@@ -1,0 +1,6 @@
+import {
+  "moonbit-community/rabbita" @rabbita,
+  "moonbit-community/rabbita/html" @html,
+}
+
+supported_targets = "+native+js"

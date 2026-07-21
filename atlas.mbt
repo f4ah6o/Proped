@@ -40,7 +40,14 @@ pub fn report_to_json(report : RunReport) -> String {
     output.write_object(state.depth)
     output.write_string(",\"html\":")
     write_json_string(output, state.html)
-    output.write_char('}')
+    output.write_string(",\"dependencies\":[")
+    for dependency_index, dependency in state.dependencies {
+      if dependency_index > 0 {
+        output.write_char(',')
+      }
+      write_json_string(output, dependency)
+    }
+    output.write_string("]}")
   }
   output.write_string("],\"transitions\":[")
   for index, transition in report.transitions {
@@ -110,10 +117,10 @@ pub fn report_to_dot(report : RunReport) -> String {
 /// below the canvas.
 pub fn report_to_html(report : RunReport) -> String {
   let output = StringBuilder::new()
-  output.write_string(
+  let shell =
     #|<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Proped Rabbita Atlas</title><style>
-    #|:root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#172033;background:#eef1f7}*{box-sizing:border-box}body{margin:0}.top{position:sticky;top:0;z-index:2;background:#111827;color:#fff;padding:16px 24px;box-shadow:0 2px 12px #0003}.top h1{margin:0 0 4px;font-size:20px}.meta{opacity:.75;font-size:13px}.canvas{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;padding:24px}.frame{background:#fff;border:1px solid #d7dce7;border-radius:12px;overflow:hidden;box-shadow:0 4px 14px #1f293712}.frame header{display:flex;justify-content:space-between;gap:16px;padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;font:12px ui-monospace,monospace}.frame iframe{display:block;width:100%;height:260px;border:0;background:#fff}.section{margin:0 24px 24px;background:#fff;border:1px solid #d7dce7;border-radius:12px;padding:18px}.section h2{margin:0 0 12px;font-size:16px}.edge,.failure{padding:9px 0;border-top:1px solid #eef1f5;font:13px ui-monospace,monospace}.edge:first-of-type,.failure:first-of-type{border-top:0}.failure{color:#991b1b}.ok{color:#166534}.arrow{color:#667085;padding:0 8px}.trace{margin:6px 0 0;padding-left:22px;color:#3f3f46}</style></head><body>
-  )
+    #|:root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#172033;background:#eef1f7}*{box-sizing:border-box}body{margin:0}.top{position:sticky;top:0;z-index:2;background:#111827;color:#fff;padding:16px 24px;box-shadow:0 2px 12px #0003}.top h1{margin:0 0 4px;font-size:20px}.meta{opacity:.75;font-size:13px}.canvas{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;padding:24px}.frame{background:#fff;border:1px solid #d7dce7;border-radius:12px;overflow:hidden;box-shadow:0 4px 14px #1f293712}.frame header{display:flex;justify-content:space-between;gap:16px;padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;font:12px ui-monospace,monospace}.frame iframe{display:block;width:100%;height:260px;border:0;background:#fff}.deps{padding:8px 12px;border-top:1px solid #eef1f5;font:11px ui-monospace,monospace;color:#475467}.deps summary{cursor:pointer}.deps ul{margin:8px 0 0;padding-left:18px}.section{margin:0 24px 24px;background:#fff;border:1px solid #d7dce7;border-radius:12px;padding:18px}.section h2{margin:0 0 12px;font-size:16px}.edge,.failure{padding:9px 0;border-top:1px solid #eef1f5;font:13px ui-monospace,monospace}.edge:first-of-type,.failure:first-of-type{border-top:0}.failure{color:#991b1b}.ok{color:#166534}.arrow{color:#667085;padding:0 8px}.trace{margin:6px 0 0;padding-left:22px;color:#3f3f46}</style></head><body>
+  output.write_string(shell)
   output.write_string("<div class=\"top\"><h1>Proped Rabbita UI Atlas</h1><div class=\"meta\">")
   output.write_object(report.states.length())
   output.write_string(" states · ")
@@ -128,9 +135,17 @@ pub fn report_to_html(report : RunReport) -> String {
     output.write_string(html_escape(state.id))
     output.write_string("</strong><span>depth ")
     output.write_object(state.depth)
-    output.write_string("</span></header><iframe sandbox srcdoc=\"")
+    output.write_string(" · ")
+    output.write_object(state.dependencies.length())
+    output.write_string(" deps</span></header><iframe sandbox srcdoc=\"")
     output.write_string(html_escape(state.html))
-    output.write_string("\"></iframe></article>")
+    output.write_string("\"></iframe><details class=\"deps\"><summary>Dependencies</summary><ul>")
+    for dependency in state.dependencies {
+      output.write_string("<li>")
+      output.write_string(html_escape(dependency))
+      output.write_string("</li>")
+    }
+    output.write_string("</ul></details></article>")
   }
   output.write_string("</div><section class=\"section\"><h2>Transitions</h2>")
   for transition in report.transitions {

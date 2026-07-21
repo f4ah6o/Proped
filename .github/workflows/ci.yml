@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -30,37 +30,11 @@ jobs:
       - name: Update package registry
         run: moon update
 
-      - name: Format sources
-        run: moon fmt
-
-      - name: Commit formatted sources
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          if git diff --quiet -- '*.mbt' moon.mod moon.pkg; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- '*.mbt' moon.mod moon.pkg
-          git commit -m "style: format MoonBit sources"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Format check
+        run: moon fmt --check
 
       - name: Check
-        shell: bash
-        run: |
-          set +e
-          moon check --target native > check.log 2>&1
-          status=$?
-          cat check.log
-          exit "$status"
-
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: moonbit-diagnostics-${{ github.run_id }}
-          path: check.log
+        run: moon check --target native
 
       - name: Test
         run: moon test --target native

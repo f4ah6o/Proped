@@ -11,6 +11,7 @@ Proped Rabbita treats the following as first-class UI framework concepts:
 - automatic failure shrinking
 - browserless Rabbita rendering
 - static HTML, JSON, and Graphviz state atlases
+- dependency-based differential UI builds
 
 The core model is:
 
@@ -21,14 +22,15 @@ initial Model
   + view(Model) -> Html
   + Property<Model, Msg>
   + shrink(Msg) -> Array[Msg]
+  + dependencies(Model) -> Array[String]
   = verified reachable UI state graph
 ```
 
-This is not random DOM clicking. The generator asks the model for actions that are valid in the current state, executes typed transitions, checks invariants, and reduces failures to a minimal reproducible trace.
+This is not random DOM clicking. The generator asks the model for actions that are valid in the current state, executes typed transitions, checks invariants, reduces failures to a minimal reproducible trace, and records which inputs affect each rendered state.
 
 ## Status
 
-Early MVP. The current branch provides the executable framework core and exporters. It does not yet instrument arbitrary Rabbita components or replace browser-level layout testing.
+Early MVP. The repository provides the executable framework core, browserless Rabbita adapter, state-atlas exporters, and differential-build planning. It does not yet instrument arbitrary Rabbita components or replace browser-level layout testing.
 
 ## Features
 
@@ -73,10 +75,24 @@ let machine = rabbita_machine(
   fn(model) { @rabbita.Val::constant(view(model)) },
   model_fingerprint,
   describe_msg,
+  fn(model) { dependencies_for(model) },
 )
 ```
 
 State and structural properties can therefore run without Playwright or a browser. A future browser adapter will verify layout, focus, IME, scroll, animation, and other host-specific behavior only for selected states.
+
+### Differential UI builds
+
+Every discovered state records stable dependency identifiers such as source files, fixtures, stylesheets, and design tokens.
+
+```moonbit
+let affected = affected_state_ids(report, [
+  "theme/tokens.mbt",
+  "components/button.mbt",
+])
+```
+
+Only the returned state IDs need to be re-rendered, rechecked, or sent to an optional browser backend. The MVP accepts explicit dependency identifiers; automatic extraction from Warren or the MoonBit build graph is planned.
 
 ## Minimal example
 
@@ -110,6 +126,13 @@ let machine : Machine[Model, Msg] = {
   render: fn(model) { "<button>\{model.count}</button>" },
   fingerprint: fn(model) { "counter:\{model.count}" },
   describe_msg: fn(msg) { msg.to_string() },
+  dependencies: fn(model) {
+    if model.count == 0 {
+      ["counter/view.mbt", "theme/base.css"]
+    } else {
+      ["counter/view.mbt"]
+    }
+  },
 }
 
 let properties : Array[Property[Model, Msg]] = [
@@ -122,6 +145,7 @@ let report = run(machine, properties, RunConfig::default())
 let atlas_html = report_to_html(report)
 let graph_json = report_to_json(report)
 let graph_dot = report_to_dot(report)
+let changed_states = affected_state_ids(report, ["theme/base.css"])
 ```
 
 ## API
@@ -137,6 +161,7 @@ let graph_dot = report_to_dot(report)
 | `render` | Browserless state renderer |
 | `fingerprint` | Stable state identity and deduplication key |
 | `describe_msg` | Human-readable trace entry |
+| `dependencies` | Stable inputs that affect a rendered state |
 
 ### `Property[Model, Msg]`
 
@@ -145,10 +170,15 @@ A property may inspect rendered state, transitions, or both.
 - `state_property(name, check)`
 - `transition_property(name, check)`
 
+### Reports and differential builds
+
+- `run`: explore states, evaluate properties, and generate a report
+- `affected_state_ids`: select states affected by changed dependency identifiers
+
 ### Exporters
 
 - `report_to_html`: dependency-free static UI atlas
-- `report_to_json`: machine-readable CI artifact
+- `report_to_json`: machine-readable CI artifact, including dependencies
 - `report_to_dot`: Graphviz transition graph
 
 ## What the MVP verifies
@@ -160,6 +190,7 @@ A property may inspect rendered state, transitions, or both.
 - minimized failure traces
 - static rendered HTML
 - state and transition graph structure
+- state-level dependency impact for differential builds
 
 ## What still requires a browser adapter
 
@@ -173,7 +204,7 @@ A property may inspect rendered state, transitions, or both.
 
 The intended architecture keeps this as a second-stage verification backend. The pure runner explores broadly; a browser runner checks representative, changed, and failing states.
 
-## Planned architecture
+## Architecture
 
 ```text
 proped-rabbita core
@@ -181,6 +212,8 @@ proped-rabbita core
   ├─ property evaluation
   ├─ trace replay
   ├─ shrinking
+  ├─ state dependency index
+  ├─ differential-build planner
   └─ report model
 
 Rabbita adapter
@@ -192,10 +225,10 @@ Atlas exporters
   └─ Graphviz DOT
 
 Future Warren integration
-  ├─ CLI
-  ├─ filesystem output
-  ├─ dependency cache
-  ├─ changed-state builds
+  ├─ CLI and filesystem output
+  ├─ automatic dependency extraction
+  ├─ persistent state cache
+  ├─ Git-aware changed-state builds
   └─ optional browser adapter
 ```
 
@@ -205,15 +238,15 @@ Future Warren integration
 2. Add weighted generators and deterministic PRNG state.
 3. Add command interpreters for generated success, failure, timeout, and cancellation results.
 4. Add model and fixture shrinkers in addition to action shrinkers.
-5. Add dependency metadata for property-level and state-level differential builds.
-6. Add a Warren command that writes the HTML/JSON/DOT artifacts.
+5. Connect dependency metadata to Warren and the MoonBit build graph.
+6. Add a Warren command that writes and incrementally updates HTML/JSON/DOT artifacts.
 7. Add an optional browser adapter for selected states.
 8. Add a Figma-like infinite-canvas atlas viewer.
 
 ## Development
 
 ```bash
-moon install
+moon update
 moon fmt --check
 moon check --target native
 moon test --target native

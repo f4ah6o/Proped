@@ -36,6 +36,9 @@ pub fn[Model, Msg] transition_property(
 ///
 /// `actions` must return only actions that are valid for the supplied model.
 /// This keeps generated traces inside the reachable UI state space.
+///
+/// `dependencies` returns stable source, fixture, style, or token identifiers
+/// that affect the rendered state. They are used to plan differential builds.
 pub(all) struct Machine[Model, Msg] {
   initial : Model
   update : (Model, Msg) -> Model
@@ -44,6 +47,7 @@ pub(all) struct Machine[Model, Msg] {
   render : (Model) -> String
   fingerprint : (Model) -> String
   describe_msg : (Msg) -> String
+  dependencies : (Model) -> Array[String]
 }
 
 ///|
@@ -64,6 +68,7 @@ pub(all) struct StateSnapshot {
   id : String
   html : String
   depth : Int
+  dependencies : Array[String]
 }
 
 ///|
@@ -98,6 +103,16 @@ priv struct FailureCandidate {
 }
 
 ///|
+fn contains_string(values : Array[String], target : String) -> Bool {
+  for value in values {
+    if value == target {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn contains_state(states : Array[StateSnapshot], id : String) -> Bool {
   for state in states {
     if state.id == id {
@@ -105,6 +120,35 @@ fn contains_state(states : Array[StateSnapshot], id : String) -> Bool {
     }
   }
   false
+}
+
+///|
+fn dependencies_intersect(
+  dependencies : Array[String],
+  changed_inputs : Array[String],
+) -> Bool {
+  for dependency in dependencies {
+    if contains_string(changed_inputs, dependency) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// Return the state IDs that must be rebuilt after any of the supplied stable
+/// dependency identifiers changed.
+pub fn affected_state_ids(
+  report : RunReport,
+  changed_inputs : Array[String],
+) -> Array[String] {
+  let affected : Array[String] = []
+  for state in report.states {
+    if dependencies_intersect(state.dependencies, changed_inputs) {
+      affected.push(state.id)
+    }
+  }
+  affected
 }
 
 ///|
@@ -286,7 +330,12 @@ pub fn[Model, Msg] run(
       let state_id = (machine.fingerprint)(model)
       let html = (machine.render)(model)
       if !contains_state(report.states, state_id) {
-        report.states.push({ id: state_id, html, depth })
+        report.states.push({
+          id: state_id,
+          html,
+          depth,
+          dependencies: (machine.dependencies)(model),
+        })
       }
 
       for property in properties {

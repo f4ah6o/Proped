@@ -27,9 +27,6 @@ jobs:
       - name: Show toolchain versions
         run: moon version --all
 
-      - name: Install dependencies
-        run: moon install
-
       - name: Format check
         run: moon fmt --check
 

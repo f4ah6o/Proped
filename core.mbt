@@ -3,7 +3,7 @@
 pub(all) enum Verdict {
   Pass
   Fail(String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 /// A property may inspect a rendered state, a transition, or both.
@@ -15,7 +15,7 @@ pub(all) struct Property[Model, Msg] {
 
 ///|
 /// Defines a state property.
-pub fn state_property[Model, Msg](
+pub fn[Model, Msg] state_property(
   name : String,
   check : (Model, String) -> Verdict,
 ) -> Property[Model, Msg] {
@@ -24,7 +24,7 @@ pub fn state_property[Model, Msg](
 
 ///|
 /// Defines a transition property.
-pub fn transition_property[Model, Msg](
+pub fn[Model, Msg] transition_property(
   name : String,
   check : (Model, Msg, Model) -> Verdict,
 ) -> Property[Model, Msg] {
@@ -92,7 +92,7 @@ pub(all) struct RunReport {
 }
 
 ///|
-struct FailureCandidate {
+priv struct FailureCandidate {
   message : String
   state_id : String
 }
@@ -114,7 +114,7 @@ fn positive_mod(value : Int, modulus : Int) -> Int {
 }
 
 ///|
-fn without_index[T](values : Array[T], removed : Int) -> Array[T] {
+fn[T] without_index(values : Array[T], removed : Int) -> Array[T] {
   let result : Array[T] = []
   for index, value in values {
     if index != removed {
@@ -125,14 +125,14 @@ fn without_index[T](values : Array[T], removed : Int) -> Array[T] {
 }
 
 ///|
-fn replace_index[T](values : Array[T], index : Int, replacement : T) -> Array[T] {
+fn[T] replace_index(values : Array[T], index : Int, replacement : T) -> Array[T] {
   let result = values.copy()
   result[index] = replacement
   result
 }
 
 ///|
-fn check_state[Model, Msg](
+fn[Model, Msg] check_state(
   property : Property[Model, Msg],
   model : Model,
   html : String,
@@ -144,7 +144,7 @@ fn check_state[Model, Msg](
 }
 
 ///|
-fn check_transition[Model, Msg](
+fn[Model, Msg] check_transition(
   property : Property[Model, Msg],
   before : Model,
   msg : Msg,
@@ -157,30 +157,30 @@ fn check_transition[Model, Msg](
 }
 
 ///|
-fn replay_failure[Model, Msg](
+fn[Model, Msg] replay_failure(
   machine : Machine[Model, Msg],
   property : Property[Model, Msg],
   trace : Array[Msg],
 ) -> FailureCandidate? {
   let mut model = machine.initial
-  let initial_html = machine.render(model)
+  let initial_html = (machine.render)(model)
   match check_state(property, model, initial_html) {
     Fail(message) =>
-      return Some({ message, state_id: machine.fingerprint(model) })
+      return Some({ message, state_id: (machine.fingerprint)(model) })
     Pass => ()
   }
   for msg in trace {
-    let next = machine.update(model, msg)
+    let next = (machine.update)(model, msg)
     match check_transition(property, model, msg, next) {
       Fail(message) =>
-        return Some({ message, state_id: machine.fingerprint(next) })
+        return Some({ message, state_id: (machine.fingerprint)(next) })
       Pass => ()
     }
     model = next
-    let html = machine.render(model)
+    let html = (machine.render)(model)
     match check_state(property, model, html) {
       Fail(message) =>
-        return Some({ message, state_id: machine.fingerprint(model) })
+        return Some({ message, state_id: (machine.fingerprint)(model) })
       Pass => ()
     }
   }
@@ -188,7 +188,7 @@ fn replay_failure[Model, Msg](
 }
 
 ///|
-fn shrink_trace[Model, Msg](
+fn[Model, Msg] shrink_trace(
   machine : Machine[Model, Msg],
   property : Property[Model, Msg],
   trace : Array[Msg],
@@ -212,9 +212,10 @@ fn shrink_trace[Model, Msg](
     msg_changed = false
     for index = 0; index < current.length(); index = index + 1 {
       let original = current[index]
-      let smaller = machine.shrink(original)
+      let smaller = (machine.shrink)(original)
       for candidate_msg in smaller {
-        if machine.describe_msg(candidate_msg) != machine.describe_msg(original) {
+        if (machine.describe_msg)(candidate_msg) !=
+          (machine.describe_msg)(original) {
           let candidate = replace_index(current, index, candidate_msg)
           if replay_failure(machine, property, candidate) is Some(_) {
             current = candidate
@@ -232,7 +233,7 @@ fn shrink_trace[Model, Msg](
 }
 
 ///|
-fn append_failure[Model, Msg](
+fn[Model, Msg] append_failure(
   report : RunReport,
   machine : Machine[Model, Msg],
   property : Property[Model, Msg],
@@ -243,7 +244,7 @@ fn append_failure[Model, Msg](
     Some(failure) => {
       let rendered_trace : Array[String] = []
       for msg in minimal {
-        rendered_trace.push(machine.describe_msg(msg))
+        rendered_trace.push((machine.describe_msg)(msg))
       }
       report.failures.push({
         property: property.name,
@@ -259,7 +260,7 @@ fn append_failure[Model, Msg](
 ///|
 /// Generate reachable action traces, evaluate properties and collect a static
 /// state graph. The runner is deterministic for a given configuration.
-pub fn run[Model, Msg](
+pub fn[Model, Msg] run(
   machine : Machine[Model, Msg],
   properties : Array[Property[Model, Msg]],
   config : RunConfig,
@@ -282,8 +283,8 @@ pub fn run[Model, Msg](
         depth <= config.max_depth && !stopped &&
         report.states.length() < config.max_states;
         depth = depth + 1 {
-      let state_id = machine.fingerprint(model)
-      let html = machine.render(model)
+      let state_id = (machine.fingerprint)(model)
+      let html = (machine.render)(model)
       if !contains_state(report.states, state_id) {
         report.states.push({ id: state_id, html, depth })
       }
@@ -302,7 +303,7 @@ pub fn run[Model, Msg](
         continue
       }
 
-      let actions = machine.actions(model)
+      let actions = (machine.actions)(model)
       if actions.is_empty() {
         stopped = true
         continue
@@ -310,13 +311,13 @@ pub fn run[Model, Msg](
 
       let selector = config.seed + case_index * 17 + depth * 31
       let msg = actions[positive_mod(selector, actions.length())]
-      let next = machine.update(model, msg)
-      let next_id = machine.fingerprint(next)
+      let next = (machine.update)(model, msg)
+      let next_id = (machine.fingerprint)(next)
       trace.push(msg)
       report.steps = report.steps + 1
       report.transitions.push({
         from: state_id,
-        action: machine.describe_msg(msg),
+        action: (machine.describe_msg)(msg),
         to: next_id,
       })
 

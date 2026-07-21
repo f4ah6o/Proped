@@ -54,6 +54,13 @@ fn counter_machine(
     render: fn(model) { "<button>\{model.count}</button>" },
     fingerprint: fn(model) { "counter:\{model.count}" },
     describe_msg: describe_counter_msg,
+    dependencies: fn(model) {
+      if model.count == 0 {
+        ["counter/view.mbt", "theme/base.css"]
+      } else {
+        ["counter/view.mbt"]
+      }
+    },
   }
 }
 
@@ -111,6 +118,21 @@ test "atlas exporters include discovered graph" {
   let dot = report_to_dot(report)
   let html = report_to_html(report)
   assert_true(json.contains("\"states\""))
+  assert_true(json.contains("\"dependencies\""))
   assert_true(dot.contains("digraph ui_states"))
   assert_true(html.contains("Proped Rabbita UI Atlas"))
+}
+
+///|
+test "differential build selects dependent states" {
+  let report = run(
+    counter_machine(counter_actions),
+    [],
+    { cases: 4, max_depth: 3, max_states: 16, seed: 1 },
+  )
+  let theme_affected = affected_state_ids(report, ["theme/base.css"])
+  assert_eq(theme_affected.length(), 1)
+  assert_eq(theme_affected[0], "counter:0")
+  let view_affected = affected_state_ids(report, ["counter/view.mbt"])
+  assert_eq(view_affected.length(), report.states.length())
 }

@@ -1,13 +1,13 @@
 ///|
 struct CounterModel {
   count : Int
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 enum CounterMsg {
   Inc(Int)
   Reset
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 fn counter_update(model : CounterModel, msg : CounterMsg) -> CounterModel {

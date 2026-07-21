@@ -11,6 +11,7 @@ pub fn[Model, Msg] rabbita_machine(
   view : (Model) -> @rabbita.Val[@rabbita.Html],
   fingerprint : (Model) -> String,
   describe_msg : (Msg) -> String,
+  dependencies : (Model) -> Array[String],
 ) -> Machine[Model, Msg] {
   {
     initial,
@@ -22,5 +23,6 @@ pub fn[Model, Msg] rabbita_machine(
     },
     fingerprint,
     describe_msg,
+    dependencies,
   }
 }

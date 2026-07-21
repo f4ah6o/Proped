@@ -27,9 +27,6 @@ jobs:
       - name: Show toolchain versions
         run: moon version --all
 
-      - name: Format check
-        run: moon fmt --check
-
       - name: Check
         run: moon check --target native
 

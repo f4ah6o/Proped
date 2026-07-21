@@ -27,6 +27,9 @@ jobs:
       - name: Show toolchain versions
         run: moon version --all
 
+      - name: Update package registry
+        run: moon update
+
       - name: Check
         shell: bash
         run: |

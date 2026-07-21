@@ -3,7 +3,7 @@
 ///
 /// The adapter renders each model through Rabbita's server-side renderer, so
 /// the core runner does not need a browser or Playwright.
-pub fn rabbita_machine[Model, Msg](
+pub fn[Model, Msg] rabbita_machine(
   initial : Model,
   update : (Model, Msg) -> Model,
   actions : (Model) -> Array[Msg],

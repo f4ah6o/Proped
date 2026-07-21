@@ -8,7 +8,13 @@ repository = "https://github.com/f4ah6o/Proped-Rabbita"
 
 license = "Apache-2.0"
 
-keywords = [ "property-based-testing", "model-based-testing", "ui", "rabbita", "moonbit" ]
+keywords = [
+  "property-based-testing",
+  "model-based-testing",
+  "ui",
+  "rabbita",
+  "moonbit",
+]
 
 description = "Property-based, model-based UI verification and static state atlases for Rabbita"
 

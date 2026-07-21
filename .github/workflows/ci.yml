@@ -30,6 +30,18 @@ jobs:
       - name: Update package registry
         run: moon update
 
+      - name: Format sources
+        run: moon fmt
+
+      - name: Upload formatted sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: moonbit-formatted-${{ github.run_id }}
+          path: |
+            *.mbt
+            moon.mod
+            moon.pkg
+
       - name: Check
         shell: bash
         run: |

@@ -1,9 +1,7 @@
 name: Diagnose flow check
 
 on:
-  push:
-    branches:
-      - feat/moonbit-flow-canvas
+  pull_request:
   workflow_dispatch:
 
 permissions:

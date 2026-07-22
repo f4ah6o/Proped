@@ -4,7 +4,7 @@ priv struct AtlasTransition {
   action : String
   to : String
   samples : Int
-} derive(Debug, Eq)
+}
 
 ///|
 fn atlas_state_has_failure(report : RunReport, state_id : String) -> Bool {
@@ -156,7 +156,7 @@ fn atlas_failure_transition_indices(
       )
     }
     let backward : Array[Array[String]] = []
-    for _ = 0; _ <= failure.trace.length(); _ = _ + 1 {
+    for slot = 0; slot <= failure.trace.length(); slot = slot + 1 {
       backward.push([])
     }
     backward[failure.trace.length()] = [failure.state_id]

@@ -37,6 +37,9 @@ pub fn[Model, Msg] transition_property(
 /// `actions` must return only actions that are valid for the supplied model.
 /// This keeps generated traces inside the reachable UI state space.
 ///
+/// `describe_msg` must return a stable, unique description for each distinct
+/// message. The runner uses it both for reports and replay availability checks.
+///
 /// `dependencies` returns stable source, fixture, style, or token identifiers
 /// that affect the rendered state. They are used to plan differential builds.
 pub(all) struct Machine[Model, Msg] {
@@ -97,9 +100,10 @@ pub(all) struct RunReport {
 }
 
 ///|
-priv struct FailureCandidate {
+priv struct FailureCandidate[Model] {
   message : String
   state_id : String
+  model : Model
 }
 
 ///|
@@ -209,30 +213,78 @@ fn[Model, Msg] check_transition(
 }
 
 ///|
+fn[Model, Msg] action_is_available(
+  machine : Machine[Model, Msg],
+  model : Model,
+  msg : Msg,
+) -> Bool {
+  let expected = (machine.describe_msg)(msg)
+  for available in (machine.actions)(model) {
+    if (machine.describe_msg)(available) == expected {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn[Model, Msg] add_model_snapshot(
+  report : RunReport,
+  machine : Machine[Model, Msg],
+  model : Model,
+  depth : Int,
+) -> Unit {
+  let state_id = (machine.fingerprint)(model)
+  if !contains_state(report.states, state_id) {
+    report.states.push({
+      id: state_id,
+      html: (machine.render)(model),
+      depth,
+      dependencies: (machine.dependencies)(model),
+    })
+  }
+}
+
+///|
 fn[Model, Msg] replay_failure(
   machine : Machine[Model, Msg],
   property : Property[Model, Msg],
   trace : Array[Msg],
-) -> FailureCandidate? {
+) -> FailureCandidate[Model]? {
   let mut model = machine.initial
   let initial_html = (machine.render)(model)
   match check_state(property, model, initial_html) {
     Fail(message) =>
-      return Some({ message, state_id: (machine.fingerprint)(model) })
+      return Some({
+        message,
+        state_id: (machine.fingerprint)(model),
+        model,
+      })
     Pass => ()
   }
   for msg in trace {
+    if !action_is_available(machine, model, msg) {
+      return None
+    }
     let next = (machine.update)(model, msg)
     match check_transition(property, model, msg, next) {
       Fail(message) =>
-        return Some({ message, state_id: (machine.fingerprint)(next) })
+        return Some({
+          message,
+          state_id: (machine.fingerprint)(next),
+          model: next,
+        })
       Pass => ()
     }
     model = next
     let html = (machine.render)(model)
     match check_state(property, model, html) {
       Fail(message) =>
-        return Some({ message, state_id: (machine.fingerprint)(model) })
+        return Some({
+          message,
+          state_id: (machine.fingerprint)(model),
+          model,
+        })
       Pass => ()
     }
   }
@@ -294,6 +346,7 @@ fn[Model, Msg] append_failure(
   let minimal = shrink_trace(machine, property, trace)
   match replay_failure(machine, property, minimal) {
     Some(failure) => {
+      add_model_snapshot(report, machine, failure.model, minimal.length())
       let rendered_trace : Array[String] = []
       for msg in minimal {
         rendered_trace.push((machine.describe_msg)(msg))
@@ -357,7 +410,9 @@ pub fn[Model, Msg] run(
           Pass => ()
         }
       }
-      if stopped || depth == config.max_depth {
+      if stopped ||
+        depth == config.max_depth ||
+        report.states.length() >= config.max_states {
         continue
       }
 

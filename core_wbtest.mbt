@@ -99,9 +99,7 @@ fn gate_machine() -> Machine[GateModel, GateMsg] {
     render: fn(model) {
       "<main open=\"\{model.open}\" submitted=\"\{model.submitted}\"></main>"
     },
-    fingerprint: fn(model) {
-      "gate:\{model.open}:\{model.submitted}"
-    },
+    fingerprint: fn(model) { "gate:\{model.open}:\{model.submitted}" },
     describe_msg: fn(msg) {
       match msg {
         OpenGate => "OpenGate"

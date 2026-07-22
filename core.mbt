@@ -255,11 +255,7 @@ fn[Model, Msg] replay_failure(
   let initial_html = (machine.render)(model)
   match check_state(property, model, initial_html) {
     Fail(message) =>
-      return Some({
-        message,
-        state_id: (machine.fingerprint)(model),
-        model,
-      })
+      return Some({ message, state_id: (machine.fingerprint)(model), model })
     Pass => ()
   }
   for msg in trace {
@@ -280,11 +276,7 @@ fn[Model, Msg] replay_failure(
     let html = (machine.render)(model)
     match check_state(property, model, html) {
       Fail(message) =>
-        return Some({
-          message,
-          state_id: (machine.fingerprint)(model),
-          model,
-        })
+        return Some({ message, state_id: (machine.fingerprint)(model), model })
       Pass => ()
     }
   }

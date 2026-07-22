@@ -1,0 +1,38 @@
+name: Format flow
+
+on:
+  push:
+    branches:
+      - feat/moonbit-flow-canvas
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MoonBit
+        uses: hustcer/setup-moonbit@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update package registry
+        run: moon update
+
+      - name: Format MoonBit sources
+        run: moon fmt
+
+      - name: Upload formatted flow sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: formatted-flow-sources
+          path: |
+            flow.mbt
+            flow_atlas.mbt
+            flow_wbtest.mbt
+          if-no-files-found: error

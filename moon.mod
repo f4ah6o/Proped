@@ -2,6 +2,8 @@ name = "f4ah6o/proped-rabbita"
 
 version = "0.1.0"
 
+source = "src"
+
 readme = "README.md"
 
 repository = "https://github.com/f4ah6o/Proped-Rabbita"
@@ -18,11 +20,7 @@ keywords = [
 
 description = "Property-based, model-based UI verification and static state atlases for Rabbita"
 
-preferred_target = "native"
-
-supported_targets = "+native+js"
-
-import {
-  "moonbit-community/rabbita@0.13.1",
-  "moonbitlang/async@0.20.2",
+deps = {
+  "moonbit-community/rabbita": "0.13.1",
+  "moonbitlang/async": "0.20.2",
 }

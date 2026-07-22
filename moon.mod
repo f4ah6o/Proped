@@ -2,6 +2,8 @@ name = "f4ah6o/proped-rabbita"
 
 version = "0.1.0"
 
+source = "src"
+
 readme = "README.md"
 
 repository = "https://github.com/f4ah6o/Proped-Rabbita"

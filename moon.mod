@@ -24,4 +24,5 @@ supported_targets = "+native+js"
 
 import {
   "moonbit-community/rabbita@0.13.1",
+  "moonbitlang/async@0.20.2",
 }

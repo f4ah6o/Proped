@@ -3,3 +3,4 @@ target/
 .mooncakes/
 *.log
 .DS_Store
+demo/out/

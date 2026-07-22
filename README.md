@@ -148,6 +148,17 @@ let graph_dot = report_to_dot(report)
 let changed_states = affected_state_ids(report, ["theme/base.css"])
 ```
 
+## Runnable demo
+
+Run the local end-to-end newsletter form example with:
+
+```bash
+moon run demo
+```
+
+See [demo/README.md](demo/README.md) for the generated HTML, JSON, and
+Graphviz DOT atlas artifacts.
+
 ## API
 
 ### `Machine[Model, Msg]`

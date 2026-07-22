@@ -1,0 +1,44 @@
+name: Diagnose flow check
+
+on:
+  push:
+    branches:
+      - feat/moonbit-flow-canvas
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MoonBit
+        uses: hustcer/setup-moonbit@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update package registry
+        run: moon update
+
+      - name: Capture check output
+        shell: bash
+        run: |
+          set +e
+          moon check --target native > check.log 2>&1
+          status=$?
+          echo "$status" > check.status
+          cat check.log
+          exit 0
+
+      - name: Upload diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: flow-check-diagnostics
+          path: |
+            check.log
+            check.status
+          if-no-files-found: error

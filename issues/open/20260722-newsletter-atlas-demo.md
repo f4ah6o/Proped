@@ -1,4 +1,4 @@
-# Atlas UIを状態遷移グラフ中心に改善する
+# ニュースレター登録フォームの実行可能な atlas PoC を追加
 
 Status: open
 Model: unknown
@@ -8,92 +8,76 @@ Branch: codex/feat/20260722-newsletter-atlas-demo
 
 ## 概要
 
-静的HTML Atlasを状態カード一覧から状態遷移グラフ中心のUIへ変更し、アプリのレンダリング結果とAtlasの検証情報を明確に分離する。
+Rabbita の状態遷移、プロパティ検証、browserless rendering、HTML/JSON/DOT atlas 出力をローカルで一通り確認できる実行可能なニュースレター登録フォーム PoC を追加する。
 
 ## 背景
 
-`demo/out/atlas.html` は、到達可能状態をカードとして並べ、探索中に観測した遷移を一覧表示している。現在のdemoでは5状態に対して192件の遷移記録があり、同一遷移の重複と機械向けfingerprintが人間向けのフロー理解を妨げている。
+Proped Rabbita には `Machine`、`Property`、`run`、atlas exporter、`rabbita_machine` が実装されているが、これらを同時に実行して成果物を確認できる `demo/` パッケージはまだ存在しない。
 
-設計検討では、グラフを主役にし、選択状態のアプリプレビューとAtlasメタデータを右側に表示する方針を決定した。状態表示APIなどの新しい汎用モデルAPIは追加せず、既存のfingerprint、`describe_msg`、`RunReport`を利用する。
+Rabbita 0.13.1 の `render_to_string` は `Experimental API` として alert を発する。今回の PoC ではこの warning を抑制せず、実験的 API を使用している事実を残す。
 
 ## 問題
 
-- アプリのiframeプレビューとAtlas固有の状態情報が同じカード内で区別しにくい。
-- 状態がカードとして並ぶだけで、分岐、合流、戻り遷移を視覚的に追いにくい。
-- 探索ケース由来の重複遷移が大量に表示される。
-- fingerprintとコード風action表記が人間向けのフロー表示として読みにくい。
-- Transitions、Dependencies、Propertiesの詳細が初期表示の情報量を増やしている。
+利用者がライブラリの状態空間探索、Rabbita の HTML レンダリング、プロパティ評価、静的 atlas 生成をローカルで再現するための最短経路がない。
 
 ## 目標
 
-- 状態遷移グラフをAtlasの主表示にする。
-- 選択した状態またはエッジを調査できるインスペクタを提供する。
-- アプリのレンダリング結果とAtlasメタデータを視覚的に分離する。
-- 英語・日本語の表示を切り替えられるようにする。
-- JSONなどの機械向けレポートデータと既存のraw action値を維持する。
+- `moon run demo` で決定的なニュースレター登録フォームの状態空間を探索する。
+- Rabbita の `@html` 要素を `rabbita_machine` 経由で静的 HTML にレンダリングする。
+- モデル不変条件、レンダリング結果、Reset 遷移をプロパティとして検証する。
+- `demo/out/atlas.html`、`demo/out/atlas.json`、`demo/out/atlas.dot` を生成する。
+- 実行手順を `demo/README.md` に記載し、ルート README から参照できるようにする。
 
 ## 対象外
 
-- 状態表示名を供給する新しい`Machine`フィールドまたは汎用モデルAPIの追加。
-- React Flowなどの外部グラフライブラリの導入。
-- 初回実装でのノードドラッグ、ズーム、検索、ミニマップ。
 - ブラウザを使ったレイアウト、フォーカス、IME、スクロール、アニメーション検証。
-- JSONやDOTのスキーマ変更。
+- `render_to_string` の安定 API への置き換えや alert warning の無効化。
+- 意図的な失敗プロパティをデフォルト atlas に含めること。
+- 自動依存抽出、Warren 連携、永続キャッシュ、production 用 CLI の追加。
 
 ## 提案する方針
 
-- `report_to_html`の静的UIをinline SVGと最小限のinline JavaScriptで構成する。
-- 状態を`S0`、`S1`のような短い表示名でノード化し、完全なfingerprintは選択時のAtlas metadataに表示する。
-- `StateSnapshot.depth`を使い、初期状態を左、到達深度の高い状態を右に置く決定的な左から右のレイアウトにする。
-- 同じ`from`、action、`to`の遷移をHTML表示上で集約し、観測回数を表示する。raw transitionsはJSONに残し、折り畳みの探索ログに表示する。
-- 状態が変化しない自己ループは初期グラフでは非表示にし、ノード側に件数を示す。
-- 初期状態を自動選択し、状態クリックで関連エッジを強調する。エッジクリックではFrom、To、表示action、観測回数、raw actionを表示する。
-- 右側インスペクタを`Rendered app`と`Atlas metadata`に分け、iframe、状態ID、depth、依存関係を区別して表示する。依存関係は折り畳む。
-- グラフ上のactionはdemo固有の辞書で英語・日本語に変換し、未知のactionはraw値へフォールバックする。raw actionはレポートと詳細欄に保持する。
-- Propertiesは成功時に上部のfailure件数だけを表示し、失敗時は該当ノード・エッジを強調して理由と縮約traceを表示する。
-- デスクトップではグラフとインスペクタを左右に配置し、狭い画面ではグラフ、Rendered app、Atlas metadataの順に積む。
-- 状態カード一覧は削除する。
+- `demo/` に native 専用の `moon.pkg` と実行エントリポイントを追加する。
+- ファイル出力には `moonbitlang/async` の `async/fs` を使用し、必要な依存を `moon.mod` に追加する。core 本体の API 依存は変更しない。
+- モデルは `email : String`、`consented : Bool`、`submitted : Bool` とし、フォームの表示状態はこれらの値から導出する。
+- アクションは `SetEmail("")`、`SetEmail("alice@example.com")`、`ToggleConsent`、`Submit`、`Reset` とし、`Submit` は有効なメールアドレスかつ同意済みの場合だけ候補にする。
+- プロパティは、送信済み状態のモデル不変条件、送信済み HTML の確認メッセージ、Reset 後の初期状態復元を検証する。
+- `run` のレポートから既存の `report_to_html`、`report_to_json`、`report_to_dot` を呼び出し、`demo/out/` に生成する。生成物は Git 管理対象外にする。
+- `moonbit-agent-guide` に従い、package 境界を守り、`moon check`、`moon test`、`moon fmt`、`moon info` で検証する。
 
 ## 受け入れ条件
 
-- [x] `demo/out/atlas.html`の初期表示が状態カード一覧ではなく、決定的な状態遷移グラフになっている。
-- [x] 初期状態が自動選択され、`Rendered app`と`Atlas metadata`が別領域に表示される。
-- [x] ノードクリックで関連エッジが強調され、エッジクリックで遷移詳細が表示される。
-- [x] HTML上の遷移がユニーク化され、探索回数が表示される。自己ループは初期状態で非表示になる。
-- [x] Transitions、Dependencies、成功時のPropertiesが初期状態で折り畳まれている。
-- [x] action表示が英語・日本語で切り替わり、未知のactionはraw値へフォールバックする。
-- [x] プロパティ失敗時に該当グラフ要素が強調され、理由とtraceが表示される。
-- [x] 狭い画面でグラフとインスペクタが縦積みになり、選択操作が維持される。
-- [x] `report_to_json`のキー、raw action値、states、transitions、failuresのデータ構造が変更されない。
+- [x] `moon run demo` が native target で成功し、`demo/out/atlas.html`、`demo/out/atlas.json`、`demo/out/atlas.dot` が生成される。
+- [x] 生成レポートに Empty、Invalid、Ready、Submitted に対応する到達可能状態と遷移が含まれる。
+- [x] デフォルト実行の property failures が 0 件である。
+- [x] Rabbita の `@html` と `rabbita_machine` を通した HTML が atlas に含まれる。
+- [x] `demo/README.md` に実行方法、生成物、確認方法が記載され、ルート README から参照できる。
+- [x] `moon check --target native` と `moon test --target native` がエラーなしで完了する。`render_to_string` に由来する warning 0014 は抑制しない。
+- [x] `demo/out/` が Git の変更として扱われない。
 
 ## テスト計画
 
+- `moon update`
 - `moon fmt`
 - `moon check --target native`
 - `moon test --target native`
 - `moon run demo`
-- 生成された`demo/out/atlas.json`を解析し、raw transitionsが保持されていることを確認する。
-- 生成されたHTMLにグラフ、`Rendered app`、`Atlas metadata`、言語切り替え、折り畳み要素が含まれることを確認する。
-- ブラウザで初期状態選択、ノード選択、エッジ選択、言語切り替え、折り畳み、狭い画面の縦積みを手動確認する。
-- `moon info`で意図しない公開API変更がないことを確認する。
+- 生成された HTML をブラウザで開き、状態カード、遷移、property 結果を手動確認する。
+- JSON が `states`、`transitions`、`failures` を含み、DOT が `digraph ui_states` から始まることを確認する。
 
 ## リスク
 
-- inline SVGの簡易レイアウトは、状態数が大きいグラフでは重なりや可読性の問題が発生する可能性がある。
-- HTML側のaction辞書はdemo固有であり、未知のactionでは人間向け表示品質が下がる。
-- static HTMLのブラウザ互換性を維持するため、外部JavaScript依存を追加しない。
-- JSONとHTMLで遷移の見え方が異なるため、HTMLは人間向けの集約表示、JSONは探索記録という役割を明記する。
+- atlas の生成は native filesystem API に依存するため、demo パッケージは native 専用になる。
+- Rabbita の `render_to_string` は実験的 API のため、`moon check` と `moon test` に warning 0014 が残る。
+- `demo/out/` は生成物であり、実行結果の差分はレビュー対象にしない。
+- async 依存のバージョンや API が更新された場合、demo のファイル出力実装に追従が必要になる。
 
 ## 変更履歴
 
-`CHANGES.md` impact: yes
-
-項目案：
-
-- Improve the static Atlas viewer with a graph-first state-flow UI, bilingual labels, and separated application previews.
+`CHANGES.md` impact: no
 
 ## 注記
 
-- 2026-07-22: UI設計の合意内容をIssue化した。実装は同一ブランチで継続する。
-- 2026-07-22: graph-first UI、英日切り替え、折り畳み詳細、responsive layoutを実装し、テストとブラウザ確認を完了した。
-- 2026-07-22: ブラウザ確認で見つかったエッジの重なりを修正し、遷移を上側・下側の専用レーンへ直交ルーティングした。
+実装ブランチ: `codex/feat/20260722-newsletter-atlas-demo`
+
+検証結果: `moon fmt --check`、`moon check --target all`、`moon test --target native`、`moon run demo`、JSON parse を実行済み。すべて成功し、warning 0014 のみ残る。

@@ -19,7 +19,10 @@ test "flow layout places ranks in columns and lanes in rows" {
   assert_eq(graph.nodes[1].position.x, graph.nodes[2].position.x)
   assert_true(graph.nodes[2].position.y > graph.nodes[1].position.y)
   assert_eq(graph.edges[0].route.length(), 4)
-  assert_eq(graph.edges[0].route[0].x, graph.nodes[0].position.x + graph.nodes[0].size.width)
+  assert_eq(
+    graph.edges[0].route[0].x,
+    graph.nodes[0].position.x + graph.nodes[0].size.width,
+  )
 }
 
 ///|
@@ -73,12 +76,7 @@ test "run report adapts to flow graph and SVG" {
         depth: 0,
         dependencies: ["view.mbt"],
       },
-      {
-        id: "done",
-        html: "<p>Done</p>",
-        depth: 1,
-        dependencies: ["view.mbt"],
-      },
+      { id: "done", html: "<p>Done</p>", depth: 1, dependencies: ["view.mbt"] },
     ],
     transitions: [{ from: "idle", action: "Start", to: "done" }],
     failures: [],

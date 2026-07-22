@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -30,8 +30,21 @@ jobs:
       - name: Update package registry
         run: moon update
 
-      - name: Format check
-        run: moon fmt --check
+      - name: Format sources
+        run: moon fmt
+
+      - name: Commit formatted sources
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          if git diff --quiet -- core.mbt core_wbtest.mbt atlas.mbt rabbita_adapter.mbt; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add core.mbt core_wbtest.mbt atlas.mbt rabbita_adapter.mbt
+          git commit -m "style: format review fixes"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Check
         run: moon check --target native

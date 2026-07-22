@@ -20,7 +20,11 @@ keywords = [
 
 description = "Property-based, model-based UI verification and static state atlases for Rabbita"
 
-deps = {
-  "moonbit-community/rabbita": "0.13.1",
-  "moonbitlang/async": "0.20.2",
+preferred_target = "native"
+
+supported_targets = "+native+js"
+
+import {
+  "moonbit-community/rabbita@0.13.1",
+  "moonbitlang/async@0.20.2",
 }

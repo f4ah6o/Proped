@@ -91,5 +91,5 @@ fn newsletter_fingerprint(model : NewsletterModel) -> String {
 
 ///|
 fn newsletter_dependencies(_ : NewsletterModel) -> Array[String] {
-  ["demo/model.mbt", "demo/view.mbt"]
+  ["src/demo/model.mbt", "src/demo/view.mbt"]
 }

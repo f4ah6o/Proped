@@ -26,6 +26,57 @@ test "flow layout places ranks in columns and lanes in rows" {
 }
 
 ///|
+test "flow layout respects custom node sizes" {
+  let config = FlowLayoutConfig::default()
+  let wide = {
+    ..FlowNode::new("wide", "Wide", 0),
+    size: { width: 500, height: 200 },
+  }
+  let next = FlowNode::new("next", "Next", 1)
+  let lower = {
+    ..FlowNode::new("lower", "Lower", 0),
+    size: { width: 120, height: 160 },
+  }
+  let graph = layout_flow(FlowGraph::new([wide, next, lower], []), config)
+  assert_true(
+    graph.nodes[1].position.x >=
+    graph.nodes[0].position.x + graph.nodes[0].size.width + config.horizontal_gap,
+  )
+  assert_true(
+    graph.nodes[2].position.y >=
+    graph.nodes[0].position.y + graph.nodes[0].size.height + config.vertical_gap,
+  )
+}
+
+///|
+test "backward edges use facing node sides" {
+  let nodes = [
+    FlowNode::new("target", "Target", 0),
+    FlowNode::new("source", "Source", 1),
+  ]
+  let edge = FlowEdge::new("reset", "source", "target", "Reset")
+  let graph = layout_flow(FlowGraph::new(nodes, [edge]), FlowLayoutConfig::default())
+  assert_eq(graph.edges[0].route[0].x, graph.nodes[1].position.x)
+  assert_eq(
+    graph.edges[0].route[3].x,
+    graph.nodes[0].position.x + graph.nodes[0].size.width,
+  )
+}
+
+///|
+test "self loop routes contribute to graph bounds" {
+  let node = FlowNode::new("loop", "Loop", 0)
+  let edge = FlowEdge::new("again", "loop", "loop", "Again")
+  let graph = layout_flow(FlowGraph::new([node], [edge]), FlowLayoutConfig::default())
+  let bounds = flow_bounds(graph)
+  assert_true(bounds.y < graph.nodes[0].position.y)
+  assert_true(
+    bounds.x + bounds.width >
+    graph.nodes[0].position.x + graph.nodes[0].size.width,
+  )
+}
+
+///|
 test "flow selection keeps one selected item" {
   let graph = layout_flow(sample_flow_graph(), FlowLayoutConfig::default())
   let node_selected = select_flow_node(graph, "ready")
@@ -51,6 +102,17 @@ test "flow viewport pans zooms and fits deterministically" {
   let fitted = fit_flow_view(graph, 800, 500, 24)
   assert_true(fitted.viewport.zoom_percent >= 10)
   assert_true(fitted.viewport.zoom_percent <= 400)
+  assert_eq(fitted.viewport.width, 800)
+  assert_eq(fitted.viewport.height, 500)
+}
+
+///|
+test "fitted SVG preserves the requested viewport" {
+  let graph = layout_flow(sample_flow_graph(), FlowLayoutConfig::default())
+  let svg = flow_to_svg(fit_flow_view(graph, 1200, 720, 32))
+  assert_true(svg.contains("width=\"1200\""))
+  assert_true(svg.contains("height=\"720\""))
+  assert_true(svg.contains("viewBox=\"0 0 1200 720\""))
 }
 
 ///|
@@ -86,4 +148,39 @@ test "run report adapts to flow graph and SVG" {
   assert_eq(graph.edges.length(), 1)
   assert_eq(graph.nodes[0].kind, "initial")
   assert_true(report_to_flow_svg(report).contains("idle"))
+}
+
+///|
+test "Atlas aggregates samples and marks only the failing trace path" {
+  let report : RunReport = {
+    seed: 1,
+    cases: 2,
+    steps: 4,
+    states: [
+      { id: "a", html: "<p>A</p>", depth: 0, dependencies: [] },
+      { id: "c", html: "<p>C</p>", depth: 1, dependencies: [] },
+      { id: "b", html: "<p>B</p>", depth: 2, dependencies: [] },
+    ],
+    transitions: [
+      { from: "a", action: "Start", to: "b" },
+      { from: "a", action: "Start", to: "b" },
+      { from: "a", action: "ToC", to: "c" },
+      { from: "c", action: "Start", to: "b" },
+    ],
+    failures: [
+      {
+        property: "submit fails",
+        message: "rejected",
+        state_id: "b",
+        trace: ["ToC", "Start"],
+      },
+    ],
+  }
+  let graph = report_to_flow_graph(report)
+  assert_eq(graph.edges.length(), 3)
+  assert_eq(graph.edges[0].sample_count, 2)
+  assert_eq(graph.edges[0].kind, "transition")
+  assert_eq(graph.edges[1].kind, "failure")
+  assert_eq(graph.edges[2].kind, "failure")
+  assert_true(flow_to_svg(graph).contains("Start ×2"))
 }

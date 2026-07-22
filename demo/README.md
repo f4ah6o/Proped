@@ -15,8 +15,10 @@ moon run demo
 
 The command writes generated artifacts to `demo/out/`:
 
-- `atlas.html` — open this file in a browser to inspect the state cards,
-  transitions, dependencies, and property results;
+- `atlas.html` — open this file in a browser to inspect the state-flow graph,
+  the selected rendered app, Atlas metadata, transitions, dependencies, and
+  property results. The viewer supports English/Japanese labels and keeps
+  verbose exploration details collapsed by default;
 - `atlas.json` — machine-readable report for CI or another visualizer;
 - `atlas.dot` — Graphviz transition graph source.
 

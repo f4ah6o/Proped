@@ -224,6 +224,9 @@ test "transition failure target is included in state snapshots" {
     }
   }
   assert_true(found)
+  let html = report_to_html(report)
+  assert_true(html.contains("increment fails"))
+  assert_true(html.contains("properties-panel"))
 }
 
 ///|
@@ -240,7 +243,10 @@ test "atlas exporters include discovered graph" {
   assert_true(json.contains("\"states\""))
   assert_true(json.contains("\"dependencies\""))
   assert_true(dot.contains("digraph ui_states"))
-  assert_true(html.contains("Proped Rabbita UI Atlas"))
+  assert_true(html.contains("State flow atlas"))
+  assert_true(html.contains("Rendered app"))
+  assert_true(html.contains("Atlas metadata"))
+  assert_true(html.contains("atlas-data"))
 }
 
 ///|

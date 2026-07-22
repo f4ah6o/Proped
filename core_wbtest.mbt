@@ -65,6 +65,54 @@ fn counter_machine(
 }
 
 ///|
+struct GateModel {
+  open : Bool
+  submitted : Bool
+} derive(Debug, Eq)
+
+///|
+enum GateMsg {
+  OpenGate
+  SubmitGate
+} derive(Debug, Eq)
+
+///|
+fn gate_machine() -> Machine[GateModel, GateMsg] {
+  {
+    initial: { open: false, submitted: false },
+    update: fn(model, msg) {
+      match msg {
+        OpenGate => { open: true, submitted: model.submitted }
+        SubmitGate => { open: model.open, submitted: true }
+      }
+    },
+    actions: fn(model) {
+      if model.submitted {
+        []
+      } else if model.open {
+        [SubmitGate]
+      } else {
+        [OpenGate]
+      }
+    },
+    shrink: fn(_) { [] },
+    render: fn(model) {
+      "<main open=\"\{model.open}\" submitted=\"\{model.submitted}\"></main>"
+    },
+    fingerprint: fn(model) {
+      "gate:\{model.open}:\{model.submitted}"
+    },
+    describe_msg: fn(msg) {
+      match msg {
+        OpenGate => "OpenGate"
+        SubmitGate => "SubmitGate"
+      }
+    },
+    dependencies: fn(_) { ["gate/view.mbt"] },
+  }
+}
+
+///|
 test "runner explores reachable states" {
   let properties : Array[Property[CounterModel, CounterMsg]] = [
     state_property("count remains non-negative", fn(model, _) {
@@ -115,6 +163,69 @@ test "failing traces are minimized" {
   assert_eq(report.failures.length(), 1)
   assert_eq(report.failures[0].trace.length(), 1)
   assert_eq(report.failures[0].trace[0], "Inc(2)")
+}
+
+///|
+test "shrinking keeps counterexamples reachable" {
+  let properties : Array[Property[GateModel, GateMsg]] = [
+    state_property("submission fails", fn(model, _) {
+      if model.submitted {
+        Fail("submitted")
+      } else {
+        Pass
+      }
+    }),
+  ]
+  let report = run(gate_machine(), properties, {
+    cases: 1,
+    max_depth: 3,
+    max_states: 8,
+    seed: 1,
+  })
+  assert_eq(report.failures.length(), 1)
+  assert_eq(report.failures[0].trace.length(), 2)
+  assert_eq(report.failures[0].trace[0], "OpenGate")
+  assert_eq(report.failures[0].trace[1], "SubmitGate")
+}
+
+///|
+test "state limit stops before recording a dangling transition" {
+  let report = run(counter_machine(counter_actions), [], {
+    cases: 1,
+    max_depth: 3,
+    max_states: 1,
+    seed: 1,
+  })
+  assert_eq(report.states.length(), 1)
+  assert_eq(report.transitions.length(), 0)
+  assert_eq(report.steps, 0)
+}
+
+///|
+test "transition failure target is included in state snapshots" {
+  let properties : Array[Property[CounterModel, CounterMsg]] = [
+    transition_property("increment fails", fn(_, msg, _) {
+      match msg {
+        Inc(_) => Fail("increment rejected")
+        Reset => Pass
+      }
+    }),
+  ]
+  let report = run(counter_machine(counter_actions), properties, {
+    cases: 1,
+    max_depth: 3,
+    max_states: 8,
+    seed: 1,
+  })
+  assert_eq(report.failures.length(), 1)
+  let failure_state = report.failures[0].state_id
+  let mut found = false
+  for state in report.states {
+    if state.id == failure_state {
+      found = true
+    }
+  }
+  assert_true(found)
 }
 
 ///|

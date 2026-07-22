@@ -32,9 +32,7 @@ fn atlas_same_transition(
   left : AtlasTransition,
   right : TransitionSnapshot,
 ) -> Bool {
-  left.from == right.from &&
-  left.action == right.action &&
-  left.to == right.to
+  left.from == right.from && left.action == right.action && left.to == right.to
 }
 
 ///|

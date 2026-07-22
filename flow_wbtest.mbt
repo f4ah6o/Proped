@@ -40,7 +40,9 @@ test "flow layout respects custom node sizes" {
   let graph = layout_flow(FlowGraph::new([wide, next, lower], []), config)
   assert_true(
     graph.nodes[1].position.x >=
-    graph.nodes[0].position.x + graph.nodes[0].size.width + config.horizontal_gap,
+    graph.nodes[0].position.x +
+    graph.nodes[0].size.width +
+    config.horizontal_gap,
   )
   assert_true(
     graph.nodes[2].position.y >=
@@ -55,7 +57,10 @@ test "backward edges use facing node sides" {
     FlowNode::new("source", "Source", 1),
   ]
   let edge = FlowEdge::new("reset", "source", "target", "Reset")
-  let graph = layout_flow(FlowGraph::new(nodes, [edge]), FlowLayoutConfig::default())
+  let graph = layout_flow(
+    FlowGraph::new(nodes, [edge]),
+    FlowLayoutConfig::default(),
+  )
   assert_eq(graph.edges[0].route[0].x, graph.nodes[1].position.x)
   assert_eq(
     graph.edges[0].route[3].x,
@@ -67,7 +72,10 @@ test "backward edges use facing node sides" {
 test "self loop routes contribute to graph bounds" {
   let node = FlowNode::new("loop", "Loop", 0)
   let edge = FlowEdge::new("again", "loop", "loop", "Again")
-  let graph = layout_flow(FlowGraph::new([node], [edge]), FlowLayoutConfig::default())
+  let graph = layout_flow(
+    FlowGraph::new([node], [edge]),
+    FlowLayoutConfig::default(),
+  )
   let bounds = flow_bounds(graph)
   assert_true(bounds.y < graph.nodes[0].position.y)
   assert_true(

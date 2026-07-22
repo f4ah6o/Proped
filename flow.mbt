@@ -203,11 +203,7 @@ fn normalize_flow_nodes(
 }
 
 ///|
-fn flow_rank_width(
-  nodes : Array[FlowNode],
-  rank : Int,
-  fallback : Int,
-) -> Int {
+fn flow_rank_width(nodes : Array[FlowNode], rank : Int, fallback : Int) -> Int {
   let mut found = false
   let mut width = fallback
   for node in nodes {
@@ -592,12 +588,7 @@ fn write_flow_path(output : StringBuilder, route : Array[FlowPoint]) -> Unit {
 ///|
 fn flow_svg_view_box(graph : FlowGraph) -> FlowBounds {
   if graph.viewport.width > 0 && graph.viewport.height > 0 {
-    {
-      x: 0,
-      y: 0,
-      width: graph.viewport.width,
-      height: graph.viewport.height,
-    }
+    { x: 0, y: 0, width: graph.viewport.width, height: graph.viewport.height }
   } else {
     let bounds = transformed_flow_bounds(graph)
     {

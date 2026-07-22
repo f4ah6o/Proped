@@ -123,15 +123,7 @@ pub fn FlowEdge::new(
   target : String,
   label : String,
 ) -> FlowEdge {
-  {
-    id,
-    source,
-    target,
-    label,
-    route: [],
-    kind: "default",
-    selected: false,
-  }
+  { id, source, target, label, route: [], kind: "default", selected: false }
 }
 
 ///|
@@ -139,22 +131,25 @@ pub fn FlowGraph::new(
   nodes : Array[FlowNode],
   edges : Array[FlowEdge],
 ) -> FlowGraph {
-  {
-    nodes,
-    edges,
-    viewport: FlowViewport::default(),
-    selection: EmptySelection,
-  }
+  { nodes, edges, viewport: FlowViewport::default(), selection: EmptySelection }
 }
 
 ///|
 fn flow_min(left : Int, right : Int) -> Int {
-  if left < right { left } else { right }
+  if left < right {
+    left
+  } else {
+    right
+  }
 }
 
 ///|
 fn flow_max(left : Int, right : Int) -> Int {
-  if left > right { left } else { right }
+  if left > right {
+    left
+  } else {
+    right
+  }
 }
 
 ///|
@@ -177,7 +172,8 @@ fn route_flow_edge(
   edge : FlowEdge,
   nodes : Array[FlowNode],
 ) -> Array[FlowPoint] {
-  match (find_flow_node(nodes, edge.source), find_flow_node(nodes, edge.target)) {
+  match
+    (find_flow_node(nodes, edge.source), find_flow_node(nodes, edge.target)) {
     (Some(source), Some(target)) => {
       let source_x = source.position.x + source.size.width
       let source_y = source.position.y + source.size.height / 2
@@ -191,10 +187,7 @@ fn route_flow_edge(
           { x: loop_x, y: source_y },
           { x: loop_x, y: top_y },
           { x: source.position.x + source.size.width / 2, y: top_y },
-          {
-            x: source.position.x + source.size.width / 2,
-            y: source.position.y,
-          },
+          { x: source.position.x + source.size.width / 2, y: source.position.y },
         ]
       } else {
         let middle_x = (source_x + target_x) / 2
@@ -213,14 +206,13 @@ fn route_flow_edge(
 ///|
 /// Place nodes in rank columns and route edges orthogonally. The algorithm is
 /// deliberately small and deterministic so it can run on native and JS targets.
-pub fn layout_flow(
-  graph : FlowGraph,
-  config : FlowLayoutConfig,
-) -> FlowGraph {
+pub fn layout_flow(graph : FlowGraph, config : FlowLayoutConfig) -> FlowGraph {
   let nodes : Array[FlowNode] = []
   for index, node in graph.nodes {
     let mut lane = 0
-    for previous_index = 0; previous_index < index; previous_index = previous_index + 1 {
+    for previous_index = 0
+        previous_index < index
+        previous_index = previous_index + 1 {
       if graph.nodes[previous_index].rank == node.rank {
         lane = lane + 1
       }
@@ -238,8 +230,10 @@ pub fn layout_flow(
     nodes.push({
       ..node,
       position: {
-        x: config.padding + node.rank * (config.default_node_width + config.horizontal_gap),
-        y: config.padding + lane * (config.default_node_height + config.vertical_gap),
+        x: config.padding +
+        node.rank * (config.default_node_width + config.horizontal_gap),
+        y: config.padding +
+        lane * (config.default_node_height + config.vertical_gap),
       },
       size: { width, height },
     })

@@ -1,5 +1,7 @@
 # Proped Rabbita
 
+[日本語](README.ja.md) | English
+
 Property-based, model-based UI verification and static state atlases for [Rabbita](https://github.com/moonbit-community/rabbita).
 
 Proped Rabbita treats the following as first-class UI framework concepts:
@@ -17,7 +19,7 @@ The core model is:
 
 ```text
 initial Model
-  + available(Model) -> Array[Msg]
+  + actions(Model) -> Array[Msg]
   + update(Model, Msg) -> Model
   + view(Model) -> Html
   + Property<Model, Msg>
@@ -26,17 +28,19 @@ initial Model
   = verified reachable UI state graph
 ```
 
-This is not random DOM clicking. The generator asks the model for actions that are valid in the current state, executes typed transitions, checks invariants, reduces failures to a minimal reproducible trace, and records which inputs affect each rendered state.
+Proped Rabbita asks the model for actions that are valid in the current state, executes typed transitions, checks properties, reduces failures to reproducible traces, and records which inputs affect each rendered state.
 
-## Status
+## Current package
 
-Early MVP. The repository provides the executable framework core, browserless Rabbita adapter, state-atlas exporters, and differential-build planning. It does not yet instrument arbitrary Rabbita components or replace browser-level layout testing.
+- Version: `0.1.0`
+- Targets: native and JS
+- License: Apache-2.0
 
 ## Features
 
 ### Reachable-state exploration
 
-`Machine::actions` receives the current model and returns only currently valid messages. Generated traces therefore remain in the reachable state space rather than constructing arbitrary and contradictory field combinations.
+`Machine::actions` receives the current model and returns only currently valid messages. Generated traces therefore remain in the reachable state space rather than constructing arbitrary field combinations.
 
 ### State and transition properties
 
@@ -79,7 +83,7 @@ let machine = rabbita_machine(
 )
 ```
 
-State and structural properties can therefore run without Playwright or a browser. A future browser adapter will verify layout, focus, IME, scroll, animation, and other host-specific behavior only for selected states.
+State and structural properties run without Playwright or a browser because the adapter renders each model through Rabbita's server-side renderer.
 
 ### Differential UI builds
 
@@ -92,7 +96,7 @@ let affected = affected_state_ids(report, [
 ])
 ```
 
-Only the returned state IDs need to be re-rendered, rechecked, or sent to an optional browser backend. The MVP accepts explicit dependency identifiers; automatic extraction from Warren or the MoonBit build graph is planned.
+`affected_state_ids` returns the states whose recorded dependencies intersect the supplied identifiers. Callers can use those state IDs to select re-rendering or property checks.
 
 ## Minimal example
 
@@ -156,8 +160,7 @@ Run the local end-to-end newsletter form example with:
 moon run demo
 ```
 
-See [demo/README.md](demo/README.md) for the generated HTML, JSON, and
-Graphviz DOT atlas artifacts.
+See [demo/README.md](demo/README.md) for the generated HTML, JSON, and Graphviz DOT atlas artifacts.
 
 ## API
 
@@ -192,7 +195,7 @@ A property may inspect rendered state, transitions, or both.
 - `report_to_json`: machine-readable CI artifact, including dependencies
 - `report_to_dot`: Graphviz transition graph
 
-## What the MVP verifies
+## Verified behavior
 
 - typed model transitions
 - reachable-state invariants
@@ -202,18 +205,6 @@ A property may inspect rendered state, transitions, or both.
 - static rendered HTML
 - state and transition graph structure
 - state-level dependency impact for differential builds
-
-## What still requires a browser adapter
-
-- CSS layout and text wrapping
-- real fonts and image dimensions
-- focus and selection behavior
-- IME and clipboard behavior
-- drag-and-drop and scrolling
-- hover, media queries, and animation
-- browser engine differences
-
-The intended architecture keeps this as a second-stage verification backend. The pure runner explores broadly; a browser runner checks representative, changed, and failing states.
 
 ## Architecture
 
@@ -231,28 +222,10 @@ Rabbita adapter
   └─ Model -> Val[Html] -> static HTML
 
 Atlas exporters
-  ├─ HTML canvas
+  ├─ HTML state-flow atlas
   ├─ JSON graph
   └─ Graphviz DOT
-
-Future Warren integration
-  ├─ CLI and filesystem output
-  ├─ automatic dependency extraction
-  ├─ persistent state cache
-  ├─ Git-aware changed-state builds
-  └─ optional browser adapter
 ```
-
-## Roadmap
-
-1. Stabilize the runner and renderer adapter.
-2. Add weighted generators and deterministic PRNG state.
-3. Add command interpreters for generated success, failure, timeout, and cancellation results.
-4. Add model and fixture shrinkers in addition to action shrinkers.
-5. Connect dependency metadata to Warren and the MoonBit build graph.
-6. Add a Warren command that writes and incrementally updates HTML/JSON/DOT artifacts.
-7. Add an optional browser adapter for selected states.
-8. Add a Figma-like infinite-canvas atlas viewer.
 
 ## Development
 

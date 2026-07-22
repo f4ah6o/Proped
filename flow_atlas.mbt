@@ -20,7 +20,10 @@ fn atlas_node_kind(report : RunReport, state : StateSnapshot) -> String {
 }
 
 ///|
-fn atlas_edge_kind(report : RunReport, transition : TransitionSnapshot) -> String {
+fn atlas_edge_kind(
+  report : RunReport,
+  transition : TransitionSnapshot,
+) -> String {
   if atlas_state_has_failure(report, transition.to) {
     "failure"
   } else if transition.from == transition.to {

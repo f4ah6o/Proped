@@ -61,11 +61,17 @@ async fn main {
     @fs.mkdir("demo/out", recursive=true)
   }
   let html = @proped.report_to_html(report)
+  let svg = @proped.report_to_flow_svg(report)
   let json = @proped.report_to_json(report)
   let dot = @proped.report_to_dot(report)
   @fs.write_file(
     "demo/out/atlas.html",
     html,
+    create_mode=@fs.CreateMode::CreateOrTruncate,
+  )
+  @fs.write_file(
+    "demo/out/atlas.svg",
+    svg,
     create_mode=@fs.CreateMode::CreateOrTruncate,
   )
   @fs.write_file(
@@ -83,6 +89,7 @@ async fn main {
   println("transitions: \{report.transitions.length()}")
   println("property failures: \{report.failures.length()}")
   println("wrote demo/out/atlas.html")
+  println("wrote demo/out/atlas.svg")
   println("wrote demo/out/atlas.json")
   println("wrote demo/out/atlas.dot")
 }

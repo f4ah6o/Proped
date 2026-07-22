@@ -161,10 +161,10 @@ let changed_states = affected_state_ids(report, ["theme/base.css"])
 ニュースレター登録フォームの一連の例をローカルで実行します。
 
 ```bash
-moon run demo
+moon run src/demo
 ```
 
-生成される HTML の状態遷移グラフ、JSON、Graphviz DOT の出力は [demo/README.md](demo/README.md) を参照してください。
+生成される Flow Canvas の HTML/SVG 状態遷移グラフ、JSON、Graphviz DOT の出力は [demo/README.md](demo/README.md) を参照してください。
 
 ## API
 

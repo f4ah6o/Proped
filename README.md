@@ -157,10 +157,10 @@ let changed_states = affected_state_ids(report, ["theme/base.css"])
 Run the local end-to-end newsletter form example with:
 
 ```bash
-moon run demo
+moon run src/demo
 ```
 
-See [demo/README.md](demo/README.md) for the generated HTML, JSON, and Graphviz DOT atlas artifacts.
+See [demo/README.md](demo/README.md) for the generated Flow Canvas HTML/SVG, JSON, and Graphviz DOT atlas artifacts.
 
 ## API
 

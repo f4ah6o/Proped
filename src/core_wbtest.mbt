@@ -226,7 +226,9 @@ test "transition failure target is included in state snapshots" {
   assert_true(found)
   let html = report_to_html(report)
   assert_true(html.contains("increment fails"))
-  assert_true(html.contains("properties-panel"))
+  assert_true(html.contains("Property failures"))
+  assert_true(html.contains("flow-node"))
+  assert_true(!html.contains("<script"))
 }
 
 ///|
@@ -243,10 +245,58 @@ test "atlas exporters include discovered graph" {
   assert_true(json.contains("\"states\""))
   assert_true(json.contains("\"dependencies\""))
   assert_true(dot.contains("digraph ui_states"))
-  assert_true(html.contains("State flow atlas"))
-  assert_true(html.contains("Rendered app"))
-  assert_true(html.contains("Atlas metadata"))
-  assert_true(html.contains("atlas-data"))
+  assert_true(html.contains("<html lang=\"en\">"))
+  assert_true(html.contains("Proped Rabbita Atlas"))
+  assert_true(html.contains("Flow Canvas"))
+  assert_true(html.contains("flow-arrow"))
+  assert_true(html.contains("flow-node"))
+  assert_true(html.contains("atlas.json"))
+  assert_true(html.contains("atlas.dot"))
+  assert_true(!html.contains("<script"))
+  assert_true(html.contains(report_to_flow_svg(report)))
+}
+
+///|
+test "static atlas escapes failure details" {
+  let report : RunReport = {
+    seed: 1,
+    cases: 1,
+    steps: 0,
+    states: [],
+    transitions: [],
+    failures: [
+      {
+        property: "<property & name>",
+        message: "message with <unsafe> & quotes \"here\"",
+        state_id: "state<'one'>",
+        trace: ["Action<&>"],
+      },
+    ],
+  }
+  let html = report_to_html(report)
+  assert_true(html.contains("&lt;property &amp; name&gt;"))
+  assert_true(
+    html.contains("message with &lt;unsafe&gt; &amp; quotes &quot;here&quot;"),
+  )
+  assert_true(html.contains("state&lt;&#39;one&#39;&gt;"))
+  assert_true(html.contains("Action&lt;&amp;&gt;"))
+  assert_true(!html.contains("<script"))
+}
+
+///|
+test "empty static atlas includes a flow SVG and success summary" {
+  let report : RunReport = {
+    seed: 1,
+    cases: 0,
+    steps: 0,
+    states: [],
+    transitions: [],
+    failures: [],
+  }
+  let html = report_to_html(report)
+  assert_true(html.contains("Flow Canvas"))
+  assert_true(html.contains("flow-arrow"))
+  assert_true(html.contains("All generated traces satisfied"))
 }
 
 ///|

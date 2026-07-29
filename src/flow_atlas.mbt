@@ -1,6 +1,7 @@
 ///|
 priv struct AtlasTransition {
   from : String
+  action_id : String
   action : String
   to : String
   samples : Int
@@ -32,7 +33,10 @@ fn atlas_same_transition(
   left : AtlasTransition,
   right : TransitionSnapshot,
 ) -> Bool {
-  left.from == right.from && left.action == right.action && left.to == right.to
+  left.from == right.from &&
+  left.action_id == right.action_id &&
+  left.action == right.action &&
+  left.to == right.to
 }
 
 ///|
@@ -52,6 +56,7 @@ fn atlas_aggregate_transitions(report : RunReport) -> Array[AtlasTransition] {
     } else {
       aggregated.push({
         from: transition.from,
+        action_id: transition.action_id,
         action: transition.action,
         to: transition.to,
         samples: 1,
@@ -59,23 +64,6 @@ fn atlas_aggregate_transitions(report : RunReport) -> Array[AtlasTransition] {
     }
   }
   aggregated
-}
-
-///|
-fn atlas_contains_string(values : Array[String], target : String) -> Bool {
-  for value in values {
-    if value == target {
-      return true
-    }
-  }
-  false
-}
-
-///|
-fn atlas_push_unique_string(values : Array[String], value : String) -> Unit {
-  if !atlas_contains_string(values, value) {
-    values.push(value)
-  }
 }
 
 ///|
@@ -96,85 +84,17 @@ fn atlas_push_unique_int(values : Array[Int], value : Int) -> Unit {
 }
 
 ///|
-fn atlas_initial_state_ids(report : RunReport) -> Array[String] {
-  let ids : Array[String] = []
-  for state in report.states {
-    if state.depth == 0 {
-      atlas_push_unique_string(ids, state.id)
-    }
-  }
-  ids
-}
-
-///|
-fn atlas_next_states(
-  transitions : Array[AtlasTransition],
-  states : Array[String],
-  action : String,
-) -> Array[String] {
-  let next : Array[String] = []
-  for transition in transitions {
-    if transition.action == action &&
-      atlas_contains_string(states, transition.from) {
-      atlas_push_unique_string(next, transition.to)
-    }
-  }
-  next
-}
-
-///|
-fn atlas_previous_states(
-  transitions : Array[AtlasTransition],
-  states : Array[String],
-  action : String,
-) -> Array[String] {
-  let previous : Array[String] = []
-  for transition in transitions {
-    if transition.action == action &&
-      atlas_contains_string(states, transition.to) {
-      atlas_push_unique_string(previous, transition.from)
-    }
-  }
-  previous
-}
-
-///|
 fn atlas_failure_transition_indices(
   report : RunReport,
   transitions : Array[AtlasTransition],
 ) -> Array[Int] {
   let failing : Array[Int] = []
-  let initial_states = atlas_initial_state_ids(report)
   for failure in report.failures {
-    if failure.trace.is_empty() {
-      continue
-    }
-    let forward : Array[Array[String]] = [initial_states]
-    for action in failure.trace {
-      forward.push(
-        atlas_next_states(transitions, forward[forward.length() - 1], action),
-      )
-    }
-    let backward : Array[Array[String]] = []
-    for slot = 0; slot <= failure.trace.length(); slot = slot + 1 {
-      backward.push([])
-    }
-    backward[failure.trace.length()] = [failure.state_id]
-    let mut cursor = failure.trace.length()
-    while cursor > 0 {
-      let step = cursor - 1
-      backward[step] = atlas_previous_states(
-        transitions,
-        backward[cursor],
-        failure.trace[step],
-      )
-      cursor = step
-    }
-    for step, action in failure.trace {
+    for step in failure.structured_trace {
       for index, transition in transitions {
-        if transition.action == action &&
-          atlas_contains_string(forward[step], transition.from) &&
-          atlas_contains_string(backward[step + 1], transition.to) {
+        if transition.from == step.from &&
+          transition.action_id == step.action_id &&
+          transition.to == step.to {
           atlas_push_unique_int(failing, index)
         }
       }

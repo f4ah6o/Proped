@@ -64,20 +64,21 @@ let properties : Array[Property[Model, Msg]] = [
 
 ### Failure shrinking
 
-When a property fails, Proped Rabbita first removes unnecessary actions from the trace, then applies the message-specific shrinker. Reports contain the minimized sequence rather than only the original generated sequence.
+When a property fails, Proped Rabbita first removes unnecessary actions from the trace, then applies the message-specific shrinker. Reports contain the minimized sequence rather than only the original generated sequence. Shrinking records visited traces and uses `RunConfig.shrink_budget`, so cyclic, duplicate, and self-referential shrink candidates terminate with a diagnostic when the budget is exhausted.
 
 ### Browserless Rabbita rendering
 
-`rabbita_machine` uses Rabbita's server-side renderer:
+`rabbita_machine_with_action_id` uses Rabbita's server-side renderer and keeps stable action IDs separate from display labels:
 
 ```moonbit
-let machine = rabbita_machine(
+let machine = rabbita_machine_with_action_id(
   initial_model,
   update,
   available_actions,
   shrink_msg,
   fn(model) { @rabbita.Val::constant(view(model)) },
   model_fingerprint,
+  stable_action_id,
   describe_msg,
   fn(model) { dependencies_for(model) },
 )
@@ -129,6 +130,7 @@ let machine : Machine[Model, Msg] = {
   },
   render: fn(model) { "<button>\{model.count}</button>" },
   fingerprint: fn(model) { "counter:\{model.count}" },
+  action_id: fn(msg) { msg.to_string() },
   describe_msg: fn(msg) { msg.to_string() },
   dependencies: fn(model) {
     if model.count == 0 {
@@ -173,8 +175,9 @@ See [demo/README.md](demo/README.md) for the generated Flow Canvas HTML/SVG, JSO
 | `actions` | Valid action candidates for the current model |
 | `shrink` | Smaller representatives for a message |
 | `render` | Browserless state renderer |
-| `fingerprint` | Stable state identity and deduplication key |
-| `describe_msg` | Human-readable trace entry |
+| `fingerprint` | Stable state identity and deduplication key; collisions are reported |
+| `action_id` | Stable machine-readable action identity used by replay and graph edges |
+| `describe_msg` | Human-readable trace label; labels may be shared |
 | `dependencies` | Stable inputs that affect a rendered state |
 
 ### `Property[Model, Msg]`
@@ -186,8 +189,11 @@ A property may inspect rendered state, transitions, or both.
 
 ### Reports and differential builds
 
-- `run`: explore states, evaluate properties, and generate a report
+- `run`: explore states, evaluate properties, and generate a report. The report stores the effective seed, bounds, PRNG strategy, diagnostics, and schema version.
+- `run_checked`: the same exploration with explicit `RunConfigError` results. `RunConfig::validate` checks `cases >= 0`, `max_depth >= 0`, `max_states > 0`, and `shrink_budget > 0`.
 - `affected_state_ids`: select states affected by changed dependency identifiers
+
+Each `FailureReport` retains the legacy human-readable `trace` and a `structured_trace` of exact `from`, `action_id`, label, and `to` transition records. Atlas exporters use the structured records when marking failure edges. Existing callers can keep using `rabbita_machine`; it uses `describe_msg` as the action ID for compatibility. New machines should use `rabbita_machine_with_action_id` or provide distinct `Machine.action_id` and `Machine.describe_msg` functions.
 
 ### Exporters
 

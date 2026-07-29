@@ -37,13 +37,14 @@ fn newsletter_properties() -> Array[
 
 ///|
 fn newsletter_machine() -> @proped.Machine[NewsletterModel, NewsletterMsg] {
-  @proped.rabbita_machine(
+  @proped.rabbita_machine_with_action_id(
     newsletter_initial(),
     newsletter_update,
     newsletter_actions,
     newsletter_shrink,
     newsletter_view,
     newsletter_fingerprint,
+    newsletter_action_id,
     newsletter_describe,
     newsletter_dependencies,
   )
@@ -56,6 +57,7 @@ async fn main {
     max_depth: 8,
     max_states: 64,
     seed: 7,
+    shrink_budget: 1024,
   })
   if !@fs.exists("demo/out") {
     @fs.mkdir("demo/out", recursive=true)

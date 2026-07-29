@@ -136,8 +136,13 @@ test "flow SVG contains routed nodes and edges" {
 ///|
 test "run report adapts to flow graph and SVG" {
   let report : RunReport = {
+    schema_version: 2,
     seed: 1,
     cases: 1,
+    max_depth: 1,
+    max_states: 2,
+    shrink_budget: 1024,
+    strategy: "xorshift64",
     steps: 1,
     states: [
       {
@@ -148,8 +153,11 @@ test "run report adapts to flow graph and SVG" {
       },
       { id: "done", html: "<p>Done</p>", depth: 1, dependencies: ["view.mbt"] },
     ],
-    transitions: [{ from: "idle", action: "Start", to: "done" }],
+    transitions: [
+      { from: "idle", action_id: "start", action: "Start", to: "done" },
+    ],
     failures: [],
+    diagnostics: [],
   }
   let graph = report_to_flow_graph(report)
   assert_eq(graph.nodes.length(), 2)
@@ -161,8 +169,13 @@ test "run report adapts to flow graph and SVG" {
 ///|
 test "Atlas aggregates samples and marks only the failing trace path" {
   let report : RunReport = {
+    schema_version: 2,
     seed: 1,
     cases: 2,
+    max_depth: 2,
+    max_states: 3,
+    shrink_budget: 1024,
+    strategy: "xorshift64",
     steps: 4,
     states: [
       { id: "a", html: "<p>A</p>", depth: 0, dependencies: [] },
@@ -170,19 +183,24 @@ test "Atlas aggregates samples and marks only the failing trace path" {
       { id: "b", html: "<p>B</p>", depth: 2, dependencies: [] },
     ],
     transitions: [
-      { from: "a", action: "Start", to: "b" },
-      { from: "a", action: "Start", to: "b" },
-      { from: "a", action: "ToC", to: "c" },
-      { from: "c", action: "Start", to: "b" },
+      { from: "a", action_id: "start", action: "Start", to: "b" },
+      { from: "a", action_id: "start", action: "Start", to: "b" },
+      { from: "a", action_id: "to-c", action: "ToC", to: "c" },
+      { from: "c", action_id: "start", action: "Start", to: "b" },
     ],
     failures: [
       {
         property: "submit fails",
         message: "rejected",
         state_id: "b",
-        trace: ["ToC", "Start"],
+        trace: ["Start"],
+        structured_trace: [
+          { from: "a", action_id: "to-c", action: "ToC", to: "c" },
+          { from: "c", action_id: "start", action: "Start", to: "b" },
+        ],
       },
     ],
+    diagnostics: [],
   }
   let graph = report_to_flow_graph(report)
   assert_eq(graph.edges.length(), 3)

@@ -85,6 +85,16 @@ fn newsletter_describe(msg : NewsletterMsg) -> String {
 }
 
 ///|
+fn newsletter_action_id(msg : NewsletterMsg) -> String {
+  match msg {
+    SetEmail(email) => "set-email:\{email}"
+    ToggleConsent => "toggle-consent"
+    Submit => "submit"
+    Reset => "reset"
+  }
+}
+
+///|
 fn newsletter_fingerprint(model : NewsletterModel) -> String {
   "newsletter:\{newsletter_phase(model)}:\{model.email}:\{model.consented}:\{model.submitted}"
 }

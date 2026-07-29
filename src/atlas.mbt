@@ -31,6 +31,36 @@ fn report_transition_is_failure(
 }
 
 ///|
+fn transition_identity_equal(
+  left : TransitionSnapshot,
+  right : TransitionSnapshot,
+) -> Bool {
+  left.from == right.from &&
+  left.action_id == right.action_id &&
+  left.to == right.to
+}
+
+///|
+fn report_transition_records(report : RunReport) -> Array[TransitionSnapshot] {
+  let records = report.transitions.copy()
+  for failure in report.failures {
+    for provenance in failure.structured_trace {
+      let mut found = false
+      for existing in records {
+        if transition_identity_equal(existing, provenance) {
+          found = true
+          break
+        }
+      }
+      if !found {
+        records.push(provenance)
+      }
+    }
+  }
+  records
+}
+
+///|
 /// Serialize a run report for CI artifacts and external visualizers.
 pub fn report_to_json(report : RunReport) -> String {
   let output = StringBuilder::new()
@@ -141,6 +171,7 @@ pub fn report_to_json(report : RunReport) -> String {
 /// Export the discovered graph in Graphviz DOT format.
 pub fn report_to_dot(report : RunReport) -> String {
   let output = StringBuilder::new()
+  let transitions = report_transition_records(report)
   output.write_string("digraph ui_states {\n  rankdir=LR;\n")
   for state in report.states {
     output.write_string("  ")
@@ -149,7 +180,7 @@ pub fn report_to_dot(report : RunReport) -> String {
     write_json_string(output, state.id)
     output.write_string("];\n")
   }
-  for transition in report.transitions {
+  for transition in transitions {
     output.write_string("  ")
     write_json_string(output, transition.from)
     output.write_string(" -> ")

@@ -35,32 +35,51 @@ fn atlas_same_transition(
 ) -> Bool {
   left.from == right.from &&
   left.action_id == right.action_id &&
-  left.action == right.action &&
   left.to == right.to
+}
+
+///|
+fn atlas_add_transition(
+  aggregated : Array[AtlasTransition],
+  transition : TransitionSnapshot,
+  samples : Int,
+) -> Unit {
+  let mut matched_index = -1
+  for index, current in aggregated {
+    if atlas_same_transition(current, transition) {
+      matched_index = index
+      break
+    }
+  }
+  if matched_index >= 0 {
+    let current = aggregated[matched_index]
+    aggregated[matched_index] = {
+      ..current,
+      samples: current.samples + samples,
+    }
+  } else {
+    aggregated.push({
+      from: transition.from,
+      action_id: transition.action_id,
+      action: transition.action,
+      to: transition.to,
+      samples,
+    })
+  }
 }
 
 ///|
 fn atlas_aggregate_transitions(report : RunReport) -> Array[AtlasTransition] {
   let aggregated : Array[AtlasTransition] = []
   for transition in report.transitions {
-    let mut matched_index = -1
-    for index, current in aggregated {
-      if atlas_same_transition(current, transition) {
-        matched_index = index
-        break
-      }
-    }
-    if matched_index >= 0 {
-      let current = aggregated[matched_index]
-      aggregated[matched_index] = { ..current, samples: current.samples + 1 }
-    } else {
-      aggregated.push({
-        from: transition.from,
-        action_id: transition.action_id,
-        action: transition.action,
-        to: transition.to,
-        samples: 1,
-      })
+    atlas_add_transition(aggregated, transition, 1)
+  }
+  // Failure provenance may identify a minimized edge that was not part of
+  // the generated exploration. Include it for visualization with zero raw
+  // samples, without mutating `RunReport.transitions`.
+  for failure in report.failures {
+    for transition in failure.structured_trace {
+      atlas_add_transition(aggregated, transition, 0)
     }
   }
   aggregated

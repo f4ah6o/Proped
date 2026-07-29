@@ -221,6 +221,12 @@ fn left_only_label_machine() -> Machine[Int, LabelMsg] {
 }
 
 ///|
+fn left_only_colliding_label_machine() -> Machine[Int, LabelMsg] {
+  let machine = duplicate_label_machine(true)
+  { ..machine, actions: fn(_) { [LabelLeft] } }
+}
+
+///|
 fn config_for_tests(
   cases : Int,
   max_depth : Int,
@@ -339,7 +345,26 @@ test "invalid run configuration is explicit" {
 
 ///|
 test "state and action identity collisions are diagnosed" {
-  assert_true(!action_is_available(left_only_label_machine(), 0, LabelRight))
+  assert_true(
+    available_action(left_only_label_machine(), 0, LabelRight) is None,
+  )
+  let replay_property = state_property("left action fails", fn(model, _) {
+    if model == 1 {
+      Fail("left")
+    } else {
+      Pass
+    }
+  })
+  match
+    replay_failure(left_only_colliding_label_machine(), replay_property, [
+      LabelRight,
+    ]) {
+    Some(failure) => {
+      assert_eq(failure.structured_trace.length(), 1)
+      assert_eq(failure.structured_trace[0].to, "label:1")
+    }
+    None => fail("replay must use the available message with the matching ID")
+  }
   let state_report = run(
     state_collision_machine(),
     [],
@@ -544,6 +569,7 @@ test "transition failure target is included in state snapshots" {
   assert_eq(provenance[0].from, "counter:0")
   assert_eq(provenance[0].action, report.failures[0].trace[0])
   assert_eq(provenance[0].to, report.failures[0].state_id)
+  assert_eq(report.transitions.length(), report.steps)
   let html = report_to_html(report)
   assert_true(html.contains("increment fails"))
   assert_true(html.contains("Property failures"))

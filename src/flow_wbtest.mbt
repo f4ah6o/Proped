@@ -209,4 +209,38 @@ test "Atlas aggregates samples and marks only the failing trace path" {
   assert_eq(graph.edges[1].kind, "failure")
   assert_eq(graph.edges[2].kind, "failure")
   assert_true(flow_to_svg(graph).contains("Start ×2"))
+
+  let minimized_report : RunReport = {
+    schema_version: 2,
+    seed: 1,
+    cases: 1,
+    max_depth: 2,
+    max_states: 3,
+    shrink_budget: 1024,
+    strategy: "xorshift64",
+    steps: 1,
+    states: [
+      { id: "a", html: "<p>A</p>", depth: 0, dependencies: [] },
+      { id: "b", html: "<p>B</p>", depth: 1, dependencies: [] },
+      { id: "c", html: "<p>C</p>", depth: 1, dependencies: [] },
+    ],
+    transitions: [{ from: "a", action_id: "raw", action: "Raw", to: "b" }],
+    failures: [
+      {
+        property: "minimized fails",
+        message: "rejected",
+        state_id: "c",
+        trace: ["Shrunk"],
+        structured_trace: [
+          { from: "a", action_id: "shrunk", action: "Shrunk", to: "c" },
+        ],
+      },
+    ],
+    diagnostics: [],
+  }
+  let minimized_graph = report_to_flow_graph(minimized_report)
+  assert_eq(minimized_report.transitions.length(), minimized_report.steps)
+  assert_eq(minimized_graph.edges.length(), 2)
+  assert_eq(minimized_graph.edges[1].sample_count, 0)
+  assert_eq(minimized_graph.edges[1].kind, "failure")
 }

@@ -262,18 +262,18 @@ fn[Model, Msg] check_transition(
 }
 
 ///|
-fn[Model, Msg] action_is_available(
+fn[Model, Msg] available_action(
   machine : Machine[Model, Msg],
   model : Model,
   msg : Msg,
-) -> Bool {
+) -> Msg? {
   let expected = (machine.action_id)(msg)
   for available in (machine.actions)(model) {
     if (machine.action_id)(available) == expected {
-      return true
+      return Some(available)
     }
   }
-  false
+  None
 }
 
 ///|
@@ -344,17 +344,6 @@ fn observe_action(
 }
 
 ///|
-fn transitions_equal(
-  left : TransitionSnapshot,
-  right : TransitionSnapshot,
-) -> Bool {
-  left.from == right.from &&
-  left.action_id == right.action_id &&
-  left.action == right.action &&
-  left.to == right.to
-}
-
-///|
 fn observe_transition_identity(
   report : RunReport,
   transition : TransitionSnapshot,
@@ -421,19 +410,20 @@ fn[Model, Msg] replay_failure(
     Pass => ()
   }
   for depth, msg in trace {
-    if !action_is_available(machine, model, msg) {
-      return None
+    let available_msg = match available_action(machine, model, msg) {
+      Some(available) => available
+      None => return None
     }
-    let next = (machine.update)(model, msg)
+    let next = (machine.update)(model, available_msg)
     let next_id = (machine.fingerprint)(next)
     structured_trace.push({
       from: (machine.fingerprint)(model),
-      action_id: (machine.action_id)(msg),
-      action: (machine.describe_msg)(msg),
+      action_id: (machine.action_id)(available_msg),
+      action: (machine.describe_msg)(available_msg),
       to: next_id,
     })
     states.push({ model: next, depth: depth + 1 })
-    match check_transition(property, model, msg, next) {
+    match check_transition(property, model, available_msg, next) {
       Fail(message) =>
         return Some({ message, state_id: next_id, states, structured_trace })
       Pass => ()
@@ -540,29 +530,6 @@ fn[Model, Msg] shrink_trace(
 }
 
 ///|
-fn append_transition_if_missing(
-  report : RunReport,
-  observed : Array[ObservedAction],
-  transition : TransitionSnapshot,
-) -> Unit {
-  observe_action(
-    report,
-    observed,
-    transition.action_id,
-    transition.action,
-    transition.from,
-    transition.to,
-  )
-  observe_transition_identity(report, transition)
-  for existing in report.transitions {
-    if transitions_equal(existing, transition) {
-      return
-    }
-  }
-  report.transitions.push(transition)
-}
-
-///|
 fn[Model, Msg] append_failure(
   report : RunReport,
   observed : Array[ObservedAction],
@@ -583,11 +550,20 @@ fn[Model, Msg] append_failure(
         )
       }
       for transition in failure.structured_trace {
-        append_transition_if_missing(report, observed, transition)
+        // Failure provenance is exported separately from raw exploration
+        // transitions. It must not alter `steps` or raw sample counts.
+        observe_action(
+          report,
+          observed,
+          transition.action_id,
+          transition.action,
+          transition.from,
+          transition.to,
+        )
       }
       let rendered_trace : Array[String] = []
-      for msg in minimal {
-        rendered_trace.push((machine.describe_msg)(msg))
+      for transition in failure.structured_trace {
+        rendered_trace.push(transition.action)
       }
       report.failures.push({
         property: property.name,

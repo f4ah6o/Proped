@@ -1,0 +1,16 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/demo"
+
+// Values
+
+// Errors
+
+// Types and methods
+type NewsletterModel derive(Eq)
+
+type NewsletterMsg
+
+// Type aliases
+
+// Traits
+

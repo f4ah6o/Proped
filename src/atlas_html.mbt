@@ -85,6 +85,7 @@ pub fn report_to_html(report : RunReport) -> String {
   atlas_html_write_stat(output, "Raw transitions", report.transitions.length())
   atlas_html_write_stat(output, "Unique edges", unique_edges)
   atlas_html_write_stat(output, "Property failures", report.failures.length())
+  atlas_html_write_stat(output, "Diagnostics", report.diagnostics.length())
   output.write_string("</dl></section>")
   output.write_string(
     (
@@ -128,6 +129,31 @@ pub fn report_to_html(report : RunReport) -> String {
         output.write_string("</ol>")
       }
       output.write_string("</li>")
+    }
+    output.write_string("</ul>")
+  }
+  output.write_string(
+    (
+      #|</section>
+      #|<section class="panel" aria-labelledby="diagnostic-title"><h2 id="diagnostic-title">Diagnostics</h2>
+    ),
+  )
+  if report.diagnostics.is_empty() {
+    output.write_string(
+      "<p class=\"success\">No runner diagnostics were recorded.</p>",
+    )
+  } else {
+    output.write_string("<ul class=\"failure-list\">")
+    for diagnostic in report.diagnostics {
+      output.write_string("<li class=\"failure\"><h3>")
+      output.write_string(
+        atlas_html_escape(run_diagnostic_kind_name(diagnostic.kind)),
+      )
+      output.write_string("</h3><p>")
+      output.write_string(atlas_html_escape(diagnostic.message))
+      output.write_string("</p><div class=\"failure-meta\">Identity: <code>")
+      output.write_string(atlas_html_escape(diagnostic.identity))
+      output.write_string("</code></div></li>")
     }
     output.write_string("</ul>")
   }

@@ -1,0 +1,222 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita"
+
+import {
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn affected_state_ids(RunReport, Array[String]) -> Array[String]
+
+pub fn clear_flow_selection(FlowGraph) -> FlowGraph
+
+pub fn fit_flow_view(FlowGraph, Int, Int, Int) -> FlowGraph
+
+pub fn flow_bounds(FlowGraph) -> FlowBounds
+
+pub fn flow_to_svg(FlowGraph) -> String
+
+pub fn layout_flow(FlowGraph, FlowLayoutConfig) -> FlowGraph
+
+pub fn pan_flow(FlowGraph, Int, Int) -> FlowGraph
+
+pub fn[Model, Msg] rabbita_machine(Model, (Model, Msg) -> Model, (Model) -> Array[Msg], (Msg) -> Array[Msg], (Model) -> @rabbita.Val[@html.Html], (Model) -> String, (Msg) -> String, (Model) -> Array[String]) -> Machine[Model, Msg]
+
+pub fn[Model, Msg] rabbita_machine_with_action_id(Model, (Model, Msg) -> Model, (Model) -> Array[Msg], (Msg) -> Array[Msg], (Model) -> @rabbita.Val[@html.Html], (Model) -> String, (Msg) -> String, (Msg) -> String, (Model) -> Array[String]) -> Machine[Model, Msg]
+
+pub fn report_to_dot(RunReport) -> String
+
+pub fn report_to_flow_graph(RunReport) -> FlowGraph
+
+pub fn report_to_flow_svg(RunReport) -> String
+
+pub fn report_to_html(RunReport) -> String
+
+pub fn report_to_json(RunReport) -> String
+
+pub fn[Model, Msg] run(Machine[Model, Msg], Array[Property[Model, Msg]], RunConfig) -> RunReport
+
+pub fn[Model, Msg] run_checked(Machine[Model, Msg], Array[Property[Model, Msg]], RunConfig) -> Result[RunReport, RunConfigError]
+
+pub fn select_flow_edge(FlowGraph, String) -> FlowGraph
+
+pub fn select_flow_node(FlowGraph, String) -> FlowGraph
+
+pub fn[Model, Msg] state_property(String, (Model, String) -> Verdict) -> Property[Model, Msg]
+
+pub fn[Model, Msg] transition_property(String, (Model, Msg, Model) -> Verdict) -> Property[Model, Msg]
+
+pub fn zoom_flow(FlowGraph, Int) -> FlowGraph
+
+// Errors
+
+// Types and methods
+pub(all) struct FailureReport {
+  property : String
+  message : String
+  state_id : String
+  trace : Array[String]
+  structured_trace : Array[TransitionSnapshot]
+}
+
+pub(all) struct FlowBounds {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct FlowEdge {
+  id : String
+  source : String
+  target : String
+  label : String
+  route : Array[FlowPoint]
+  kind : String
+  selected : Bool
+  sample_count : Int
+} derive(Eq, @debug.Debug)
+pub fn FlowEdge::new(String, String, String, String) -> Self
+
+pub(all) struct FlowGraph {
+  nodes : Array[FlowNode]
+  edges : Array[FlowEdge]
+  viewport : FlowViewport
+  selection : FlowSelection
+} derive(Eq, @debug.Debug)
+pub fn FlowGraph::new(Array[FlowNode], Array[FlowEdge]) -> Self
+
+pub(all) struct FlowLayoutConfig {
+  padding : Int
+  horizontal_gap : Int
+  vertical_gap : Int
+  default_node_width : Int
+  default_node_height : Int
+} derive(Eq, @debug.Debug)
+pub fn FlowLayoutConfig::default() -> Self
+
+pub(all) struct FlowNode {
+  id : String
+  label : String
+  rank : Int
+  position : FlowPoint
+  size : FlowSize
+  kind : String
+  selected : Bool
+  draggable : Bool
+} derive(Eq, @debug.Debug)
+pub fn FlowNode::new(String, String, Int) -> Self
+
+pub(all) struct FlowPoint {
+  x : Int
+  y : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum FlowSelection {
+  EmptySelection
+  NodeSelection(String)
+  EdgeSelection(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct FlowSize {
+  width : Int
+  height : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct FlowViewport {
+  x : Int
+  y : Int
+  zoom_percent : Int
+  width : Int
+  height : Int
+} derive(Eq, @debug.Debug)
+pub fn FlowViewport::default() -> Self
+
+pub(all) struct Machine[Model, Msg] {
+  initial : Model
+  update : (Model, Msg) -> Model
+  actions : (Model) -> Array[Msg]
+  shrink : (Msg) -> Array[Msg]
+  render : (Model) -> String
+  fingerprint : (Model) -> String
+  action_id : (Msg) -> String
+  describe_msg : (Msg) -> String
+  dependencies : (Model) -> Array[String]
+}
+
+pub(all) struct Property[Model, Msg] {
+  name : String
+  state : ((Model, String) -> Verdict)?
+  transition : ((Model, Msg, Model) -> Verdict)?
+}
+
+pub(all) struct RunConfig {
+  cases : Int
+  max_depth : Int
+  max_states : Int
+  seed : Int
+  shrink_budget : Int
+}
+pub fn RunConfig::default() -> Self
+pub fn RunConfig::validate(Self) -> Result[Unit, RunConfigError]
+
+pub(all) enum RunConfigError {
+  InvalidCases(Int)
+  InvalidMaxDepth(Int)
+  InvalidMaxStates(Int)
+  InvalidShrinkBudget(Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RunDiagnostic {
+  kind : RunDiagnosticKind
+  identity : String
+  message : String
+}
+
+pub(all) enum RunDiagnosticKind {
+  InvalidConfig
+  StateIdentityCollision
+  ActionIdentityCollision
+  ShrinkBudgetExceeded
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RunReport {
+  schema_version : Int
+  seed : Int
+  cases : Int
+  max_depth : Int
+  max_states : Int
+  shrink_budget : Int
+  strategy : String
+  mut steps : Int
+  states : Array[StateSnapshot]
+  transitions : Array[TransitionSnapshot]
+  failures : Array[FailureReport]
+  diagnostics : Array[RunDiagnostic]
+}
+
+pub(all) struct StateSnapshot {
+  id : String
+  html : String
+  depth : Int
+  dependencies : Array[String]
+}
+
+pub(all) struct TransitionSnapshot {
+  from : String
+  action_id : String
+  action : String
+  to : String
+}
+
+pub(all) enum Verdict {
+  Pass
+  Fail(String)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

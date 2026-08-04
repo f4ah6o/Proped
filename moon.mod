@@ -1,6 +1,6 @@
 name = "f4ah6o/proped-rabbita"
 
-version = "0.5.0"
+version = "0.6.0"
 
 source = "src"
 
@@ -25,6 +25,7 @@ preferred_target = "native"
 supported_targets = "+native+js"
 
 import {
+  "bobzhang/vg@0.3.0",
   "moonbit-community/rabbita@0.13.1",
   "moonbitlang/async@0.20.2",
   "moonbitlang/x@0.4.46",

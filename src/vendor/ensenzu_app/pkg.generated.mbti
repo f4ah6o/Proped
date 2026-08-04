@@ -1,0 +1,153 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/ensenzu_app"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "f4ah6o/proped-rabbita/external",
+  "f4ah6o/proped-rabbita/vendor/ensenzu_core",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn all_field_keys() -> Array[FieldKey]
+
+pub fn default_app_fields() -> AppFields
+
+pub fn default_app_params() -> AppParams
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn field_name(FieldKey) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn input_corpus() -> Array[String]
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+// Errors
+pub(all) suberror AppInputError {
+  InvalidField(String, String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct AppFields {
+  input_source : InputSource
+  phase_voltage : String
+  frequency : String
+  poles : String
+  phases : String
+  r1 : String
+  x1 : String
+  r2 : String
+  x2 : String
+  xm : String
+  core_loss_resistance : String
+  mechanical_loss : String
+  no_load_input_power : String
+  no_load_current : String
+  locked_rotor_voltage : String
+  locked_rotor_input_power : String
+  locked_rotor_current : String
+  width : String
+  height : String
+  output_power : String
+} derive(Eq, @debug.Debug)
+pub fn AppFields::to_params(Self) -> AppParams raise AppInputError
+
+pub(all) struct AppParams {
+  input_source : InputSource
+  phase_voltage : Double
+  frequency : Double
+  poles : Int
+  phases : Int
+  r1 : Double
+  x1 : Double
+  r2 : Double
+  x2 : Double
+  xm : Double
+  core_loss_resistance : Double
+  mechanical_loss : Double
+  no_load_input_power : Double
+  no_load_current : Double
+  locked_rotor_voltage : Double
+  locked_rotor_input_power : Double
+  locked_rotor_current : Double
+  width : Double
+  height : Double
+  output_power : Double
+} derive(Eq, @debug.Debug)
+
+pub(all) enum FieldKey {
+  PhaseVoltage
+  Frequency
+  Poles
+  Phases
+  R1
+  X1
+  R2
+  X2
+  Xm
+  CoreLossResistance
+  MechanicalLoss
+  NoLoadInputPower
+  NoLoadCurrent
+  LockedRotorVoltage
+  LockedRotorInputPower
+  LockedRotorCurrent
+  Width
+  Height
+  OutputPower
+} derive(Eq, @debug.Debug)
+
+pub(all) enum InputSource {
+  LTypeEquivalentCircuit
+  NoLoadLockedRotorTest
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Model {
+  fields : AppFields
+  svg : String
+  characteristics : @ensenzu_core.CircleDiagramCharacteristics?
+  line_lengths : @ensenzu_core.CharacteristicLineLengths?
+  error : String?
+  pending_input : Bool
+  show_advanced : Bool
+  confirm_reset : Bool
+  pending_effects : Array[@external.EffectDescriptor]
+  next_effect_id : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  Change(FieldKey, String)
+  ChangeInputSource(InputSource)
+  RequestReset
+  Reset
+  CancelReset
+  Download
+  ToggleAdvanced
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

@@ -69,6 +69,7 @@ Lists reviewed external targets, their pinned repository and revision, adapter s
 
 ```bash
 moon run src/cli -- external inspect proton-demo-todo --json
+moon run src/cli -- external inspect ensenzu-app --json
 ```
 
 Returns manifest entry points, source SHA-256, effect policy, enabled properties, and the explicit `read-only` upstream write policy.
@@ -77,6 +78,7 @@ Returns manifest entry points, source SHA-256, effect policy, enabled properties
 
 ```bash
 moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
+moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json
 ```
 
 Mechanically scans one local MoonBit source file for Rabbita imports, state constructors, `Model`, `Msg`, `update`, `view`, command, and subscription boundaries. The scanner classifies the file as `pure`, `effect-model`, `subscription-model`, `browser-replay`, or `unsupported`; reviewed manifest entries remain authoritative.
@@ -85,6 +87,7 @@ Mechanically scans one local MoonBit source file for Rabbita imports, state cons
 
 ```bash
 moon run src/cli -- external run proton-demo-todo --json
+moon run src/cli -- external run ensenzu-app --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -93,6 +96,7 @@ Runs deterministic external adapters under `<output>/external/<id>/`. Native, ne
 | External target | Property | Exact minimized trace |
 | --- | --- | --- |
 | `proton-demo-todo` | `snapshot version never decreases` | `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` |
+| `ensenzu-app` | `active numeric fields reject non-finite input` | `Change(Frequency, "Infinity")` |
 
 External repositories are read-only inputs. These commands do not create upstream issues, pull requests, comments, or commits.
 

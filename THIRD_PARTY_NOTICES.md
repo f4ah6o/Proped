@@ -74,3 +74,16 @@ The upstream license is included at `src/vendor/rabbita_websocket/LICENSE`.
 - Adapted source: `src/vendor/proton_todo/proton_todo.mbt`
 
 The full MIT license is included at `src/vendor/proton_todo/LICENSE`. The adapter replaces Proton bridge execution with deterministic effect descriptors and preserves the uncorrelated snapshot update behavior for bounded response-order exploration.
+
+
+## Ensenzu application and calculation core
+
+- Project: `shiguri-01/ensenzu`
+- Source paths: `app/src`, `app/styles.css`, and `ensenzu/`
+- Revision: `f1fbec776a393e7023c8fa8324ea26c0774752e5`
+- License: Apache License 2.0
+- Preserved application source: `src/vendor/ensenzu_app/upstream/`
+- Adapted application source: `src/vendor/ensenzu_app/ensenzu_app.mbt`
+- Preserved calculation source: `src/vendor/ensenzu_core/`
+
+The Apache License 2.0 text is included in both vendor directories. The calculation source is vendored because the upstream workspace references `shiguri-01/ensenzu@0.1.0`, but that module is not available from the public MoonBit registry. The application adapter replaces only the browser download command and exploration boundary; source revision, hashes, and changes are documented in each `UPSTREAM.md`.

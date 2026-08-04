@@ -10,11 +10,11 @@ Proped Rabbita は、Rabbita UI の到達可能状態を探索し、モデルと
 moon run src/cli -- help
 moon run src/cli -- demo list --json
 moon run src/cli -- demo run all --json
-moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
+moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json
 moon run src/cli -- external run all --json
 ```
 
-最後のcommandは各demoを `demo/out/<demo-id>/` に出力し、stdoutへ1つのJSON result envelopeを返します。エージェントやscriptは次のcommandから安定した契約を取得します。
+`demo run all` は各demoを `demo/out/<demo-id>/` に、`external run all` は外部targetを `demo/out/external/<id>/` に出力します。どちらもstdoutへ1つのJSON result envelopeを返します。エージェントやscriptは次のcommandから安定した契約を取得します。
 
 ```bash
 moon run src/cli -- schema --json
@@ -43,7 +43,7 @@ vendor source、revision、hash、license、adapter変更、failureの根拠は 
 
 外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。
 
-最初のdogfoodである `proton-demo-todo` は320 state・618 transitionを探索し、snapshot rollbackを `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` へ縮約します。外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。
+external campaignには `proton-demo-todo` と `ensenzu-app` が含まれます。Protonは320 state・618 transitionを探索し、snapshot rollbackを `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` へ縮約します。Ensenzuは834 state・1,900 transitionを探索し、非有限frequencyの受理を `Change(Frequency, "Infinity")` へ縮約します。外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。
 
 各runは `atlas.html`、`atlas.svg`、`atlas.json`、`atlas.dot`、`summary.json` を生成します。
 
@@ -111,12 +111,14 @@ src/
   vendor/rabbita_sokoban/           malformed timeline failure
   vendor/rabbita_subscriptions/     stale timer failure
   vendor/rabbita_websocket/         duplicate disconnect failure
-  vendor/proton_todo/                stale snapshot ordering failure
-external/                            pinned external manifestとschema
+  vendor/proton_todo/               stale snapshot ordering failure
+  vendor/ensenzu_app/               numeric form・SVG application adapter
+  vendor/ensenzu_core/              固定したEnsenzu計算実装
   core.mbt                          探索、shrink、最小failure保持
   rabbita_adapter.mbt               browserless Rabbita rendering
   atlas*.mbt                        report exporter
   flow*.mbt                         決定的graph layout
+external/                            pinned external manifestとschema
 ```
 
 ## 開発

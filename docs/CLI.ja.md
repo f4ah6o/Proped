@@ -69,6 +69,7 @@ review済みexternal targetのrepository、固定revision、adapter strategy、l
 
 ```bash
 moon run src/cli -- external inspect proton-demo-todo --json
+moon run src/cli -- external inspect ensenzu-app --json
 ```
 
 manifestのentry point、source SHA-256、effect policy、有効property、upstreamへの明示的な`read-only` policyを返します。
@@ -77,6 +78,7 @@ manifestのentry point、source SHA-256、effect policy、有効property、upstr
 
 ```bash
 moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
+moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json
 ```
 
 local MoonBit source fileからRabbita import、state constructor、`Model`、`Msg`、`update`、`view`、command、subscription境界を機械検出します。scannerは `pure`、`effect-model`、`subscription-model`、`browser-replay`、`unsupported` に分類しますが、review済みmanifestを最終的な根拠とします。
@@ -85,6 +87,7 @@ local MoonBit source fileからRabbita import、state constructor、`Model`、`M
 
 ```bash
 moon run src/cli -- external run proton-demo-todo --json
+moon run src/cli -- external run ensenzu-app --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -93,6 +96,7 @@ moon run src/cli -- external run all --output artifacts --json
 | External target | Property | Exact minimized trace |
 | --- | --- | --- |
 | `proton-demo-todo` | `snapshot version never decreases` | `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` |
+| `ensenzu-app` | `active numeric fields reject non-finite input` | `Change(Frequency, "Infinity")` |
 
 外部repositoryはread-only inputです。相手側にissue、PR、comment、commitを作成しません。
 

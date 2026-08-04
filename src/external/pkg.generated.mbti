@@ -9,6 +9,8 @@ import {
 // Values
 pub fn effect_ids_unique(Array[EffectDescriptor]) -> Bool
 
+pub fn ensenzu_manifest() -> ExternalManifest
+
 pub fn inspect_source(String) -> SourceInspection
 
 pub fn[Model, Msg] monotonic_int_property(String, (Model) -> Int, (Msg) -> Bool) -> @proped-rabbita.Property[Model, Msg]

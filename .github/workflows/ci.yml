@@ -44,6 +44,7 @@ jobs:
           moon run src/cli -- schema --json > /tmp/proped-rabbita-schema.json
           moon run src/cli -- demo run all --json > /tmp/proped-rabbita-run.json
           moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json > /tmp/proped-rabbita-inspection.json
+          moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json > /tmp/proped-rabbita-ensenzu-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           python3 - <<'PY'
           import json
@@ -52,6 +53,7 @@ jobs:
           schema = json.loads(Path('/tmp/proped-rabbita-schema.json').read_text())
           result = json.loads(Path('/tmp/proped-rabbita-run.json').read_text())
           inspection = json.loads(Path('/tmp/proped-rabbita-inspection.json').read_text())
+          ensenzu_inspection = json.loads(Path('/tmp/proped-rabbita-ensenzu-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           expected_ids = [
               'newsletter',
@@ -62,9 +64,9 @@ jobs:
               'rabbita-websocket',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.5.0'
+          assert schema['version'] == '0.6.0'
           assert schema['demoIds'] == expected_ids
-          assert schema['externalIds'] == ['proton-demo-todo']
+          assert schema['externalIds'] == ['proton-demo-todo', 'ensenzu-app']
           assert result['ok'] is True
           runs = {run['id']: run for run in result['runs']}
           assert list(runs) == expected_ids
@@ -128,8 +130,10 @@ jobs:
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
-          assert len(external['runs']) == 1
-          proton = external['runs'][0]
+          assert len(external['runs']) == 2
+          external_runs = {run['id']: run for run in external['runs']}
+          assert list(external_runs) == ['proton-demo-todo', 'ensenzu-app']
+          proton = external_runs['proton-demo-todo']
           assert proton['id'] == 'proton-demo-todo'
           assert proton['expectationMet'] is True
           assert proton['diagnostics'] == 0
@@ -142,9 +146,40 @@ jobs:
           for artifact in proton['artifacts']:
               assert (Path(proton['output']) / artifact).is_file()
 
+          ensenzu = external_runs['ensenzu-app']
+          assert ensenzu['expectationMet'] is True
+          assert ensenzu['diagnostics'] == 0
+          assert ensenzu['states'] == 834
+          assert ensenzu['transitions'] == 1900
+          assert ensenzu['firstFailure']['property'] == (
+              'active numeric fields reject non-finite input'
+          )
+          assert ensenzu['firstFailure']['trace'] == [
+              'Change(Frequency, "Infinity")',
+          ]
+          assert ensenzu['firstFailure']['actionIds'] == [
+              'change:Frequency:8:Infinity',
+          ]
+          for artifact in ensenzu['artifacts']:
+              assert (Path(ensenzu['output']) / artifact).is_file()
+
+          assert ensenzu_inspection['ok'] is True
+          assert ensenzu_inspection['strategy'] == 'effect-model'
+          assert ensenzu_inspection['detected']['model'] is True
+          assert ensenzu_inspection['detected']['message'] is True
+          assert ensenzu_inspection['detected']['update'] is True
+          assert ensenzu_inspection['detected']['command'] is True
+
           import hashlib
           source = Path('src/vendor/proton_todo/upstream/main.mbt.txt').read_bytes()
           assert hashlib.sha256(source).hexdigest() == (
               '69787a7a175b323ba0c6e01ea2acfc8692379ed938217bcf00c7d3a8c1f79c8b'
+          )
+
+          ensenzu_source = Path(
+              'src/vendor/ensenzu_app/upstream/app.mbt.txt'
+          ).read_bytes()
+          assert hashlib.sha256(ensenzu_source).hexdigest() == (
+              'a580832dc58cd030ee22091abf58be8a1542c0696e57eae6f223d0e1c9bfd14b'
           )
           PY

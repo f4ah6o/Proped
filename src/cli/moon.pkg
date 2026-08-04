@@ -8,6 +8,7 @@ import {
   "f4ah6o/proped-rabbita/vendor/rabbita_subscriptions" @subscriptions,
   "f4ah6o/proped-rabbita/vendor/rabbita_websocket" @websocket,
   "f4ah6o/proped-rabbita/vendor/proton_todo",
+  "f4ah6o/proped-rabbita/vendor/ensenzu_app",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/env",

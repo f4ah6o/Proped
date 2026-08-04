@@ -3,7 +3,7 @@
 Status: open
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
-Updated: 2026-08-04
+Updated: 2026-08-05
 Priority: P0
 Depends-On: `20260804-mechanical-external-app-harness.md`
 
@@ -19,7 +19,7 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 - [x] `justjavac/proton-demo`
 - [ ] `moonbit-community/proton` framework internals
-- [ ] `shiguri-01/ensenzu`
+- [x] `shiguri-01/ensenzu`
 - [ ] `CAIMEOX/signal_reader`
 - [ ] `moonbitlang/editor` file tree
 - [ ] `CAIMEOX/circular`

@@ -288,3 +288,26 @@ pub fn proton_todo_manifest() -> ExternalManifest {
     ],
   }
 }
+
+///|
+pub fn ensenzu_manifest() -> ExternalManifest {
+  {
+    id: "ensenzu-app",
+    repository: "shiguri-01/ensenzu",
+    revision: "f1fbec776a393e7023c8fa8324ea26c0774752e5",
+    license: "Apache-2.0",
+    packages: ["app/src"],
+    model_entry: "Model",
+    message_entry: "Msg",
+    update_entry: "update",
+    view_entry: "view",
+    strategy: EffectModel,
+    effect_policy: "record-download-command",
+    source_sha256: "a580832dc58cd030ee22091abf58be8a1542c0696e57eae6f223d0e1c9bfd14b",
+    properties: [
+      "active numeric fields reject non-finite input", "pending input and error are mutually exclusive",
+      "invalid input preserves previous result", "advanced toggle preserves calculation",
+      "download effect IDs remain unique", "rendered status matches validation state",
+    ],
+  }
+}

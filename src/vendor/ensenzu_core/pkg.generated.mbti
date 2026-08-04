@@ -1,0 +1,226 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/ensenzu_core"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn branch_currents(CircuitParams, slip~ : Double) -> BranchCurrents raise CircleDiagramError
+
+pub fn circuit_params_from_tests(NoLoadLockedRotorTestParams) -> CircuitParams raise CircleDiagramError
+
+pub fn default_size() -> DiagramSize
+
+pub fn example_params() -> CircuitParams
+
+pub fn make_circle_diagram(CircuitParams, point_count? : Int, min_slip? : Double) -> CircleDiagram raise CircleDiagramError
+
+pub fn operating_point(CircuitParams, slip~ : Double) -> OperatingPoint raise CircleDiagramError
+
+pub fn read_at_output_power(CircleDiagram, output_power~ : Double) -> OperatingReadout raise CircleDiagramError
+
+pub fn render_svg(CircleDiagram, output_power~ : Double, size? : DiagramSize) -> String raise CircleDiagramError
+
+// Errors
+pub(all) suberror CircleDiagramError {
+  InvalidInput(String)
+  GeometryError(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct BranchCurrents {
+  exciting : Complex
+  rotor : Complex
+  input : Complex
+} derive(Eq, @debug.Debug)
+
+pub struct CharacteristicLineLengths {
+  o_p : Double
+  o_m : Double
+  p_m : Double
+  p_a : Double
+  p_b : Double
+  a_b : Double
+  f_y : Double
+  f_s : Double
+  g_r : Double
+  g_s : Double
+} derive(Eq, @debug.Debug)
+
+pub struct CircleDiagram {
+  params : CircuitParams
+  points : Array[DiagramPoint]
+  bounds : PlotBounds
+  no_load : DiagramPoint
+  locked_rotor : DiagramPoint
+  max_torque : DiagramPoint
+} derive(Eq, @debug.Debug)
+
+pub struct CircleDiagramCharacteristics {
+  slip : Double
+  primary_current : Double
+  active_current_component : Double
+  power_factor : Double
+  input_power : Double
+  air_gap_power : Double
+  output_power : Double
+  torque : Double
+  secondary_copper_loss : Double
+  primary_copper_loss : Double
+  core_loss : Double
+  mechanical_loss : Double
+  efficiency : Double
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CircleDiagramNode {
+  O
+  NPrime
+  SPrime
+  N
+  S
+  U
+  C
+  T
+  D
+  F
+  G
+  H
+  Pm
+  Qm
+  Pt
+  Qt
+  P
+  PPrime
+  A
+  B
+  L
+  M
+  Y
+  R
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CircuitParams {
+  phase_voltage : Double
+  frequency : Double
+  poles : Int
+  phases : Int
+  r1 : Double
+  x1 : Double
+  r2 : Double
+  x2 : Double
+  xm : Double
+  core_loss_resistance : Double
+  mechanical_loss : Double
+} derive(Eq, @debug.Debug)
+
+pub struct Complex {
+  re : Double
+  im : Double
+} derive(Eq, @debug.Debug)
+pub fn Complex::Complex(re~ : Double, im~ : Double) -> Self
+pub fn Complex::abs(Self) -> Double
+pub fn Complex::abs2(Self) -> Double
+pub fn Complex::conj(Self) -> Self
+pub impl Add for Complex
+pub impl Div for Complex
+pub impl Mul for Complex
+pub impl Sub for Complex
+
+type Construction derive(Eq, @debug.Debug)
+
+pub struct DiagramCoordinate {
+  x : Double
+  y : Double
+} derive(Eq, @debug.Debug)
+
+pub struct DiagramPoint {
+  x : Double
+  y : Double
+  point : OperatingPoint
+} derive(Eq, @debug.Debug)
+
+pub(all) struct DiagramSize {
+  width : Double
+  height : Double
+} derive(Eq, @debug.Debug)
+
+type LabelAnchor derive(Eq, @debug.Debug)
+
+pub(all) struct NoLoadLockedRotorTestParams {
+  phase_voltage : Double
+  frequency : Double
+  poles : Int
+  phases : Int
+  primary_resistance : Double
+  no_load_input_power : Double
+  no_load_current : Double
+  mechanical_loss : Double
+  locked_rotor_voltage : Double
+  locked_rotor_input_power : Double
+  locked_rotor_current : Double
+} derive(Eq, @debug.Debug)
+
+pub struct OperatingPoint {
+  slip : Double
+  input_current : Complex
+  rotor_current : Complex
+  exciting_current : Complex
+  input_power : Double
+  power_factor : Double
+  air_gap_power : Double
+  output_power : Double
+  torque : Double
+  efficiency : Double
+} derive(Eq, @debug.Debug)
+
+pub struct OperatingReadout {
+  output_power : Double
+  params : CircuitParams
+  o : DiagramCoordinate
+  n_prime : DiagramCoordinate
+  s_prime : DiagramCoordinate
+  n : DiagramCoordinate
+  s : DiagramCoordinate
+  u : DiagramCoordinate
+  c : DiagramCoordinate
+  t : DiagramCoordinate
+  d : DiagramCoordinate
+  f : DiagramCoordinate
+  g : DiagramCoordinate
+  h : DiagramCoordinate
+  pm : DiagramCoordinate
+  qm : DiagramCoordinate
+  pt : DiagramCoordinate
+  qt : DiagramCoordinate
+  p : DiagramCoordinate
+  p_prime : DiagramCoordinate
+  a : DiagramCoordinate
+  b : DiagramCoordinate
+  l : DiagramCoordinate
+  m : DiagramCoordinate
+  y : DiagramCoordinate
+  r : DiagramCoordinate
+} derive(Eq, @debug.Debug)
+pub fn OperatingReadout::characteristic_line_lengths(Self) -> CharacteristicLineLengths
+pub fn OperatingReadout::characteristics(Self) -> CircleDiagramCharacteristics raise CircleDiagramError
+pub fn OperatingReadout::distance(Self, from~ : CircleDiagramNode, to~ : CircleDiagramNode) -> Double
+
+pub struct PlotBounds {
+  min_x : Double
+  max_x : Double
+  min_y : Double
+  max_y : Double
+} derive(Eq, @debug.Debug)
+
+type PlotPoint derive(Eq, @debug.Debug)
+
+type ScreenOffset derive(Eq, @debug.Debug)
+
+type StrokeWeight derive(Eq, @debug.Debug)
+
+type Viewport derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

@@ -14,6 +14,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `rabbita-subscriptions` | `examples/subscriptions` | 420 lines | failure | typed deterministic browser events plus one queued timer callback |
 | `rabbita-websocket` | `examples/websocket` | 956 lines | failure | deterministic command-client lifecycle and outcomes |
 | `proton-demo-todo` | `justjavac/proton-demo frontend/main` | 176 lines | failure | Proton effects recorded and snapshot responses injected |
+| `ensenzu-app` | `shiguri-01/ensenzu app/src` | 605 lines | failure | 19-field numeric corpus, native calculation core, deterministic download effect |
 
 ## Counter
 
@@ -68,3 +69,13 @@ The MIT-licensed Proton Todo frontend is pinned separately from the official Rab
 2. `SnapshotReceived(version=0)`
 
 The pinned run explores 320 states and 618 transitions with zero runner diagnostics. This proves acceptance by the update function under the modeled response ordering; it does not claim every transport delivers responses in that order.
+
+## Ensenzu
+
+The Apache-2.0 Ensenzu application and its calculation core are pinned at revision `f1fbec776a393e7023c8fa8324ea26c0774752e5`. The adapter preserves the upstream parsing, pending-input classification, input-source switching, diagram calculation, previous-result retention, reset confirmation, and advanced-setting behavior. Browser download is represented as one deterministic `DomCommand`.
+
+The active `Frequency` field accepts `Infinity`: parsing succeeds and the downstream guard checks only `frequency > 0.0`. Property `active numeric fields reject non-finite input` shrinks to:
+
+1. `Change(Frequency, "Infinity")`
+
+The pinned run explores 834 states and 1,900 transitions with zero runner diagnostics. The action corpus covers all 19 `FieldKey` values with empty, partial, zero, negative, finite, `NaN`, and `Infinity` representatives.

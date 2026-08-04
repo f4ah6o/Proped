@@ -10,11 +10,11 @@ Proped Rabbita explores reachable Rabbita UI states, checks model and transition
 moon run src/cli -- help
 moon run src/cli -- demo list --json
 moon run src/cli -- demo run all --json
-moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
+moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json
 moon run src/cli -- external run all --json
 ```
 
-The last command writes each demo to `demo/out/<demo-id>/` and prints one JSON result envelope to stdout. Agents and scripts should discover the stable command contract with:
+`demo run all` writes demos to `demo/out/<demo-id>/`. `external run all` writes external targets to `demo/out/external/<id>/`. Both commands print one JSON result envelope to stdout. Agents and scripts should discover the stable command contract with:
 
 ```bash
 moon run src/cli -- schema --json
@@ -43,7 +43,7 @@ Vendored source, revision, hashes, license, adapter changes, and failure rationa
 
 External targets are pinned by manifests under `external/manifests/`. `external inspect-source` mechanically detects common `Model`, `Msg`, `update`, `view`, command, and subscription boundaries in a local source file. Effects are recorded as deterministic descriptors rather than executing upstream network or native operations.
 
-The first dogfood target, `proton-demo-todo`, explores 320 states and 618 transitions and minimizes snapshot rollback to `SnapshotReceived(version=1) -> SnapshotReceived(version=0)`. Upstream repositories are read-only inputs: this project does not create issues, pull requests, comments, or commits in them.
+The external campaign currently includes `proton-demo-todo` and `ensenzu-app`. Proton explores 320 states and 618 transitions and minimizes snapshot rollback to `SnapshotReceived(version=1) -> SnapshotReceived(version=0)`. Ensenzu explores 834 states and 1,900 transitions and minimizes acceptance of a non-finite frequency to `Change(Frequency, "Infinity")`. Upstream repositories are read-only inputs: this project does not create issues, pull requests, comments, or commits in them.
 
 Each run writes `atlas.html`, `atlas.svg`, `atlas.json`, `atlas.dot`, and `summary.json`.
 
@@ -111,12 +111,14 @@ src/
   vendor/rabbita_sokoban/           malformed timeline failure
   vendor/rabbita_subscriptions/     stale timer failure
   vendor/rabbita_websocket/         duplicate disconnect failure
-  vendor/proton_todo/                stale snapshot ordering failure
-external/                            pinned external manifests and schema
+  vendor/proton_todo/               stale snapshot ordering failure
+  vendor/ensenzu_app/               numeric form and SVG application adapter
+  vendor/ensenzu_core/              pinned Ensenzu calculation implementation
   core.mbt                          exploration, shrinking, minimal failure retention
   rabbita_adapter.mbt               browserless Rabbita rendering
   atlas*.mbt                        report exporters
   flow*.mbt                         deterministic graph layout
+external/                            pinned external manifests and schema
 ```
 
 ## Development

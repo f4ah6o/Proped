@@ -1,6 +1,7 @@
 ///|
 test "valid external manifest passes validation" {
   assert_eq(validate_manifest(proton_todo_manifest()), [])
+  assert_eq(validate_manifest(ensenzu_manifest()), [])
 }
 
 ///|
@@ -46,4 +47,17 @@ test "effect identity detector rejects duplicates" {
     { id: 7, kind: NativeInvoke, operation: "second", payload: "" },
   ]
   assert_true(!effect_ids_unique(effects))
+}
+
+///|
+test "source detector classifies effect-model applications" {
+  let source =
+    #|import { "moonbit-community/rabbita" }
+    #|struct Model { value : Int }
+    #|enum Msg { Download }
+    #|fn update(_emit : @rabbita.Emit[Msg], msg : Msg, model : Model) -> (@rabbita.Cmd, Model) { (@rabbita.none, model) }
+    #|fn view(model : Model) { model }
+  let inspection = inspect_source(source)
+  assert_true(inspection.has_command)
+  assert_eq(inspection.strategy, EffectModel)
 }

@@ -70,7 +70,7 @@ fn parse_args(raw : Array[String]) -> CliArgs {
 
 ///|
 fn print_help() -> Unit {
-  println("Proped Rabbita CLI 0.5.0")
+  println("Proped Rabbita CLI 0.6.0")
   println("")
   println("Usage:")
   println("  moon run src/cli -- <command> [arguments] [--json] [--output DIR]")
@@ -110,6 +110,9 @@ fn print_help() -> Unit {
   println("")
   println("External IDs:")
   println("  proton-demo-todo           Proton snapshot-order failure")
+  println(
+    "  ensenzu-app                Ensenzu non-finite numeric input failure",
+  )
   println("")
   println(
     "Exit codes: 0 expectation met, 2 usage error, 3 expectation mismatch",
@@ -119,7 +122,7 @@ fn print_help() -> Unit {
 ///|
 fn schema_json() -> String {
   (
-    #|{"name":"proped-rabbita","version":"0.5.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
+    #|{"name":"proped-rabbita","version":"0.6.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo","ensenzu-app"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
   )
 }
 
@@ -133,13 +136,17 @@ fn demo_list_json() -> String {
 ///|
 fn external_list_json() -> String {
   (
-    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"}]}
+    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"},{"id":"ensenzu-app","repository":"shiguri-01/ensenzu","revision":"f1fbec776a393e7023c8fa8324ea26c0774752e5","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Ensenzu numeric forms, SVG calculation, reset, and non-finite input exploration"}]}
   )
 }
 
 ///|
-fn proton_external_inspection_json() -> String {
-  let manifest = @external.proton_todo_manifest()
+fn external_inspection_json(
+  manifest : @external.ExternalManifest,
+  effect_kinds : Array[String],
+  response_ordering : String,
+  expected_failure : String,
+) -> String {
   let output = StringBuilder::new()
   output.write_string(
     "{\"ok\":true,\"command\":\"external inspect\",\"application\":{",
@@ -168,15 +175,41 @@ fn proton_external_inspection_json() -> String {
   output.write_string(json_string(manifest.view_entry))
   output.write_string("},\"properties\":")
   write_json_string_array(output, manifest.properties)
-  output.write_string(
-    ",\"effectKinds\":[\"native-invoke\",\"subscription-installed\"],\"responseOrdering\":\"all bounded permutations\",\"upstreamWritePolicy\":\"read-only\"}}",
-  )
+  output.write_string(",\"effectKinds\":")
+  write_json_string_array(output, effect_kinds)
+  output.write_string(",\"responseOrdering\":")
+  output.write_string(json_string(response_ordering))
+  output.write_string(",\"expectedFailure\":")
+  output.write_string(json_string(expected_failure))
+  output.write_string(",\"upstreamWritePolicy\":\"read-only\"}}")
   output.to_string()
 }
 
 ///|
-fn print_proton_external_inspection() -> Unit {
-  let manifest = @external.proton_todo_manifest()
+fn proton_external_inspection_json() -> String {
+  external_inspection_json(
+    @external.proton_todo_manifest(),
+    ["native-invoke", "subscription-installed"],
+    "all bounded permutations",
+    "SnapshotReceived(version=1) -> SnapshotReceived(version=0)",
+  )
+}
+
+///|
+fn ensenzu_external_inspection_json() -> String {
+  external_inspection_json(
+    @external.ensenzu_manifest(),
+    ["dom-command"],
+    "not applicable",
+    "Change(Frequency, \"Infinity\")",
+  )
+}
+
+///|
+fn print_external_inspection(
+  manifest : @external.ExternalManifest,
+  expected_failure : String,
+) -> Unit {
   println("id: \{manifest.id}")
   println("repository: \{manifest.repository}")
   println("revision: \{manifest.revision}")
@@ -184,10 +217,24 @@ fn print_proton_external_inspection() -> Unit {
   println("strategy: \{manifest.strategy.to_string()}")
   println("effect-policy: \{manifest.effect_policy}")
   println("source-sha256: \{manifest.source_sha256}")
-  println(
-    "expected-failure: SnapshotReceived(version=1) -> SnapshotReceived(version=0)",
-  )
+  println("expected-failure: \{expected_failure}")
   println("upstream-write-policy: read-only")
+}
+
+///|
+fn print_proton_external_inspection() -> Unit {
+  print_external_inspection(
+    @external.proton_todo_manifest(),
+    "SnapshotReceived(version=1) -> SnapshotReceived(version=0)",
+  )
+}
+
+///|
+fn print_ensenzu_external_inspection() -> Unit {
+  print_external_inspection(
+    @external.ensenzu_manifest(),
+    "Change(Frequency, \"Infinity\")",
+  )
 }
 
 ///|
@@ -656,6 +703,23 @@ async fn run_proton_todo(output_root : String) -> RunSummary {
 }
 
 ///|
+async fn run_ensenzu(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @ensenzu_app.machine(),
+    @ensenzu_app.properties(),
+    @ensenzu_app.default_config(),
+  )
+  finish_run(
+    "ensenzu-app",
+    "\{output_root}/ensenzu-app",
+    true,
+    "active numeric fields reject non-finite input",
+    ["Change(Frequency, \"Infinity\")"],
+    report,
+  )
+}
+
+///|
 fn summaries_json_for(
   command : String,
   summaries : Array[RunSummary],
@@ -740,9 +804,9 @@ async fn main {
       return
     }
     if parsed.json {
-      println("{\"ok\":true,\"version\":\"0.5.0\"}")
+      println("{\"ok\":true,\"version\":\"0.6.0\"}")
     } else {
-      println("proped-rabbita 0.5.0")
+      println("proped-rabbita 0.6.0")
     }
     return
   }
@@ -775,6 +839,9 @@ async fn main {
       } else {
         println(
           "proton-demo-todo\tjustjavac/proton-demo\tsubscription-model\tfailure\tSnapshot-order exploration",
+        )
+        println(
+          "ensenzu-app\tshiguri-01/ensenzu\teffect-model\tfailure\tNon-finite numeric input exploration",
         )
       }
       return
@@ -809,14 +876,22 @@ async fn main {
         usage_error("external inspect requires exactly one id", parsed.json)
         return
       }
-      if args[2] != "proton-demo-todo" {
-        usage_error("unknown external id: \{args[2]}", parsed.json)
-        return
-      }
-      if parsed.json {
-        println(proton_external_inspection_json())
+      let inspect_id = args[2]
+      if inspect_id == "proton-demo-todo" {
+        if parsed.json {
+          println(proton_external_inspection_json())
+        } else {
+          print_proton_external_inspection()
+        }
+      } else if inspect_id == "ensenzu-app" {
+        if parsed.json {
+          println(ensenzu_external_inspection_json())
+        } else {
+          print_ensenzu_external_inspection()
+        }
       } else {
-        print_proton_external_inspection()
+        usage_error("unknown external id: \{inspect_id}", parsed.json)
+        return
       }
       return
     }
@@ -830,8 +905,13 @@ async fn main {
     let external_id = args[2]
     let external_summaries : Array[RunSummary] = []
     let external_root = "\{parsed.output}/external"
-    if external_id == "proton-demo-todo" || external_id == "all" {
+    if external_id == "proton-demo-todo" {
       external_summaries.push(run_proton_todo(external_root))
+    } else if external_id == "ensenzu-app" {
+      external_summaries.push(run_ensenzu(external_root))
+    } else if external_id == "all" {
+      external_summaries.push(run_proton_todo(external_root))
+      external_summaries.push(run_ensenzu(external_root))
     } else {
       usage_error("unknown external id: \{external_id}", parsed.json)
       return

@@ -3,7 +3,7 @@
 Status: open
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
-Updated: 2026-08-04
+Updated: 2026-08-05
 Priority: P0
 
 ## 概要
@@ -178,6 +178,8 @@ external/
 - `external inspect-source <file>` でRabbita import、state constructor、`Model`、`Msg`、`update`、`view`、command、subscriptionを機械検出する。
 - `EffectDescriptor`、adapter classification、bounded response permutation、generic monotonic property、effect ID uniqueness propertyを共通package化した。
 - `justjavac/proton-demo` をdogfoodし、generic monotonic propertyで `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` を再発見・縮約した。
+- `shiguri-01/ensenzu` をeffect-modelとしてdogfoodし、全19 fieldの有限corpusから `Change(Frequency, "Infinity")` を1 actionへ縮約した。
+- `external run all` はsubscription-modelとeffect-modelの2 targetを同一CLI契約で実行する。
 - 残作業はaction scaffold自動生成、untrusted checkout sandbox、複数target CI matrix、manifest file parserとprepare/update workflow。
 
 ## 最初のdogfood対象

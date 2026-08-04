@@ -1,9 +1,9 @@
 # Ensenzuの数値入力・reset・SVG整合性を探索する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
-Updated: 2026-08-04
+Updated: 2026-08-05
 Priority: P0
 Depends-On: `20260804-mechanical-external-app-harness.md`
 
@@ -45,10 +45,21 @@ Depends-On: `20260804-mechanical-external-app-harness.md`
 
 ## 受け入れ条件
 
-- [ ] 全FieldKeyを有限corpusで探索する。
-- [ ] parse errorと成功の境界をshrinkできる。
-- [ ] SVG/result/errorの整合propertyを追加する。
-- [ ] reset関連failureがあれば3 action以下を目標に縮約する。
+- [x] 全FieldKeyを有限corpusで探索する。
+- [x] parse errorと成功の境界をshrinkできる。
+- [x] SVG/result/errorの整合propertyを追加する。
+- [x] reset pathを検証し、reset関連failureがないことを確認した。
+
+
+## 結果
+
+- `Frequency`へ`Infinity`を入力すると、`pending_input=false`、`error=None`の有効stateとして受理された。
+- 最小trace: `Change(Frequency, "Infinity")`
+- stable action ID: `change:Frequency:8:Infinity`
+- 探索規模: 834 states / 1,900 transitions / 1 retained failure / 0 diagnostics
+- 全19 `FieldKey`について、空、partial、zero、negative、finite、`NaN`、`Infinity`を含む有限corpusを生成した。
+- invalid/pending inputのprevious SVG保持、reset/cancel、advanced toggle、download effect identityはpassした。
+- upstream repositoryはread-onlyで扱い、issue・PR・comment・commitを作成していない。
 
 ## 共通テスト
 

@@ -144,7 +144,8 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("external"))
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
-  assert_true(schema.contains("0.5.0"))
+  assert_true(schema.contains("ensenzu-app"))
+  assert_true(schema.contains("0.6.0"))
 }
 
 ///|
@@ -173,4 +174,22 @@ test "source inspection envelope exposes detected boundaries" {
   assert_true(json.contains("subscription-model"))
   assert_true(json.contains("\"model\":true"))
   assert_true(json.contains("\"subscription\":true"))
+}
+
+///|
+test "Ensenzu inspection reports finite-input property and provenance" {
+  let json = ensenzu_external_inspection_json()
+  assert_true(json.contains("shiguri-01/ensenzu"))
+  assert_true(json.contains("effect-model"))
+  assert_true(json.contains("active numeric fields reject non-finite input"))
+  assert_true(json.contains("expectedFailure"))
+  assert_true(json.contains("Infinity"))
+  assert_true(json.contains("read-only"))
+}
+
+///|
+test "external list exposes both pinned applications" {
+  let json = external_list_json()
+  assert_true(json.contains("proton-demo-todo"))
+  assert_true(json.contains("ensenzu-app"))
 }

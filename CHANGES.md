@@ -1,5 +1,21 @@
 # Changes
 
+## 0.6.0 - 2026-08-05
+
+### Added
+
+- Added `ensenzu-app` as the second manifest-driven external target, covering all 19 numeric `FieldKey` variants, finite string corpora, input-source switching, reset confirmation, advanced settings, SVG calculation, and deterministic download effects.
+- Vendored the Apache-2.0 Ensenzu application source and calculation core at revision `f1fbec776a393e7023c8fa8324ea26c0774752e5` because the workspace dependency is not published in the MoonBit registry.
+- Extended `external list`, `external inspect`, `external inspect-source`, and `external run all` to cover both subscription-model and effect-model applications.
+
+### Fixed
+
+- Found that the pinned Ensenzu application accepts the non-finite literal `Infinity` for the active frequency field without a validation error; minimized to `Change(Frequency, "Infinity")`.
+
+### Changed
+
+- Expanded the external campaign to two deterministic targets and bumped the package and CLI version to `0.6.0`.
+
 ## 0.5.0 - 2026-08-04
 
 ### Added

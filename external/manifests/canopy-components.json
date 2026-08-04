@@ -1,0 +1,30 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "canopy-components",
+  "repository": "dowdiness/canopy",
+  "revision": "cb41945b04801084e8abe1d8edc27eb0cdce4a1c",
+  "license": "Apache-2.0",
+  "packages": [
+    "modules/rabbita-resizable/resizable",
+    "modules/rabbita-menu/menu",
+    "modules/rabbita-tabs/tabs"
+  ],
+  "entryPoints": {
+    "model": "Model",
+    "message": "Msg",
+    "update": "update",
+    "view": "view"
+  },
+  "strategy": "pure",
+  "effectPolicy": "none",
+  "sourceSha256": "ac88ca22d332ea66853e7ad34f07492f97d150e11155ff66bd821b8413ae55cb",
+  "properties": [
+    "resizable size remains inside constraints",
+    "positive resize nudges do not decrease width",
+    "stale pointer movement after resize end is ignored",
+    "menu focus remains in range",
+    "tab selection remains in range",
+    "rendered component state matches model"
+  ],
+  "findingVisibility": "public-bug"
+}

@@ -72,6 +72,7 @@ moon run src/cli -- external inspect proton-demo-todo --json
 moon run src/cli -- external inspect ensenzu-app --json
 moon run src/cli -- external inspect signal-reader --json
 moon run src/cli -- external inspect moonbit-editor-file-tree --json
+moon run src/cli -- external inspect canopy-components --json
 ```
 
 Returns manifest entry points, source SHA-256, effect policy, enabled properties, and the explicit `read-only` upstream write policy.
@@ -93,6 +94,7 @@ moon run src/cli -- external run proton-demo-todo --json
 moon run src/cli -- external run ensenzu-app --json
 moon run src/cli -- external run signal-reader --json
 moon run src/cli -- external run moonbit-editor-file-tree --json
+moon run src/cli -- external run canopy-components --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -104,14 +106,16 @@ Runs deterministic external adapters under `<output>/external/<id>/`. Native, ne
 | `ensenzu-app` | `active numeric fields reject non-finite input` | `Change(Frequency, "Infinity")` |
 | `signal-reader` | `feed responses match the current subscription` | `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)` |
 | `moonbit-editor-file-tree` | `asynchronous resolve responses preserve newer tree intent` | `ToggleDirectory("readonly-remote://workspace/tests") -> SetActive("readonly-remote://workspace/src/lib/util.mbt") -> DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")` |
+| `canopy-components` | `positive resize nudges do not decrease width` | `ResizeNudge(dw=2147483647, dh=0)` |
 
-Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response. MoonBit Editor also retains a minimized late-success trace where a directory manually collapsed after auto-reveal started becomes expanded again.
+Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response. MoonBit Editor also retains a minimized late-success trace where a directory manually collapsed after auto-reveal started becomes expanded again. Canopy menu focus and tabs selection properties pass; the disabled-entry property is not applicable because those pinned APIs do not model disabled entries.
 
 ### `external handoff <id|all>`
 
 ```bash
 moon run src/cli -- external handoff signal-reader --output artifacts --json
 moon run src/cli -- external handoff moonbit-editor-file-tree --output artifacts --json
+moon run src/cli -- external handoff canopy-components --output artifacts --json
 ```
 
 Writes local `issue.md`, `reproduction.md`, `fix-plan.md`, `pr-body.md`, and `machine.json` drafts under `<output>/handoff/<id>/`. The metadata fixes `upstreamWritePerformed` to `false`; the command never calls GitHub or an upstream API.

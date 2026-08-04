@@ -1,5 +1,22 @@
 # Changes
 
+## 0.9.0 - 2026-08-05
+
+### Added
+
+- Added `canopy-components` as the fifth external target, combining the pinned Canopy resizable, menu, and tabs pure component semantics in one finite adapter.
+- Preserved the Apache-2.0 component sources from `dowdiness/canopy` revision `cb41945b04801084e8abe1d8edc27eb0cdce4a1c` with SHA-256 provenance.
+- Split the remaining CodeMirror/Ideal editor phase and incr typed-spreadsheet/backdating phase into dedicated open issues.
+
+### Fixed
+
+- Found that the public resizable `NudgeBy` message can overflow 32-bit addition before clamping, so a positive maximum delta moves width from 120 to the minimum 50; minimized to `ResizeNudge(dw=2147483647, dh=0)`.
+
+### Changed
+
+- Expanded the external campaign to five deterministic targets and bumped the package and CLI version to `0.9.0`.
+- Documented that incr's always-false comparison callbacks belong to explicit no-backdate APIs rather than being invalid equality implementations.
+
 ## 0.8.0 - 2026-08-05
 
 ### Added

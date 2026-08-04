@@ -27,7 +27,7 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 ### Tier 2: command/subscription/browser boundaryをmockすれば探索可能
 
-- [ ] `dowdiness/canopy`
+- [x] `dowdiness/canopy`
 - [ ] `dowdiness/incr`
 - [ ] `moonbitlang/mooncakes.io`
 - [ ] `moonbitlang/openseek`
@@ -57,6 +57,8 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 - `20260804-signal-reader-exploration.md`
 - `20260804-moonbit-editor-file-tree-exploration.md`
 - `20260804-canopy-and-incr-exploration.md`
+- `20260805-incr-typed-spreadsheet-exploration.md`
+- `20260805-canopy-editor-integration-exploration.md`
 - `20260804-mooncakes-production-ui-exploration.md`
 - `20260804-openseek-exploration.md`
 - `20260804-selene-editor-exploration.md`
@@ -103,8 +105,9 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 ## 2026-08-05 進捗
 
-- Proton Todo、Ensenzu、Signal Reader、MoonBit Editor file treeの4 targetを`external run all`へ登録した。
+- Proton Todo、Ensenzu、Signal Reader、MoonBit Editor file tree、Canopy componentsの5 targetを`external run all`へ登録した。
 - MoonBit Editorでは1,600 state・2,646 transitionを探索し、unrelated resolve failureによるauto-reveal中断と、late successによるmanual collapseの再展開を最小3 actionへ縮約した。
+- Canopyではresizable、menu、tabsをpure adapterへ統合し、720 state・2,618 transitionからInt32 overflowによる正方向nudge反転を`ResizeNudge(dw=2147483647, dh=0)`へ縮約した。
 - named private modelと`Type::update` / `Type::view`を`inspect-source`で認識できるようdetectorを拡張した。
 - 全external repositoryはread-only inputとして扱い、相手側へ書き込みを行っていない。
 

@@ -16,6 +16,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `proton-demo-todo` | `justjavac/proton-demo frontend/main` | 176 lines | failure | Proton effects recorded and snapshot responses injected |
 | `ensenzu-app` | `shiguri-01/ensenzu app/src` | 605 lines | failure | 19-field numeric corpus, native calculation core, deterministic download effect |
 | `moonbit-editor-file-tree` | `moonbitlang/editor internal/shell` | 708 lines | failure | two finite workspaces and injected directory-resolve responses |
+| `canopy-components` | `dowdiness/canopy` component modules | 471 lines | failure | resizable, menu, and tabs pure finite state |
 
 ## Counter
 
@@ -111,3 +112,15 @@ A second retained trace shows a late successful response re-expanding a director
 3. `DirectoryResolveSucceeded(request=1, uri="readonly-remote://workspace/tests", fixture=1)`
 
 The pinned run explores 1,600 states and 2,646 transitions with zero diagnostics. The modeled request ID controls response delivery but is not used as a freshness guard when applying the response, matching the upstream URI-only message boundary.
+
+## Canopy components
+
+Canopy's Apache-2.0 `rabbita-resizable`, `rabbita-menu`, and `rabbita-tabs` modules are pinned at revision `cb41945b04801084e8abe1d8edc27eb0cdce4a1c`. The adapter preserves the pure component update semantics and replaces pointer, keyboard, focus, and dispatch boundaries with typed finite actions.
+
+The public resizable message accepts arbitrary `Int` deltas and adds them before clamping. MoonBit Int32 wrapping makes a maximum positive nudge move an interior width backward to the minimum:
+
+1. `ResizeNudge(dw=2147483647, dh=0)`
+
+The run explores 720 states and 2,618 transitions with one retained failure and zero diagnostics. Constraint bounds, stale movement after `EndResize`, menu focus range, tab selection, and rendered-state properties pass. The normal keyboard integration emits small deltas, so the failure is scoped to direct dispatch or malformed generated input. Disabled menu/tab selection is not tested because the pinned component APIs have no disabled-entry model.
+
+CodeMirror, context-menu nesting, the Ideal editor, and incr typed-spreadsheet behavior continue in separate issues.

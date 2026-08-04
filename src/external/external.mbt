@@ -510,3 +510,62 @@ pub fn signal_reader_handoff() -> @disclosure.FindingHandoff {
     visibility: @disclosure.PublicBug,
   }
 }
+
+///|
+pub fn canopy_components_manifest() -> ExternalManifest {
+  {
+    id: "canopy-components",
+    repository: "dowdiness/canopy",
+    revision: "cb41945b04801084e8abe1d8edc27eb0cdce4a1c",
+    license: "Apache-2.0",
+    packages: [
+      "modules/rabbita-resizable/resizable", "modules/rabbita-menu/menu", "modules/rabbita-tabs/tabs",
+    ],
+    model_entry: "Model",
+    message_entry: "Msg",
+    update_entry: "update",
+    view_entry: "view",
+    strategy: Pure,
+    effect_policy: "none",
+    source_sha256: "ac88ca22d332ea66853e7ad34f07492f97d150e11155ff66bd821b8413ae55cb",
+    properties: [
+      "resizable size remains inside constraints", "positive resize nudges do not decrease width",
+      "stale pointer movement after resize end is ignored", "menu focus remains in range",
+      "menu activation remains in range", "tab selection remains in range", "rendered component state matches model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn canopy_components_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "canopy-components",
+    repository: "dowdiness/canopy",
+    revision: "cb41945b04801084e8abe1d8edc27eb0cdce4a1c",
+    title: "Saturate resizable nudges before Int32 overflow",
+    summary: "The public resizable NudgeBy message adds arbitrary Int deltas before clamping. A sufficiently large positive delta wraps negative, so the component moves to its minimum width instead of saturating at the maximum.",
+    impact: "Ordinary keyboard handlers use small deltas, but direct dispatch, generated commands, or malformed integration input can reverse the requested resize direction while still producing an in-range state.",
+    expected: "A positive width nudge either increases the width or saturates at max_w; it never decreases the width.",
+    actual: "From width 120 with bounds 50..300, ResizeNudge(dw=2147483647, dh=0) produces width 50 because 32-bit addition wraps before clamp.",
+    property: "positive resize nudges do not decrease width",
+    minimal_trace: ["ResizeNudge(dw=2147483647, dh=0)"],
+    action_ids: ["resize-nudge:2147483647:0"],
+    evidence: [
+      "The failure shrinks to one public message.", "Resizable bounds, stale post-EndResize pointer movement, menu focus, tabs selection, and rendered-state properties all pass.",
+      "The adapter covers the pinned resizable, menu, and tabs pure update semantics in one finite model.",
+      "Normal arrow-key increments are not claimed to reach this value; the finding concerns the public message/direct-dispatch boundary.",
+    ],
+    suggested_fix: [
+      "Use checked or saturating addition before applying min/max constraints.",
+      "Alternatively clamp the delta against the remaining distance to each bound before addition.",
+      "Apply the same overflow-safe arithmetic to drag deltas if pointer coordinates can be supplied outside normal browser ranges.",
+    ],
+    verification: [
+      "From an interior width, apply Int maximum as a positive nudge and confirm width becomes max_w.",
+      "Apply Int minimum and maximum deltas to width and height and confirm every result saturates in the requested direction.",
+      "Retain ordinary keyboard nudge, drag, EndResize idempotency, and stale pointer movement tests.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}

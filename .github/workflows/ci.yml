@@ -53,6 +53,7 @@ jobs:
           moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json > /tmp/proped-rabbita-ensenzu-inspection.json
           moon run src/cli -- external inspect signal-reader --json > /tmp/proped-rabbita-signal-inspection.json
           moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json > /tmp/proped-rabbita-editor-inspection.json
+          moon run src/cli -- external inspect canopy-components --json > /tmp/proped-rabbita-canopy-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -66,6 +67,7 @@ jobs:
           ensenzu_inspection = json.loads(Path('/tmp/proped-rabbita-ensenzu-inspection.json').read_text())
           signal_inspection = json.loads(Path('/tmp/proped-rabbita-signal-inspection.json').read_text())
           editor_inspection = json.loads(Path('/tmp/proped-rabbita-editor-inspection.json').read_text())
+          canopy_inspection = json.loads(Path('/tmp/proped-rabbita-canopy-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -81,9 +83,10 @@ jobs:
               'ensenzu-app',
               'signal-reader',
               'moonbit-editor-file-tree',
+              'canopy-components',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.8.0'
+          assert schema['version'] == '0.9.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -148,6 +151,13 @@ jobs:
           assert editor_inspection['detected']['update'] is True
           assert editor_inspection['detected']['view'] is True
           assert editor_inspection['detected']['command'] is True
+          canopy_app = canopy_inspection['application']
+          assert canopy_app['id'] == 'canopy-components'
+          assert canopy_app['strategy'] == 'pure'
+          assert canopy_app['effectPolicy'] == 'none'
+          assert canopy_app['findingVisibility'] == 'public-bug'
+          assert canopy_app['expectedFailure'] == 'ResizeNudge(dw=2147483647, dh=0)'
+          assert canopy_app['upstreamWritePolicy'] == 'read-only'
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -243,6 +253,23 @@ jobs:
               ],
           }
 
+
+          canopy = external_runs['canopy-components']
+          assert canopy['expectationMet'] is True
+          assert canopy['states'] == 720
+          assert canopy['transitions'] == 2618
+          assert canopy['failures'] == 1
+          assert canopy['diagnostics'] == 0
+          assert canopy['firstFailure']['property'] == (
+              'positive resize nudges do not decrease width'
+          )
+          assert canopy['firstFailure']['trace'] == [
+              'ResizeNudge(dw=2147483647, dh=0)',
+          ]
+          assert canopy['firstFailure']['actionIds'] == [
+              'resize-nudge:2147483647:0',
+          ]
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -293,5 +320,11 @@ jobs:
           ).read_bytes()
           assert hashlib.sha256(editor_source).hexdigest() == (
               'ebb0b018ae049c1f182c7c74d0361aaee0c439761d00a8ead5f20e94e1968547'
+          )
+          canopy_source = Path(
+              'src/vendor/canopy_components/upstream/resizable_update.mbt.txt'
+          ).read_bytes()
+          assert hashlib.sha256(canopy_source).hexdigest() == (
+              'ac88ca22d332ea66853e7ad34f07492f97d150e11155ff66bd821b8413ae55cb'
           )
           PY

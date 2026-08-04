@@ -8,6 +8,10 @@ import {
 }
 
 // Values
+pub fn canopy_components_handoff() -> @disclosure.FindingHandoff
+
+pub fn canopy_components_manifest() -> ExternalManifest
+
 pub fn editor_file_tree_handoff() -> @disclosure.FindingHandoff
 
 pub fn editor_file_tree_manifest() -> ExternalManifest

@@ -117,3 +117,16 @@ test "source detector recognizes model methods split from type declarations" {
   assert_true(inspection.has_message)
   assert_eq(inspection.strategy, EffectModel)
 }
+
+///|
+test "Canopy component manifest and handoff record bounded direct dispatch" {
+  let manifest = canopy_components_manifest()
+  assert_eq(validate_manifest(manifest), [])
+  assert_eq(manifest.strategy, Pure)
+  assert_eq(manifest.effect_policy, "none")
+  assert_true(manifest.properties.contains("menu focus remains in range"))
+  let handoff = canopy_components_handoff()
+  assert_eq(handoff.minimal_trace, ["ResizeNudge(dw=2147483647, dh=0)"])
+  assert_eq(handoff.action_ids, ["resize-nudge:2147483647:0"])
+  assert_eq(handoff.visibility, @disclosure.PublicBug)
+}

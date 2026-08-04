@@ -181,10 +181,11 @@ external/
 - `EffectDescriptor`、adapter classification、bounded response permutation、generic monotonic property、effect ID uniqueness propertyを共通package化した。
 - `justjavac/proton-demo` をdogfoodし、generic monotonic propertyで `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` を再発見・縮約した。
 - `shiguri-01/ensenzu` をeffect-modelとしてdogfoodし、全19 fieldの有限corpusから `Change(Frequency, "Infinity")` を1 actionへ縮約した。
-- `external run all` はsubscription-modelとeffect-modelの4 targetを同一CLI契約で実行する。
+- `external run all` はpure、subscription-model、effect-modelの5 targetを同一CLI契約で実行する。
 
 - `CAIMEOX/signal_reader` をclean-room effect-modelとしてdogfoodし、feed、search、savedの3種類のstale responseを再現した。
 - `moonbitlang/editor` file treeをeffect-modelとしてdogfoodし、named private model/method検出、2 fixture、resolve permutationから2種類のraceを再現した。
+- `dowdiness/canopy`のresizable、menu、tabsをpure adapterとしてdogfoodし、direct dispatch corpusから`ResizeNudge(dw=2147483647, dh=0)`を再現した。
 - `FindingVisibility`、private run root、public export block、tracked manifest checkを追加した。
 - `external handoff <id|all>` はissue、reproduction、fix-plan、PR body、machine metadataをローカル生成する。
 - 残作業はaction scaffold自動生成、untrusted checkout sandbox、複数target CI matrixのjob分離、manifest file parserとprepare/update workflow。

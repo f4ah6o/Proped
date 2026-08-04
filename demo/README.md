@@ -35,11 +35,12 @@ moon run src/cli -- external list --json
 moon run src/cli -- external run all --json
 ```
 
-The campaign includes `proton-demo-todo`, `ensenzu-app`, `signal-reader`, and `moonbit-editor-file-tree`. The editor target retains two file-tree resolve-order failures; its primary minimized trace is `ToggleDirectory("readonly-remote://workspace/tests") -> SetActive("readonly-remote://workspace/src/lib/util.mbt") -> DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")`. Outputs are written under `demo/out/external/<id>/`.
+The campaign includes `proton-demo-todo`, `ensenzu-app`, `signal-reader`, `moonbit-editor-file-tree`, and `canopy-components`. Canopy covers resizable, menu, and tabs behavior and minimizes its direct-dispatch overflow to `ResizeNudge(dw=2147483647, dh=0)`. Outputs are written under `demo/out/external/<id>/`.
 
 Generate local issue and PR drafts without contacting upstream:
 
 ```bash
 moon run src/cli -- external handoff signal-reader --json
 moon run src/cli -- external handoff moonbit-editor-file-tree --json
+moon run src/cli -- external handoff canopy-components --json
 ```

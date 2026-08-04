@@ -18,6 +18,7 @@ responses.
 | `ensenzu-app` | `effect-model` | accepted non-finite frequency |
 | `signal-reader` | `effect-model` | stale feed, search, and saved-state responses |
 | `moonbit-editor-file-tree` | `effect-model` | unrelated resolve failure cancels newer auto-reveal |
+| `canopy-components` | `pure` | positive maximum resize nudge wraps to minimum width |
 
 All tracked manifests are `public-bug`. Security-sensitive manifests and evidence must stay below `.private/disclosures/` and are rejected by `scripts/check_public_disclosure.py` if tracked.
 

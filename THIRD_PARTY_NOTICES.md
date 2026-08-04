@@ -110,3 +110,14 @@ The pinned revision does not include a standalone LICENSE file. No upstream sour
 - Adapted source: `src/vendor/moonbit_editor_file_tree/editor_file_tree.mbt`
 
 The Apache License 2.0 text is included at `src/vendor/moonbit_editor_file_tree/LICENSE`. The native adapter replaces private URI and provider boundaries with two finite workspace snapshots and deterministic resolve descriptors while preserving the upstream tree-update and auto-reveal semantics. Exact source hashes and adaptation notes are recorded in `src/vendor/moonbit_editor_file_tree/UPSTREAM.md`.
+
+## Canopy Rabbita components
+
+- Project: `dowdiness/canopy`
+- Source paths: `modules/rabbita-resizable/resizable`, `modules/rabbita-menu/menu`, and `modules/rabbita-tabs/tabs`
+- Revision: `cb41945b04801084e8abe1d8edc27eb0cdce4a1c`
+- License: Apache License 2.0
+- Preserved source: `src/vendor/canopy_components/upstream/`
+- Adapted source: `src/vendor/canopy_components/canopy_components.mbt`
+
+The upstream Apache License 2.0 text is included at `src/vendor/canopy_components/LICENSE`. The adapter combines the three private-state component models into a finite native/JavaScript exploration target and replaces browser event, focus, and subscription boundaries with typed messages. Exact source hashes and scope qualifications are recorded in `src/vendor/canopy_components/UPSTREAM.md`.

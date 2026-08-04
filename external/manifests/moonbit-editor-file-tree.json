@@ -1,0 +1,29 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "moonbit-editor-file-tree",
+  "repository": "moonbitlang/editor",
+  "revision": "001c9db52bcdc543c2bec8689b70e97941cecc18",
+  "license": "Apache-2.0",
+  "packages": [
+    "internal/shell/widgets/file_tree",
+    "internal/shell/workbench"
+  ],
+  "entryPoints": {
+    "model": "FileTreeModel",
+    "message": "FileTreeMsg",
+    "update": "FileTreeModel::update",
+    "view": "FileTreeModel::view"
+  },
+  "strategy": "effect-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "ebb0b018ae049c1f182c7c74d0361aaee0c439761d00a8ead5f20e94e1968547",
+  "properties": [
+    "asynchronous resolve responses preserve newer tree intent",
+    "pending resolve IDs remain unique",
+    "outside targets terminate auto reveal",
+    "open file selects the same URI",
+    "late resolve does not re-expand a collapsed directory",
+    "rendered tree status matches model"
+  ],
+  "findingVisibility": "public-bug"
+}

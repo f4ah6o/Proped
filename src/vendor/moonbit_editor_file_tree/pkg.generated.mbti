@@ -1,0 +1,101 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/moonbit_editor_file_tree"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "f4ah6o/proped-rabbita/external",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn root() -> String
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn target_outside() -> String
+
+pub fn target_src() -> String
+
+pub fn target_tests() -> String
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+pub fn visible_nodes(Model) -> Array[TreeNode]
+
+// Errors
+
+// Types and methods
+pub(all) enum EntryKind {
+  File
+  Directory
+} derive(Eq, @debug.Debug)
+pub fn EntryKind::to_string(Self) -> String
+
+pub(all) struct Model {
+  root : TreeNode?
+  selected : String?
+  pending_reveal : String?
+  pending_resolves : Array[PendingResolve]
+  next_effect_id : Int
+  provider_revision : Int
+  accepted_root_revision : Int
+  last_opened : String?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  Refresh
+  SwitchFixture(Int)
+  DirectoryResolveSucceeded(Int, String, Int)
+  DirectoryResolveFailed(Int, String)
+  ToggleDirectory(String)
+  OpenFile(String)
+  SetActive(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PendingResolve {
+  effect : @external.EffectDescriptor
+  uri : String
+  fixture_revision : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TreeNode {
+  uri : String
+  name : String
+  kind : EntryKind
+  children : Array[TreeNode]?
+  expanded : Bool
+  resolve_failed : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) struct WorkspaceStat {
+  uri : String
+  name : String
+  kind : EntryKind
+  children : Array[WorkspaceStat]?
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

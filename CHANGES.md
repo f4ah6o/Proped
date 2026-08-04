@@ -1,5 +1,22 @@
 # Changes
 
+## 0.8.0 - 2026-08-05
+
+### Added
+
+- Added `moonbit-editor-file-tree` as the fourth external target with two finite workspace snapshots, recorded directory-resolve effects, overlapping auto-reveal actions, and deterministic response injection.
+- Preserved the Apache-2.0 MoonBit Editor file-tree, tree-state, provider, and stylesheet sources at revision `001c9db52bcdc543c2bec8689b70e97941cecc18` with SHA-256 provenance.
+- Extended source inspection to recognize named model/message types and method-style `Type::update` / `Type::view` boundaries used by private component models.
+
+### Fixed
+
+- Found that a late failure from an older unrelated directory resolve clears the newer active file's `pending_reveal`; minimized to `ToggleDirectory("readonly-remote://workspace/tests") -> SetActive("readonly-remote://workspace/src/lib/util.mbt") -> DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")`.
+- Found that a late successful resolve can re-expand a directory manually collapsed after auto-reveal started; minimized to `SetActive("readonly-remote://workspace/tests/spec.mbt") -> ToggleDirectory("readonly-remote://workspace/tests") -> DirectoryResolveSucceeded(request=1, uri="readonly-remote://workspace/tests", fixture=1)`.
+
+### Changed
+
+- Expanded the external campaign to four deterministic targets and bumped the package and CLI version to `0.8.0`.
+
 ## 0.7.0 - 2026-08-05
 
 ### Added

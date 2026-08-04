@@ -70,7 +70,7 @@ fn parse_args(raw : Array[String]) -> CliArgs {
 
 ///|
 fn print_help() -> Unit {
-  println("Proped Rabbita CLI 0.7.0")
+  println("Proped Rabbita CLI 0.8.0")
   println("")
   println("Usage:")
   println("  moon run src/cli -- <command> [arguments] [--json] [--output DIR]")
@@ -117,6 +117,7 @@ fn print_help() -> Unit {
     "  ensenzu-app                Ensenzu non-finite numeric input failure",
   )
   println("  signal-reader              Signal Reader response-order failures")
+  println("  moonbit-editor-file-tree   Editor file-tree resolve race")
   println("")
   println(
     "Exit codes: 0 expectation met, 2 usage error, 3 expectation mismatch",
@@ -126,7 +127,7 @@ fn print_help() -> Unit {
 ///|
 fn schema_json() -> String {
   (
-    #|{"name":"proped-rabbita","version":"0.7.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","handoff","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["issue.md","reproduction.md","fix-plan.md","pr-body.md","machine.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo","ensenzu-app","signal-reader"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
+    #|{"name":"proped-rabbita","version":"0.8.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","handoff","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["issue.md","reproduction.md","fix-plan.md","pr-body.md","machine.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo","ensenzu-app","signal-reader","moonbit-editor-file-tree"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
   )
 }
 
@@ -140,7 +141,7 @@ fn demo_list_json() -> String {
 ///|
 fn external_list_json() -> String {
   (
-    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"},{"id":"ensenzu-app","repository":"shiguri-01/ensenzu","revision":"f1fbec776a393e7023c8fa8324ea26c0774752e5","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Ensenzu numeric forms, SVG calculation, reset, and non-finite input exploration"},{"id":"signal-reader","repository":"CAIMEOX/signal_reader","revision":"e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a","license":"MIT","strategy":"effect-model","expectedOutcome":"failure","description":"Signal Reader stale feed, search, and saved-state response exploration"}]}
+    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"},{"id":"ensenzu-app","repository":"shiguri-01/ensenzu","revision":"f1fbec776a393e7023c8fa8324ea26c0774752e5","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Ensenzu numeric forms, SVG calculation, reset, and non-finite input exploration"},{"id":"signal-reader","repository":"CAIMEOX/signal_reader","revision":"e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a","license":"MIT","strategy":"effect-model","expectedOutcome":"failure","description":"Signal Reader stale feed, search, and saved-state response exploration"},{"id":"moonbit-editor-file-tree","repository":"moonbitlang/editor","revision":"001c9db52bcdc543c2bec8689b70e97941cecc18","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"MoonBit Editor overlapping file-tree resolve and auto-reveal exploration"}]}
   )
 }
 
@@ -222,6 +223,16 @@ fn signal_reader_external_inspection_json() -> String {
 }
 
 ///|
+fn editor_file_tree_external_inspection_json() -> String {
+  external_inspection_json(
+    @external.editor_file_tree_manifest(),
+    ["native-invoke"],
+    "all bounded pending resolve permutations",
+    "ToggleDirectory(\"readonly-remote://workspace/tests\") -> SetActive(\"readonly-remote://workspace/src/lib/util.mbt\") -> DirectoryResolveFailed(request=1, uri=\"readonly-remote://workspace/tests\")",
+  )
+}
+
+///|
 fn print_external_inspection(
   manifest : @external.ExternalManifest,
   expected_failure : String,
@@ -258,6 +269,14 @@ fn print_signal_reader_external_inspection() -> Unit {
   print_external_inspection(
     @external.signal_reader_manifest(),
     "SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)",
+  )
+}
+
+///|
+fn print_editor_file_tree_external_inspection() -> Unit {
+  print_external_inspection(
+    @external.editor_file_tree_manifest(),
+    "ToggleDirectory(tests) -> SetActive(src/lib/util.mbt) -> DirectoryResolveFailed(tests)",
   )
 }
 
@@ -831,6 +850,25 @@ async fn run_signal_reader(output_root : String) -> RunSummary {
 }
 
 ///|
+async fn run_editor_file_tree(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @editor_file_tree.machine(),
+    @editor_file_tree.properties(),
+    @editor_file_tree.default_config(),
+  )
+  finish_external_run(
+    @external.editor_file_tree_manifest(),
+    output_root,
+    "asynchronous resolve responses preserve newer tree intent",
+    [
+      "ToggleDirectory(\"readonly-remote://workspace/tests\")", "SetActive(\"readonly-remote://workspace/src/lib/util.mbt\")",
+      "DirectoryResolveFailed(request=1, uri=\"readonly-remote://workspace/tests\")",
+    ],
+    report,
+  )
+}
+
+///|
 fn summaries_json_for(
   command : String,
   summaries : Array[RunSummary],
@@ -888,6 +926,8 @@ fn handoff_spec(id : String) -> @disclosure.FindingHandoff? {
     Some(@external.ensenzu_handoff())
   } else if id == "signal-reader" {
     Some(@external.signal_reader_handoff())
+  } else if id == "moonbit-editor-file-tree" {
+    Some(@external.editor_file_tree_handoff())
   } else {
     None
   }
@@ -974,9 +1014,9 @@ async fn main {
       return
     }
     if parsed.json {
-      println("{\"ok\":true,\"version\":\"0.7.0\"}")
+      println("{\"ok\":true,\"version\":\"0.8.0\"}")
     } else {
-      println("proped-rabbita 0.7.0")
+      println("proped-rabbita 0.8.0")
     }
     return
   }
@@ -1016,6 +1056,9 @@ async fn main {
         println(
           "signal-reader\tCAIMEOX/signal_reader\teffect-model\tfailure\tResponse-order exploration",
         )
+        println(
+          "moonbit-editor-file-tree\tmoonbitlang/editor\teffect-model\tfailure\tFile-tree resolve race exploration",
+        )
       }
       return
     }
@@ -1039,6 +1082,9 @@ async fn main {
         )
         statuses.push(
           generate_handoff(parsed.output, @external.signal_reader_handoff()),
+        )
+        statuses.push(
+          generate_handoff(parsed.output, @external.editor_file_tree_handoff()),
         )
       } else {
         match handoff_spec(requested) {
@@ -1107,6 +1153,12 @@ async fn main {
         } else {
           print_signal_reader_external_inspection()
         }
+      } else if inspect_id == "moonbit-editor-file-tree" {
+        if parsed.json {
+          println(editor_file_tree_external_inspection_json())
+        } else {
+          print_editor_file_tree_external_inspection()
+        }
       } else {
         usage_error("unknown external id: \{inspect_id}", parsed.json)
         return
@@ -1129,10 +1181,13 @@ async fn main {
       external_summaries.push(run_ensenzu(external_root))
     } else if external_id == "signal-reader" {
       external_summaries.push(run_signal_reader(external_root))
+    } else if external_id == "moonbit-editor-file-tree" {
+      external_summaries.push(run_editor_file_tree(external_root))
     } else if external_id == "all" {
       external_summaries.push(run_proton_todo(external_root))
       external_summaries.push(run_ensenzu(external_root))
       external_summaries.push(run_signal_reader(external_root))
+      external_summaries.push(run_editor_file_tree(external_root))
     } else {
       usage_error("unknown external id: \{external_id}", parsed.json)
       return

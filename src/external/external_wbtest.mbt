@@ -81,3 +81,39 @@ test "Signal Reader manifest and handoff are valid" {
   let files = @disclosure.public_handoff_files(signal_reader_handoff()).unwrap()
   assert_eq(files.length(), 5)
 }
+
+///|
+test "source detector recognizes named model message and method view" {
+  let source =
+    #|import { "moonbit-community/rabbita" }
+    #|struct FileTreeModel { value : Int }
+    #|priv enum FileTreeMsg { Refresh }
+    #|fn FileTreeModel::update(self : FileTreeModel, msg : FileTreeMsg) { self }
+    #|fn FileTreeModel::view(self : FileTreeModel) { self }
+    #|fn effect() { @cmd.perform() }
+  let inspection = inspect_source(source)
+  assert_true(inspection.has_model)
+  assert_true(inspection.has_message)
+  assert_true(inspection.has_update)
+  assert_true(inspection.has_view)
+  assert_eq(inspection.strategy, EffectModel)
+}
+
+///|
+test "editor file tree manifest passes validation" {
+  assert_eq(validate_manifest(editor_file_tree_manifest()), [])
+}
+
+///|
+test "source detector recognizes model methods split from type declarations" {
+  let source =
+    #|import { "moonbit-community/rabbita" }
+    #|priv enum FileTreeMsg { Refresh }
+    #|fn FileTreeModel::update(self : FileTreeModel, msg : FileTreeMsg) { self }
+    #|fn FileTreeModel::view(self : FileTreeModel) { self }
+    #|fn effect() { @cmd.perform() }
+  let inspection = inspect_source(source)
+  assert_true(inspection.has_model)
+  assert_true(inspection.has_message)
+  assert_eq(inspection.strategy, EffectModel)
+}

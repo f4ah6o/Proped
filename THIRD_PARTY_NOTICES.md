@@ -98,3 +98,15 @@ The Apache License 2.0 text is included in both vendor directories. The calculat
 - Adapter: `src/vendor/signal_reader/signal_reader.mbt`
 
 The pinned revision does not include a standalone LICENSE file. No upstream source is included in Proped Rabbita. The adapter is a clean-room finite behavioral model; exact source hashes and the modeled boundary are recorded in `src/vendor/signal_reader/UPSTREAM.md`.
+
+
+## MoonBit Editor file tree
+
+- Project: `moonbitlang/editor`
+- Source paths: `internal/shell/widgets/file_tree/file_tree.mbt`, `tree_state.mbt`, `file_tree.css`, and `internal/shell/workbench/tree_provider.mbt`
+- Revision: `001c9db52bcdc543c2bec8689b70e97941cecc18`
+- License: Apache License 2.0
+- Preserved source: `src/vendor/moonbit_editor_file_tree/upstream/`
+- Adapted source: `src/vendor/moonbit_editor_file_tree/editor_file_tree.mbt`
+
+The Apache License 2.0 text is included at `src/vendor/moonbit_editor_file_tree/LICENSE`. The native adapter replaces private URI and provider boundaries with two finite workspace snapshots and deterministic resolve descriptors while preserving the upstream tree-update and auto-reveal semantics. Exact source hashes and adaptation notes are recorded in `src/vendor/moonbit_editor_file_tree/UPSTREAM.md`.

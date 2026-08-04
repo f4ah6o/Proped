@@ -71,6 +71,7 @@ Lists reviewed external targets, their pinned repository and revision, adapter s
 moon run src/cli -- external inspect proton-demo-todo --json
 moon run src/cli -- external inspect ensenzu-app --json
 moon run src/cli -- external inspect signal-reader --json
+moon run src/cli -- external inspect moonbit-editor-file-tree --json
 ```
 
 Returns manifest entry points, source SHA-256, effect policy, enabled properties, and the explicit `read-only` upstream write policy.
@@ -80,6 +81,7 @@ Returns manifest entry points, source SHA-256, effect policy, enabled properties
 ```bash
 moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
 moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json
+moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json
 ```
 
 Mechanically scans one local MoonBit source file for Rabbita imports, state constructors, `Model`, `Msg`, `update`, `view`, command, and subscription boundaries. The scanner classifies the file as `pure`, `effect-model`, `subscription-model`, `browser-replay`, or `unsupported`; reviewed manifest entries remain authoritative.
@@ -90,6 +92,7 @@ Mechanically scans one local MoonBit source file for Rabbita imports, state cons
 moon run src/cli -- external run proton-demo-todo --json
 moon run src/cli -- external run ensenzu-app --json
 moon run src/cli -- external run signal-reader --json
+moon run src/cli -- external run moonbit-editor-file-tree --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -100,13 +103,15 @@ Runs deterministic external adapters under `<output>/external/<id>/`. Native, ne
 | `proton-demo-todo` | `snapshot version never decreases` | `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` |
 | `ensenzu-app` | `active numeric fields reject non-finite input` | `Change(Frequency, "Infinity")` |
 | `signal-reader` | `feed responses match the current subscription` | `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)` |
+| `moonbit-editor-file-tree` | `asynchronous resolve responses preserve newer tree intent` | `ToggleDirectory("readonly-remote://workspace/tests") -> SetActive("readonly-remote://workspace/src/lib/util.mbt") -> DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")` |
 
-Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response.
+Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response. MoonBit Editor also retains a minimized late-success trace where a directory manually collapsed after auto-reveal started becomes expanded again.
 
 ### `external handoff <id|all>`
 
 ```bash
 moon run src/cli -- external handoff signal-reader --output artifacts --json
+moon run src/cli -- external handoff moonbit-editor-file-tree --output artifacts --json
 ```
 
 Writes local `issue.md`, `reproduction.md`, `fix-plan.md`, `pr-body.md`, and `machine.json` drafts under `<output>/handoff/<id>/`. The metadata fixes `upstreamWritePerformed` to `false`; the command never calls GitHub or an upstream API.

@@ -21,7 +21,7 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 - [ ] `moonbit-community/proton` framework internals
 - [x] `shiguri-01/ensenzu`
 - [x] `CAIMEOX/signal_reader`
-- [ ] `moonbitlang/editor` file tree
+- [x] `moonbitlang/editor` file tree
 - [ ] `CAIMEOX/circular`
 - [ ] `moonbit-community/isomorphic` application suite
 
@@ -93,13 +93,20 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 ## 受け入れ条件
 
-- [ ] 対象一覧の各repositoryが個別issueまたはbatch issueへ対応している。
-- [ ] 各対象にpinned revision、license、対象path、adapter方式が記録される。
+- [x] 対象一覧の各repositoryが個別issueまたはbatch issueへ対応している。
+- [x] 各対象にpinned revision、license、対象path、adapter方式が記録される。
 - [ ] 各対象で少なくともgeneric propertyが機械実行される。
 - [ ] failureが見つかった場合、property名、最小trace、stable action ID、探索規模を保存する。
 - [ ] failureが見つからなかった場合も、試したproperty、境界、探索上限を記録する。
-- [ ] `demo run all`とは別にexternal campaignを選択実行できる。
+- [x] `demo run all`とは別にexternal campaignを選択実行できる。
 - [ ] upstream更新時に再取得・再検証できる。
+
+## 2026-08-05 進捗
+
+- Proton Todo、Ensenzu、Signal Reader、MoonBit Editor file treeの4 targetを`external run all`へ登録した。
+- MoonBit Editorでは1,600 state・2,646 transitionを探索し、unrelated resolve failureによるauto-reveal中断と、late successによるmanual collapseの再展開を最小3 actionへ縮約した。
+- named private modelと`Type::update` / `Type::view`を`inspect-source`で認識できるようdetectorを拡張した。
+- 全external repositoryはread-only inputとして扱い、相手側へ書き込みを行っていない。
 
 ## テスト計画
 

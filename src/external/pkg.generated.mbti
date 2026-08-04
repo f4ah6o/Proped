@@ -8,6 +8,10 @@ import {
 }
 
 // Values
+pub fn editor_file_tree_handoff() -> @disclosure.FindingHandoff
+
+pub fn editor_file_tree_manifest() -> ExternalManifest
+
 pub fn effect_ids_unique(Array[EffectDescriptor]) -> Bool
 
 pub fn ensenzu_handoff() -> @disclosure.FindingHandoff

@@ -11,7 +11,7 @@ import {
   "f4ah6o/proped-rabbita/vendor/proton_todo",
   "f4ah6o/proped-rabbita/vendor/ensenzu_app",
   "f4ah6o/proped-rabbita/vendor/signal_reader",
-  "f4ah6o/proped-rabbita/vendor/signal_reader",
+  "f4ah6o/proped-rabbita/vendor/moonbit_editor_file_tree" @editor_file_tree,
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/env",

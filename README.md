@@ -11,6 +11,7 @@ moon run src/cli -- help
 moon run src/cli -- demo list --json
 moon run src/cli -- demo run all --json
 moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json
+moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json
 moon run src/cli -- external run all --json
 ```
 
@@ -43,7 +44,7 @@ Vendored source, revision, hashes, license, adapter changes, and failure rationa
 
 External targets are pinned by manifests under `external/manifests/`. `external inspect-source` mechanically detects common `Model`, `Msg`, `update`, `view`, command, and subscription boundaries in a local source file. Effects are recorded as deterministic descriptors rather than executing upstream network or native operations.
 
-The external campaign currently includes `proton-demo-todo`, `ensenzu-app`, and `signal-reader`. Signal Reader explores 720 states and 1,265 transitions and retains three response-order failures covering feed selection, live search, and optimistic saved-state callbacks. Its primary trace minimizes to `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)`.
+The external campaign currently includes `proton-demo-todo`, `ensenzu-app`, `signal-reader`, and `moonbit-editor-file-tree`. Signal Reader explores 720 states and 1,265 transitions and retains three response-order failures. The MoonBit Editor file-tree target explores 1,600 states and 2,646 transitions and retains two resolve-order failures. Its primary trace minimizes to `ToggleDirectory("readonly-remote://workspace/tests") -> SetActive("readonly-remote://workspace/src/lib/util.mbt") -> DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")`: an older unrelated resolve failure cancels the newer active file's auto-reveal.
 
 Upstream repositories are read-only inputs: this project does not create issues, pull requests, comments, or commits in them. `external handoff <id>` generates local issue, reproduction, fix-plan, and PR-body drafts only. Security-sensitive findings are blocked from public export and isolated below ignored `.private/disclosures/`; see [docs/DISCLOSURE.md](docs/DISCLOSURE.md).
 
@@ -116,6 +117,7 @@ src/
   vendor/proton_todo/               stale snapshot ordering failure
   vendor/ensenzu_app/               numeric form and SVG application adapter
   vendor/ensenzu_core/              pinned Ensenzu calculation implementation
+  vendor/moonbit_editor_file_tree/  file-tree resolve and auto-reveal adapter
   core.mbt                          exploration, shrinking, minimal failure retention
   rabbita_adapter.mbt               browserless Rabbita rendering
   atlas*.mbt                        report exporters

@@ -52,6 +52,7 @@ jobs:
           moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json > /tmp/proped-rabbita-inspection.json
           moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json > /tmp/proped-rabbita-ensenzu-inspection.json
           moon run src/cli -- external inspect signal-reader --json > /tmp/proped-rabbita-signal-inspection.json
+          moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json > /tmp/proped-rabbita-editor-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -64,6 +65,7 @@ jobs:
           inspection = json.loads(Path('/tmp/proped-rabbita-inspection.json').read_text())
           ensenzu_inspection = json.loads(Path('/tmp/proped-rabbita-ensenzu-inspection.json').read_text())
           signal_inspection = json.loads(Path('/tmp/proped-rabbita-signal-inspection.json').read_text())
+          editor_inspection = json.loads(Path('/tmp/proped-rabbita-editor-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -74,9 +76,14 @@ jobs:
               'rabbita-subscriptions',
               'rabbita-websocket',
           ]
-          external_ids = ['proton-demo-todo', 'ensenzu-app', 'signal-reader']
+          external_ids = [
+              'proton-demo-todo',
+              'ensenzu-app',
+              'signal-reader',
+              'moonbit-editor-file-tree',
+          ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.7.0'
+          assert schema['version'] == '0.8.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -135,6 +142,12 @@ jobs:
           assert signal_app['strategy'] == 'effect-model'
           assert signal_app['findingVisibility'] == 'public-bug'
           assert signal_app['upstreamWritePolicy'] == 'read-only'
+          assert editor_inspection['strategy'] == 'effect-model'
+          assert editor_inspection['detected']['model'] is True
+          assert editor_inspection['detected']['message'] is True
+          assert editor_inspection['detected']['update'] is True
+          assert editor_inspection['detected']['view'] is True
+          assert editor_inspection['detected']['command'] is True
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -195,6 +208,41 @@ jobs:
                   'SearchLoaded(request=1, query="alpha")',
               ],
           }
+
+          editor = external_runs['moonbit-editor-file-tree']
+          assert editor['expectationMet'] is True
+          assert editor['states'] == 1600
+          assert editor['transitions'] == 2646
+          assert editor['failures'] == 2
+          assert editor['diagnostics'] == 0
+          assert editor['firstFailure']['property'] == (
+              'asynchronous resolve responses preserve newer tree intent'
+          )
+          assert editor['firstFailure']['trace'] == [
+              'ToggleDirectory("readonly-remote://workspace/tests")',
+              'SetActive("readonly-remote://workspace/src/lib/util.mbt")',
+              'DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")',
+          ]
+          editor_atlas = json.loads(
+              (Path(editor['output']) / 'atlas.json').read_text()
+          )
+          editor_failures = {
+              failure['property']: failure['trace']
+              for failure in editor_atlas['failures']
+          }
+          assert editor_failures == {
+              'asynchronous resolve responses preserve newer tree intent': [
+                  'ToggleDirectory("readonly-remote://workspace/tests")',
+                  'SetActive("readonly-remote://workspace/src/lib/util.mbt")',
+                  'DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")',
+              ],
+              'late resolve does not re-expand a collapsed directory': [
+                  'SetActive("readonly-remote://workspace/tests/spec.mbt")',
+                  'ToggleDirectory("readonly-remote://workspace/tests")',
+                  'DirectoryResolveSucceeded(request=1, uri="readonly-remote://workspace/tests", fixture=1)',
+              ],
+          }
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -239,4 +287,11 @@ jobs:
               'df8dd9c5382d0acdcee335ec8cc3ba88b386b47c4ab15cd178a352e1812b617e'
           )
           assert not Path('src/vendor/signal_reader/upstream').exists()
+
+          editor_source = Path(
+              'src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt'
+          ).read_bytes()
+          assert hashlib.sha256(editor_source).hexdigest() == (
+              'ebb0b018ae049c1f182c7c74d0361aaee0c439761d00a8ead5f20e94e1968547'
+          )
           PY

@@ -71,6 +71,7 @@ review済みexternal targetのrepository、固定revision、adapter strategy、l
 moon run src/cli -- external inspect proton-demo-todo --json
 moon run src/cli -- external inspect ensenzu-app --json
 moon run src/cli -- external inspect signal-reader --json
+moon run src/cli -- external inspect moonbit-editor-file-tree --json
 ```
 
 manifestのentry point、source SHA-256、effect policy、有効property、upstreamへの明示的な`read-only` policyを返します。
@@ -80,6 +81,7 @@ manifestのentry point、source SHA-256、effect policy、有効property、upstr
 ```bash
 moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
 moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json
+moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json
 ```
 
 local MoonBit source fileからRabbita import、state constructor、`Model`、`Msg`、`update`、`view`、command、subscription境界を機械検出します。scannerは `pure`、`effect-model`、`subscription-model`、`browser-replay`、`unsupported` に分類しますが、review済みmanifestを最終的な根拠とします。
@@ -90,6 +92,7 @@ local MoonBit source fileからRabbita import、state constructor、`Model`、`M
 moon run src/cli -- external run proton-demo-todo --json
 moon run src/cli -- external run ensenzu-app --json
 moon run src/cli -- external run signal-reader --json
+moon run src/cli -- external run moonbit-editor-file-tree --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -100,13 +103,15 @@ moon run src/cli -- external run all --output artifacts --json
 | `proton-demo-todo` | `snapshot version never decreases` | `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` |
 | `ensenzu-app` | `active numeric fields reject non-finite input` | `Change(Frequency, "Infinity")` |
 | `signal-reader` | `feed responses match the current subscription` | `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)` |
+| `moonbit-editor-file-tree` | `asynchronous resolve responses preserve newer tree intent` | `ToggleDirectory("readonly-remote://workspace/tests") -> SetActive("readonly-remote://workspace/src/lib/util.mbt") -> DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")` |
 
-Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。
+Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。MoonBit Editorはauto-reveal開始後に手動collapseしたdirectoryがlate successで再展開される最小traceも保持します。
 
 ### `external handoff <id|all>`
 
 ```bash
 moon run src/cli -- external handoff signal-reader --output artifacts --json
+moon run src/cli -- external handoff moonbit-editor-file-tree --output artifacts --json
 ```
 
 `<output>/handoff/<id>/`へ`issue.md`、`reproduction.md`、`fix-plan.md`、`pr-body.md`、`machine.json`をローカル生成します。metadataの`upstreamWritePerformed`は常に`false`で、GitHubやupstream APIを呼びません。

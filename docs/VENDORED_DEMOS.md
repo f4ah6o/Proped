@@ -15,6 +15,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `rabbita-websocket` | `examples/websocket` | 956 lines | failure | deterministic command-client lifecycle and outcomes |
 | `proton-demo-todo` | `justjavac/proton-demo frontend/main` | 176 lines | failure | Proton effects recorded and snapshot responses injected |
 | `ensenzu-app` | `shiguri-01/ensenzu app/src` | 605 lines | failure | 19-field numeric corpus, native calculation core, deterministic download effect |
+| `moonbit-editor-file-tree` | `moonbitlang/editor internal/shell` | 708 lines | failure | two finite workspaces and injected directory-resolve responses |
 
 ## Counter
 
@@ -92,3 +93,21 @@ The adapter records feed, search, and saved-state HTTP requests and injects resp
 3. `OpenSearchModal -> UpdateSearchQuery("alpha") -> UpdateSearchQuery("beta") -> SearchLoaded(request=1, query="alpha")`
 
 The run explores 720 states and 1,265 transitions with zero diagnostics. The adapter demonstrates response acceptance under modeled ordering; it does not claim a particular network scheduler always produces that order.
+
+## MoonBit Editor file tree
+
+The Apache-2.0 file-tree widget is pinned at revision `001c9db52bcdc543c2bec8689b70e97941cecc18`. The upstream model and message types are private and the shell package is JS-only, so the adapter preserves its tree, toggle, resolve, and auto-reveal update semantics over String URIs. Two finite workspace snapshots replace the remote provider, and every directory resolve is recorded as a deterministic `NativeInvoke` descriptor.
+
+The upstream `DirectoryResolved(uri, result)` message has no request or reveal generation. A late failure for an older unrelated directory therefore clears the current `pending_reveal`. Property `asynchronous resolve responses preserve newer tree intent` shrinks to:
+
+1. `ToggleDirectory("readonly-remote://workspace/tests")`
+2. `SetActive("readonly-remote://workspace/src/lib/util.mbt")`
+3. `DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")`
+
+A second retained trace shows a late successful response re-expanding a directory manually collapsed after auto-reveal started:
+
+1. `SetActive("readonly-remote://workspace/tests/spec.mbt")`
+2. `ToggleDirectory("readonly-remote://workspace/tests")`
+3. `DirectoryResolveSucceeded(request=1, uri="readonly-remote://workspace/tests", fixture=1)`
+
+The pinned run explores 1,600 states and 2,646 transitions with zero diagnostics. The modeled request ID controls response delivery but is not used as a freshness guard when applying the response, matching the upstream URI-only message boundary.

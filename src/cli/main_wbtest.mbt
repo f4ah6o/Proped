@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.7.0"))
+  assert_true(schema.contains("0.8.0"))
 }
 
 ///|
@@ -193,6 +193,7 @@ test "external list exposes all pinned applications" {
   assert_true(json.contains("proton-demo-todo"))
   assert_true(json.contains("ensenzu-app"))
   assert_true(json.contains("signal-reader"))
+  assert_true(json.contains("moonbit-editor-file-tree"))
 }
 
 ///|
@@ -215,4 +216,17 @@ test "private security external run policy always uses ignored private root" {
   let policy = external_run_policy(private_manifest, "public-output")
   assert_true(policy.details_withheld)
   assert_eq(policy.output, ".private/disclosures/security-fixture/run")
+}
+
+///|
+test "MoonBit Editor file tree inspection and handoff expose resolve race" {
+  let json = editor_file_tree_external_inspection_json()
+  assert_true(json.contains("moonbitlang/editor"))
+  assert_true(
+    json.contains("asynchronous resolve responses preserve newer tree intent"),
+  )
+  assert_true(json.contains("DirectoryResolveFailed"))
+  let spec = handoff_spec("moonbit-editor-file-tree").unwrap()
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+  assert_eq(spec.minimal_trace.length(), 3)
 }

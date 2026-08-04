@@ -105,10 +105,18 @@ pub fn inspect_source(source : String) -> SourceInspection {
   let has_create_state_with_init = source.contains("create_state_with_init(")
   let has_cell_with_dispatch = source.contains("cell_with_dispatch(")
   let has_model = source.contains("struct Model") ||
-    source.contains("type Model")
-  let has_message = source.contains("enum Msg") || source.contains("type Msg")
-  let has_update = source.contains("fn update") || source.contains(".update(")
-  let has_view = source.contains("fn view") || source.contains(".view(")
+    source.contains("type Model") ||
+    source.contains("Model {") ||
+    source.contains("Model::")
+  let has_message = source.contains("enum Msg") ||
+    source.contains("type Msg") ||
+    source.contains("Msg {")
+  let has_update = source.contains("fn update") ||
+    source.contains(".update(") ||
+    source.contains("::update(")
+  let has_view = source.contains("fn view") ||
+    source.contains(".view(") ||
+    source.contains("::view(")
   let has_subscription = source.contains("fn subscriptions") ||
     source.contains("@sub.") ||
     source.contains("subscribe(")
@@ -371,6 +379,71 @@ pub fn ensenzu_handoff() -> @disclosure.FindingHandoff {
       "Add table-driven tests for NaN, Infinity, and -Infinity across active numeric fields.",
       "Preserve the previous SVG and calculation result while reporting a validation error.",
       "Confirm ordinary finite values and partial input behavior remain unchanged.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn editor_file_tree_manifest() -> ExternalManifest {
+  {
+    id: "moonbit-editor-file-tree",
+    repository: "moonbitlang/editor",
+    revision: "001c9db52bcdc543c2bec8689b70e97941cecc18",
+    license: "Apache-2.0",
+    packages: ["internal/shell/widgets/file_tree", "internal/shell/workbench"],
+    model_entry: "FileTreeModel",
+    message_entry: "FileTreeMsg",
+    update_entry: "FileTreeModel::update",
+    view_entry: "FileTreeModel::view",
+    strategy: EffectModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "ebb0b018ae049c1f182c7c74d0361aaee0c439761d00a8ead5f20e94e1968547",
+    properties: [
+      "asynchronous resolve responses preserve newer tree intent", "pending resolve IDs remain unique",
+      "outside targets terminate auto reveal", "open file selects the same URI",
+      "late resolve does not re-expand a collapsed directory", "rendered tree status matches model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn editor_file_tree_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "moonbit-editor-file-tree",
+    repository: "moonbitlang/editor",
+    revision: "001c9db52bcdc543c2bec8689b70e97941cecc18",
+    title: "Keep a newer file-tree auto-reveal pending when an unrelated resolve fails",
+    summary: "FileTreeMsg::DirectoryResolved carries a URI and result but no request or reveal generation. The error branch clears pending_reveal even when the failed directory belongs to an older unrelated request.",
+    impact: "A late failure from a folder expansion can cancel auto-reveal for the currently active file. The editor keeps the new file selected, but its ancestor resolution stops before the file becomes visible in the tree.",
+    expected: "A resolve failure clears or retries only the reveal operation associated with that request. An unrelated older failure leaves the newer pending reveal target intact.",
+    actual: "A stale failure for readonly-remote://workspace/tests clears the pending reveal for readonly-remote://workspace/src/lib/util.mbt.",
+    property: "asynchronous resolve responses preserve newer tree intent",
+    minimal_trace: [
+      "ToggleDirectory(\"readonly-remote://workspace/tests\")", "SetActive(\"readonly-remote://workspace/src/lib/util.mbt\")",
+      "DirectoryResolveFailed(request=1, uri=\"readonly-remote://workspace/tests\")",
+    ],
+    action_ids: [
+      "toggle:33:readonly-remote://workspace/tests", "set-active:44:readonly-remote://workspace/src/lib/util.mbt",
+      "resolve-failure:1:33:readonly-remote://workspace/tests",
+    ],
+    evidence: [
+      "The adapter preserves the private FileTreeModel update, reveal, toggle, and resolve semantics over two finite provider snapshots.",
+      "The failure shrinks to three actions and uses two valid overlapping resolve operations.",
+      "The deterministic run explores 1,600 states and 2,646 transitions, retaining two failures with zero runner diagnostics.",
+      "A separate bounded test shows that an older root snapshot can also replace a newer accepted root because responses carry no generation.",
+    ],
+    suggested_fix: [
+      "Carry a request or reveal generation through DirectoryResolved and ignore responses that do not match the current operation.",
+      "On failure, clear pending_reveal only when the failed URI is the ancestor currently being resolved for that target.",
+      "Apply the same generation check to root refresh responses so stale roots cannot replace a newer workspace snapshot.",
+    ],
+    verification: [
+      "Start a resolve for tests, switch the active file to src/lib/util.mbt, and deliver the tests failure last.",
+      "Confirm pending_reveal still points to src/lib/util.mbt and subsequent src/lib responses complete the reveal.",
+      "Deliver two root refresh responses in reverse order and confirm the newest generation remains visible.",
+      "Confirm a failure for the current reveal path still clears or exposes a retry state as designed.",
     ],
     visibility: @disclosure.PublicBug,
   }

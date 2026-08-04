@@ -19,6 +19,7 @@ responses.
 | `signal-reader` | `effect-model` | stale feed, search, and saved-state responses |
 | `moonbit-editor-file-tree` | `effect-model` | unrelated resolve failure cancels newer auto-reveal |
 | `canopy-components` | `pure` | positive maximum resize nudge wraps to minimum width |
+| `incr-typed-spreadsheet` | `pure` | typed formula addition wraps across Int32 boundary |
 
 All tracked manifests are `public-bug`. Security-sensitive manifests and evidence must stay below `.private/disclosures/` and are rejected by `scripts/check_public_disclosure.py` if tracked.
 

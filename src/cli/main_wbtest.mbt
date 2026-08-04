@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.9.0"))
+  assert_true(schema.contains("0.10.0"))
 }
 
 ///|
@@ -195,6 +195,8 @@ test "external list exposes all pinned applications" {
   assert_true(json.contains("signal-reader"))
   assert_true(json.contains("moonbit-editor-file-tree"))
   assert_true(json.contains("canopy-components"))
+  assert_true(json.contains("incr-typed-spreadsheet"))
+  assert_true(json.contains("incr-typed-spreadsheet"))
 }
 
 ///|
@@ -241,5 +243,18 @@ test "Canopy inspection and handoff expose overflow boundary" {
   assert_true(json.contains("ResizeNudge(dw=2147483647, dh=0)"))
   let spec = handoff_spec("canopy-components").unwrap()
   assert_eq(spec.action_ids, ["resize-nudge:2147483647:0"])
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "incr spreadsheet inspection and handoff expose overflow evidence" {
+  let json = incr_typed_spreadsheet_external_inspection_json()
+  assert_true(json.contains("dowdiness/incr"))
+  assert_true(json.contains("\"strategy\":\"pure\""))
+  assert_true(json.contains("positive formula addition does not wrap backward"))
+  assert_true(json.contains("2147483647"))
+  assert_true(json.contains("expectedFailure"))
+  let spec = handoff_spec("incr-typed-spreadsheet").unwrap()
+  assert_eq(spec.action_ids, ["draft:A1:10:2147483647", "apply-selected"])
   assert_eq(spec.visibility, @disclosure.PublicBug)
 }

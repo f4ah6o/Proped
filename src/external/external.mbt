@@ -531,7 +531,7 @@ pub fn canopy_components_manifest() -> ExternalManifest {
     properties: [
       "resizable size remains inside constraints", "positive resize nudges do not decrease width",
       "stale pointer movement after resize end is ignored", "menu focus remains in range",
-      "menu activation remains in range", "tab selection remains in range", "rendered component state matches model",
+      "tab selection remains in range", "rendered component state matches model",
     ],
     finding_visibility: @disclosure.PublicBug,
   }
@@ -565,6 +565,68 @@ pub fn canopy_components_handoff() -> @disclosure.FindingHandoff {
       "From an interior width, apply Int maximum as a positive nudge and confirm width becomes max_w.",
       "Apply Int minimum and maximum deltas to width and height and confirm every result saturates in the requested direction.",
       "Retain ordinary keyboard nudge, drag, EndResize idempotency, and stale pointer movement tests.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn incr_typed_spreadsheet_manifest() -> ExternalManifest {
+  {
+    id: "incr-typed-spreadsheet",
+    repository: "dowdiness/incr",
+    revision: "afc715b261d99f35245f1a14a2390ae8ad86d7d0",
+    license: "Apache-2.0",
+    packages: [
+      "dowdiness/incr/cells@0.15.0", "examples/typed_spreadsheet", "examples/typed_spreadsheet_demo",
+      "examples/typed_spreadsheet_rabbita_demo",
+    ],
+    model_entry: "Model",
+    message_entry: "Msg",
+    update_entry: "update",
+    view_entry: "view",
+    strategy: Pure,
+    effect_policy: "none",
+    source_sha256: "6b4c85f453e8bd0622e10f5c5b41025e0d4f9c8d9a246eb93f661365e3182391",
+    properties: [
+      "positive formula addition does not wrap backward", "parse failure preserves committed worksheet",
+      "deleted input invalidates dependent formula", "Eq and no-backdate probes preserve declared semantics",
+      "worksheet trace records changed formula dependents", "stale inline apply is idempotent",
+      "rendered spreadsheet state matches model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn incr_typed_spreadsheet_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "incr-typed-spreadsheet",
+    repository: "dowdiness/incr",
+    revision: "afc715b261d99f35245f1a14a2390ae8ad86d7d0",
+    title: "Report typed spreadsheet integer overflow instead of wrapping",
+    summary: "The typed spreadsheet formula AST evaluates Int addition and multiplication with wrapping MoonBit Int arithmetic and returns the wrapped value as an ordinary successful cell result.",
+    impact: "A valid-looking spreadsheet formula can silently change sign or magnitude at the Int32 boundary. Downstream formulas and UI snapshots then propagate a numerically incorrect value without a parse, type, or reference error.",
+    expected: "Arithmetic overflow is represented as an explicit cell error, rejected during evaluation, or computed in a numeric type whose supported range includes the result.",
+    actual: "With B1=A1+1, setting A1 to 2147483647 produces Ok(Int(-2147483648)).",
+    property: "positive formula addition does not wrap backward",
+    minimal_trace: ["UpdateDraft(A1, \"2147483647\")", "ApplySelected"],
+    action_ids: ["draft:A1:10:2147483647", "apply-selected"],
+    evidence: [
+      "The adapter executes the pinned Formula, Worksheet, parser, operation runner, and dowdiness/incr@0.15.0 runtime rather than reimplementing arithmetic behavior.",
+      "The failure shrinks to two UI actions over the seeded B1=A1+1 formula.", "900 states and 1,347 transitions are explored with one retained failure and zero runner diagnostics.",
+      "The same target verifies Eq-backed stable parity keeps downstream_count=1 while derived_no_backdate produces downstream_count=2 after input 4 -> 6.",
+      "Parse failure, delete propagation, worksheet trace classification, and stale inline blur properties pass.",
+    ],
+    suggested_fix: [
+      "Use checked addition and multiplication in Formula::evaluate and return a dedicated overflow CellResult error.",
+      "Alternatively introduce a wider or arbitrary-precision spreadsheet integer type and convert literals explicitly.",
+      "Apply the same policy consistently to Add, Mul, and future arithmetic operators.",
+    ],
+    verification: [
+      "Evaluate 2147483647 + 1 and -2147483648 + -1 and confirm both return an overflow error rather than a wrapped Int.",
+      "Evaluate multiplication boundaries such as 1073741824 * 2.", "Confirm ordinary arithmetic, type errors, dependency traces, Eq backdating, and no-backdate behavior remain unchanged.",
+      "Run the Rabbita UI sequence UpdateDraft(A1, max-int) -> ApplySelected and confirm B1 shows the chosen overflow error state.",
     ],
     visibility: @disclosure.PublicBug,
   }

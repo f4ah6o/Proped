@@ -44,7 +44,7 @@ vendor source、revision、hash、license、adapter変更、failureの根拠は 
 
 外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。
 
-external campaignには `proton-demo-todo`、`ensenzu-app`、`signal-reader`、`moonbit-editor-file-tree`、`canopy-components` が含まれます。Signal Readerは3種類、MoonBit Editor file treeは2種類のresponse-order failureを保持します。Canopyはresizable、menu、tabsについて720 state・2,618 transitionを探索し、direct dispatch時のInt32 overflowを `ResizeNudge(dw=2147483647, dh=0)` へ縮約します。通常のkeyboard integrationは小さいdeltaを生成するため、このfindingはpublic message boundaryに限定します。
+external campaignには6 target、`proton-demo-todo`、`ensenzu-app`、`signal-reader`、`moonbit-editor-file-tree`、`canopy-components`、`incr-typed-spreadsheet` が含まれます。incr targetは900 state・1,347 transitionを探索し、typed formula overflowを `UpdateDraft(A1, "2147483647") -> ApplySelected` へ縮約します。Eq-backedの同値出力はdownstream recomputeを省略し、`derived_no_backdate`は意図どおり伝播することも検証します。
 
 外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。`external handoff <id>`はissue、再現、fix plan、PR本文のローカル下書きだけを生成します。security-sensitive findingはpublic exportを拒否し、Gitでignoreされる `.private/disclosures/`へ隔離します。詳細は [docs/DISCLOSURE.ja.md](docs/DISCLOSURE.ja.md) を参照してください。
 
@@ -118,7 +118,9 @@ src/
   vendor/ensenzu_app/               numeric form・SVG application adapter
   vendor/ensenzu_core/              固定したEnsenzu計算実装
   vendor/moonbit_editor_file_tree/  file tree resolve・auto-reveal adapter
-  vendor/canopy_components/          resizable・menu・tabs finite adapter
+  vendor/canopy_components/         resizable・menu・tabs finite adapter
+  vendor/incr_typed_spreadsheet/     worksheet UI・backdating adapter
+  vendor/incr_typed_spreadsheet_core/ pinned worksheet実装
   core.mbt                          探索、shrink、最小failure保持
   rabbita_adapter.mbt               browserless Rabbita rendering
   atlas*.mbt                        report exporter

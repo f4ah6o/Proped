@@ -1,0 +1,942 @@
+///|
+/// A runtime-checked typed spreadsheet worksheet built on top of existing
+/// `@incr` cells.
+///
+/// `Worksheet` owns a local scope for all cells in the sheet so callers can
+/// dispose an entire sheet through `Worksheet::dispose`. Formula type mismatches
+/// are reported as `CellResult::TypeError` when the cell is read, not when the
+/// formula is installed.
+pub struct Worksheet {
+  runtime : @incr.Runtime
+  sheet_id : SheetId
+  scope : @incr.Scope
+  cells : @hashmap.HashMap[CellId, CellSlot]
+  cell_presence : @hashmap.HashMap[CellId, @incr.InputField[Bool]]
+  priv logical_cell_by_runtime_cell : @hashmap.HashMap[@incr.CellId, CellId]
+}
+
+///|
+priv enum CellDefinition {
+  Input(CellValue)
+  Formula(FormulaFacts)
+} derive(Eq)
+
+///|
+priv struct FormulaFacts {
+  static_references : Array[CellId]
+  installed_dependencies : Array[CellId]
+  declared : CellType
+  identity : FormulaIdentity
+} derive(Eq)
+
+///|
+priv enum FormulaIdentity {
+  Ast(Formula)
+  Custom(String?)
+} derive(Eq)
+
+///|
+priv struct FormulaEvaluator {
+  mut evaluate : (Worksheet) -> CellResult
+}
+
+///|
+struct CellSlot {
+  presence : @incr.InputField[Bool]
+  definition : @incr.InputField[CellDefinition]
+  evaluator : FormulaEvaluator
+  value : @incr.Derived[CellResult]
+  metadata_root : @incr.Derived[Unit]
+  watch : @incr.Watch[CellResult]
+  metadata_watch : @incr.Watch[Unit]
+}
+
+///|
+priv struct CellSnapshotMetadata {
+  kind : CellKind?
+  dependency_shape : FormulaDependencyShape?
+  installed_dependencies : Array[CellId]
+  static_references : Array[CellId]
+}
+
+///|
+fn FormulaEvaluator::FormulaEvaluator(
+  evaluate : (Worksheet) -> CellResult,
+) -> FormulaEvaluator {
+  { evaluate, }
+}
+
+///|
+/// Whether a worksheet cell has a concrete value or formula definition.
+pub enum CellKind {
+  Input
+  Formula
+}
+
+///|
+/// A plain, read-only view of a single cell for UI and diagnostics.
+pub struct CellSnapshot {
+  id : CellId
+  present : Bool
+  kind : CellKind?
+  result : CellResult
+  dependency_shape : FormulaDependencyShape?
+  installed_dependencies : Array[CellId]
+  static_references : Array[CellId]
+  last_dynamic_dependencies : Array[CellId]
+}
+
+///|
+/// Plain trace data for worksheet operations.
+pub struct WorksheetTrace {
+  recomputed : Array[CellId]
+  changed : Array[CellId]
+  unchanged : Array[CellId]
+}
+
+///|
+/// Errors returned when querying a worksheet cell for its formula AST.
+pub enum FormulaAstQueryError {
+  ForeignCellId(CellId)
+  MissingCell(CellId)
+  DeletedCell(CellId)
+  NotFormula(CellId)
+  OpaqueFormula(CellId)
+} derive(Eq, Debug)
+
+///|
+/// Creates a worksheet bound to a runtime.
+pub fn Worksheet::Worksheet(
+  runtime : @incr.Runtime,
+  sheet_id : SheetId,
+) -> Worksheet {
+  {
+    runtime,
+    sheet_id,
+    scope: @incr.Scope::new(runtime),
+    cells: @hashmap.HashMap([]),
+    cell_presence: @hashmap.HashMap([]),
+    logical_cell_by_runtime_cell: @hashmap.HashMap([]),
+  }
+}
+
+///|
+/// Returns the worksheet identifier.
+pub fn Worksheet::sheet_id(self : Worksheet) -> SheetId {
+  self.sheet_id
+}
+
+///|
+/// Returns true when this worksheet has been disposed.
+pub fn Worksheet::is_disposed(self : Worksheet) -> Bool {
+  self.scope.is_disposed()
+}
+
+///|
+/// Disposes all cells created through this worksheet.
+pub fn Worksheet::dispose(self : Worksheet) -> Unit {
+  for _, slot in self.cells {
+    slot.dispose(self.runtime)
+  }
+  self.cells.clear()
+  self.scope.dispose()
+  self.cell_presence.clear()
+  self.logical_cell_by_runtime_cell.clear()
+}
+
+///|
+/// Reads the current cell result without aborting.
+///
+/// Same-sheet missing and deleted cells read as `Ok(Blank)`. A foreign cell id
+/// returns `RefError`.
+pub fn Worksheet::read(self : Worksheet, id : CellId) -> CellResult {
+  self.read_slot(id)
+}
+
+///|
+/// Returns a stable inspection snapshot for a single cell.
+///
+/// Same-sheet missing and deleted snapshots have `present=false` and an
+/// `Ok(Blank)` result. Foreign snapshots retain `RefError`.
+pub fn Worksheet::inspect_cell(self : Worksheet, id : CellId) -> CellSnapshot {
+  if !self.owns_cell_id(id) {
+    return missing_cell_snapshot(id, CellResult::RefError("foreign cell id"))
+  }
+
+  match self.cell_presence.get(id) {
+    Some(presence) if !presence.get() =>
+      return missing_cell_snapshot(id, CellResult::ok(CellValue::blank()))
+    Some(_) => ()
+    None => return missing_cell_snapshot(id, CellResult::ok(CellValue::blank()))
+  }
+
+  match self.cells.get(id) {
+    Some(slot) => {
+      let metadata = slot.definition.get().snapshot_metadata()
+      let result = slot.read()
+      let last_dynamic_dependencies = self.last_dynamic_dependencies(
+        id,
+        slot.value.id(),
+      )
+      {
+        id,
+        present: true,
+        kind: metadata.kind,
+        result,
+        dependency_shape: metadata.dependency_shape,
+        installed_dependencies: metadata.installed_dependencies,
+        static_references: metadata.static_references,
+        last_dynamic_dependencies,
+      }
+    }
+    None => missing_cell_snapshot(id, CellResult::ok(CellValue::blank()))
+  }
+}
+
+///|
+/// Returns the stored formula AST for a present AST-backed formula cell.
+pub fn Worksheet::formula_ast(
+  self : Worksheet,
+  id : CellId,
+) -> Result[Formula, FormulaAstQueryError] {
+  if !self.owns_cell_id(id) {
+    return Err(FormulaAstQueryError::ForeignCellId(id))
+  }
+
+  match self.cell_presence.get(id) {
+    None => Err(FormulaAstQueryError::MissingCell(id))
+    Some(presence) if !presence.peek() =>
+      Err(FormulaAstQueryError::DeletedCell(id))
+    Some(_) =>
+      match self.cells.get(id) {
+        None => Err(FormulaAstQueryError::MissingCell(id))
+        Some(slot) =>
+          match slot.definition.peek() {
+            CellDefinition::Input(_) =>
+              Err(FormulaAstQueryError::NotFormula(id))
+            CellDefinition::Formula(facts) =>
+              match facts.identity {
+                FormulaIdentity::Ast(formula) => Ok(formula)
+                FormulaIdentity::Custom(_) =>
+                  Err(FormulaAstQueryError::OpaqueFormula(id))
+              }
+          }
+      }
+  }
+}
+
+///|
+/// Runs an operation and returns a global recompute/change trace for this
+/// worksheet.
+///
+/// The method returns `recomputed`, `changed`, and `unchanged` formula cell IDs,
+/// with all formula cells re-read after the operation to capture final status.
+///
+/// - `recomputed`: formula cells whose verified revision advanced.
+/// - `changed`: formula cells that changed value (`changed_at` advanced).
+/// - `unchanged`: formula cells that reverified but did not change.
+pub fn[T] Worksheet::trace(
+  self : Worksheet,
+  operation : () -> T,
+) -> (T, WorksheetTrace) {
+  self.trace_formula_scope(None, operation)
+}
+
+///|
+/// Runs an operation and returns a bounded recompute/change trace for the
+/// caller-provided observed formula cells.
+///
+/// Only IDs in `observed_ids` are considered. Missing, foreign, and non-formula
+/// IDs are ignored; duplicate IDs are collapsed in first-seen order. Listed IDs
+/// that become formula cells during `operation` can appear in the trace.
+pub fn[T] Worksheet::trace_observed_formulas(
+  self : Worksheet,
+  observed_ids : Array[CellId],
+  operation : () -> T,
+) -> (T, WorksheetTrace) {
+  self.trace_formula_scope(Some(observed_ids.copy()), operation)
+}
+
+///|
+/// Sets a concrete value cell.
+///
+/// Setting the same stored value is a worksheet-level no-op. Use
+/// `force_set_input` when a caller deliberately wants revalidation even when
+/// the value is equal.
+pub fn Worksheet::set_input(
+  self : Worksheet,
+  id : CellId,
+  value : CellValue,
+  declared? : CellType = CellType::TAny,
+  label? : String,
+) -> CellResult {
+  self.set_input_with_policy(id, value, declared, force=false, label?)
+}
+
+///|
+/// Sets a concrete value cell and always invalidates/revalidates dependents.
+pub fn Worksheet::force_set_input(
+  self : Worksheet,
+  id : CellId,
+  value : CellValue,
+  declared? : CellType = CellType::TAny,
+  label? : String,
+) -> CellResult {
+  self.set_input_with_policy(id, value, declared, force=true, label?)
+}
+
+///|
+fn Worksheet::set_input_with_policy(
+  self : Worksheet,
+  id : CellId,
+  value : CellValue,
+  declared : CellType,
+  force~ : Bool,
+  label? : String,
+) -> CellResult {
+  if !self.owns_cell_id(id) {
+    return CellResult::RefError("foreign cell id")
+  }
+
+  let cell_type = if declared == CellType::TAny {
+    value.cell_type()
+  } else {
+    declared
+  }
+
+  if !cell_type.accepts(value) {
+    return type_error(cell_type, value)
+  }
+
+  self.set_cell_definition(
+    id,
+    CellDefinition::Input(value),
+    inert_formula_evaluator,
+    force~,
+    label?,
+  )
+  CellResult::Ok(value)
+}
+
+///|
+/// Sets a formula cell from typed dependencies.
+///
+/// The `compute` function receives the dependency values in `deps` order.
+///
+/// Returns `Result::Ok(())` when installation succeeds and `RefError` for
+/// boundary mismatches. Read the cell through `read` to observe
+/// evaluation results such as `TypeError`/`RefError`. The declared result type
+/// is checked during evaluation, not at installation.
+///
+/// When `fingerprint` is supplied, it is treated as the formula's comparable
+/// identity: reinstalling the same dependency list, declared type, and
+/// fingerprint is a no-op. Without a fingerprint, opaque closure formulas are
+/// force-installed so callers retain an explicit revalidation path.
+///
+/// This keeps install success and evaluation success decoupled.
+pub fn Worksheet::set_formula(
+  self : Worksheet,
+  id : CellId,
+  declared : CellType,
+  deps : Array[CellId],
+  compute : (Array[CellValue]) -> CellResult,
+  fingerprint? : String,
+  label? : String,
+) -> Result[Unit, WorksheetError] {
+  if !self.owns_cell_id(id) {
+    return Err(WorksheetError::ref_error("foreign cell id"))
+  }
+
+  if !self.all_cell_ids_owned(deps) {
+    return Err(WorksheetError::ref_error("foreign dependency id"))
+  }
+
+  let dep_ids = deps.copy()
+  let definition = CellDefinition::Formula({
+    static_references: dep_ids,
+    installed_dependencies: dep_ids,
+    declared,
+    identity: FormulaIdentity::Custom(fingerprint),
+  })
+  let evaluator = (worksheet : Worksheet) => {
+    let values = []
+    let mut first_error : CellResult? = None
+    dep_ids.each(dep_id => {
+      if first_error is None {
+        let value_result = worksheet.get_slot(dep_id)
+        match value_result {
+          CellResult::Ok(value) => values.push(value)
+          _ => first_error = Some(value_result)
+        }
+      }
+    })
+    match first_error {
+      Some(error) => error
+      None => compute(values)
+    }
+  }
+  self.set_cell_definition(
+    id,
+    definition,
+    evaluator,
+    force=fingerprint is None,
+    label?,
+  )
+
+  Ok(())
+}
+
+///|
+/// Sets a formula cell from a hand-built formula AST.
+///
+/// Returns `Result::Ok(())` when installation succeeds and `RefError` for
+/// boundary mismatches. Read the cell through `read` to observe
+/// evaluation results such as `TypeError`/`RefError`. Formula operator and
+/// declared result type checks happen during evaluation, not at installation.
+///
+/// This keeps install success and evaluation success decoupled.
+pub fn Worksheet::set_formula_ast(
+  self : Worksheet,
+  id : CellId,
+  declared : CellType,
+  formula : Formula,
+  label? : String,
+) -> Result[Unit, WorksheetError] {
+  if !self.owns_cell_id(id) {
+    return Err(WorksheetError::ref_error("foreign cell id"))
+  }
+
+  let dep_ids = formula.refs()
+  if !self.all_cell_ids_owned(dep_ids) {
+    return Err(WorksheetError::ref_error("foreign dependency id"))
+  }
+
+  let definition = CellDefinition::Formula({
+    static_references: dep_ids,
+    installed_dependencies: ([] : Array[CellId]),
+    declared,
+    identity: FormulaIdentity::Ast(formula),
+  })
+  let evaluator = (worksheet : Worksheet) => {
+    formula.evaluate(dep_id => worksheet.get_slot(dep_id))
+  }
+  self.set_cell_definition(id, definition, evaluator, force=false, label?)
+
+  Ok(())
+}
+
+///|
+/// Marks a cell as deleted while retaining its stable presence anchor.
+pub fn Worksheet::delete(self : Worksheet, id : CellId) -> CellResult {
+  if !self.owns_cell_id(id) {
+    return CellResult::RefError("foreign cell id")
+  }
+
+  match self.cells.get(id) {
+    Some(_) => {
+      let presence = self.cell_presence_for(id)
+      let previous_present = presence.get()
+      if !previous_present {
+        return CellResult::RefError("no cell at the requested address")
+      }
+      presence.set(false)
+      CellResult::Ok(CellValue::Blank)
+    }
+    None => CellResult::RefError("no cell at the requested address")
+  }
+}
+
+///|
+/// Removes heavyweight slots for committed deleted cells.
+///
+/// Deleted addresses keep their lightweight presence anchors so formulas that
+/// reference a missing address are invalidated when that address is recreated.
+/// This method first refreshes present formulas so dependents of deleted slots
+/// re-anchor on presence before disposal. It then prunes the definition/value/
+/// watch slot for addresses whose committed presence is already `false`,
+/// returning the number of slots removed.
+///
+/// Call this after a successful edit or after `Runtime::batch`/`batch_result`
+/// returns. Reads inside an open batch see pre-commit values, so compaction is a
+/// post-commit maintenance step rather than part of the transactional edit body.
+pub fn Worksheet::compact_deleted_cells(self : Worksheet) -> Int {
+  let present_formulas = self.formula_cells()
+  present_formulas.each(id => {
+    let _ = self.read_slot(id)
+  })
+
+  let tombstones = [
+    for id in self.cells.keys().to_array() if self.is_compactable_deleted_cell(
+      id,
+    ) => id
+  ]
+  for id in tombstones; removed = 0 {
+    match self.cells.get(id) {
+      Some(slot) => {
+        self.dispose_slot(id, slot)
+        continue removed + 1
+      }
+      None => continue removed
+    }
+  } nobreak {
+    removed
+  }
+}
+
+///|
+fn Worksheet::read_slot(self : Worksheet, id : CellId) -> CellResult {
+  self.with_live_slot(id, slot => slot.read())
+}
+
+///|
+fn Worksheet::get_slot(self : Worksheet, id : CellId) -> CellResult {
+  self.with_live_slot(id, slot => slot.get())
+}
+
+///|
+fn Worksheet::with_live_slot(
+  self : Worksheet,
+  id : CellId,
+  consume_slot : (CellSlot) -> CellResult,
+) -> CellResult {
+  if !self.owns_cell_id(id) {
+    return CellResult::RefError("foreign cell id")
+  }
+
+  if !self.cell_presence_for(id).get() {
+    return CellResult::ok(CellValue::blank())
+  }
+  match self.cells.get(id) {
+    Some(slot) => consume_slot(slot)
+    None => CellResult::ok(CellValue::blank())
+  }
+}
+
+///|
+fn[T] Worksheet::trace_formula_scope(
+  self : Worksheet,
+  observed_ids : Array[CellId]?,
+  operation : () -> T,
+) -> (T, WorksheetTrace) {
+  let pre_formula_cells = self.formula_cells_for_trace_scope(observed_ids)
+  pre_formula_cells.each(id => {
+    let _ = self.read_slot(id)
+  })
+
+  let before = self.formula_revision_snapshot_with_ids(pre_formula_cells)
+  let output = operation()
+  let post_formula_cells = self.formula_cells_for_trace_scope(observed_ids)
+  post_formula_cells.each(id => {
+    let _ = self.read_slot(id)
+  })
+  let after = self.formula_revision_snapshot_with_ids(post_formula_cells)
+  let trace = trace_from_revision_snapshots(post_formula_cells, before, after)
+  (output, trace)
+}
+
+///|
+fn Worksheet::formula_cells_for_trace_scope(
+  self : Worksheet,
+  observed_ids : Array[CellId]?,
+) -> Array[CellId] {
+  match observed_ids {
+    Some(ids) => self.observed_formula_cells(ids)
+    None => self.formula_cells()
+  }
+}
+
+///|
+fn Worksheet::formula_cells(self : Worksheet) -> Array[CellId] {
+  [
+    for id in self.cells.keys().to_array() if self.is_formula_cell(id) => id
+  ]
+}
+
+///|
+fn Worksheet::is_formula_cell(self : Worksheet, id : CellId) -> Bool {
+  match self.cell_presence.get(id) {
+    Some(presence) if !presence.get() => false
+    Some(_) =>
+      match self.cells.get(id) {
+        Some(slot) =>
+          match slot.definition.get() {
+            CellDefinition::Formula(_) => true
+            _ => false
+          }
+        None => false
+      }
+    None => false
+  }
+}
+
+///|
+fn Worksheet::observed_formula_cells(
+  self : Worksheet,
+  observed_ids : Array[CellId],
+) -> Array[CellId] {
+  let formula_cells : Array[CellId] = []
+  let seen = @hashset.HashSet([])
+  for id in observed_ids {
+    if !seen.contains(id) && self.is_formula_cell(id) {
+      seen.add(id)
+      formula_cells.push(id)
+    }
+  }
+  formula_cells
+}
+
+///|
+fn Worksheet::formula_revision_snapshot_with_ids(
+  self : Worksheet,
+  formula_cells : Array[CellId],
+) -> @hashmap.HashMap[CellId, FormulaRevisionSnapshot] {
+  let snapshot = @hashmap.HashMap([])
+  formula_cells.each(id => {
+    match self.cells.get(id) {
+      Some(slot) =>
+        match self.runtime.cell_info(slot.value.id()) {
+          Some(info) =>
+            snapshot.set(id, FormulaRevisionSnapshot::{
+              changed_at: info.changed_at,
+              verified_at: info.verified_at,
+            })
+          None => ()
+        }
+      None => ()
+    }
+  })
+  snapshot
+}
+
+///|
+priv struct FormulaRevisionSnapshot {
+  changed_at : @incr.Revision
+  verified_at : @incr.Revision
+}
+
+///|
+fn trace_from_revision_snapshots(
+  formula_cells : Array[CellId],
+  before_snapshot : @hashmap.HashMap[CellId, FormulaRevisionSnapshot],
+  after_snapshot : @hashmap.HashMap[CellId, FormulaRevisionSnapshot],
+) -> WorksheetTrace {
+  let recomputed : Array[CellId] = formula_cells.filter_map(id => {
+    match (before_snapshot.get(id), after_snapshot.get(id)) {
+      (Some(before_revision), Some(after_revision)) if after_revision.verified_at !=
+        before_revision.verified_at => Some(id)
+      (None, Some(_)) => Some(id)
+      _ => None
+    }
+  })
+
+  let changed : Array[CellId] = formula_cells.filter_map(id => {
+    match (before_snapshot.get(id), after_snapshot.get(id)) {
+      (Some(before_revision), Some(after_revision)) if after_revision.verified_at !=
+        before_revision.verified_at &&
+        after_revision.changed_at != before_revision.changed_at => Some(id)
+      (None, Some(_)) => Some(id)
+      _ => None
+    }
+  })
+
+  let unchanged : Array[CellId] = formula_cells.filter_map(id => {
+    match (before_snapshot.get(id), after_snapshot.get(id)) {
+      (Some(before_revision), Some(after_revision)) if after_revision.verified_at !=
+        before_revision.verified_at &&
+        after_revision.changed_at == before_revision.changed_at => Some(id)
+      _ => None
+    }
+  })
+
+  { recomputed, changed, unchanged }
+}
+
+///|
+fn Worksheet::owns_cell_id(self : Worksheet, id : CellId) -> Bool {
+  self.sheet_id == id.sheet_id
+}
+
+///|
+fn Worksheet::last_dynamic_dependencies(
+  self : Worksheet,
+  target : CellId,
+  value_cell : @incr.CellId,
+) -> Array[CellId] {
+  match self.runtime.cell_info(value_cell) {
+    Some(info) => self.logical_dynamic_dependencies(target, info.dependencies)
+    None => []
+  }
+}
+
+///|
+fn Worksheet::logical_dynamic_dependencies(
+  self : Worksheet,
+  target : CellId,
+  dependencies : Array[@incr.CellId],
+) -> Array[CellId] {
+  let logical_dependencies : Array[CellId] = []
+  for dependency in dependencies {
+    match self.logical_cell_by_runtime_cell.get(dependency) {
+      Some(logical_id) if logical_id != target &&
+        !logical_dependencies.contains(logical_id) =>
+        logical_dependencies.push(logical_id)
+      _ => ()
+    }
+  }
+  logical_dependencies
+}
+
+///|
+fn Worksheet::new_slot(
+  self : Worksheet,
+  id : CellId,
+  cell_definition : CellDefinition,
+  evaluator : (Worksheet) -> CellResult,
+  label? : String,
+) -> CellSlot {
+  let presence = self.cell_presence_for(id)
+  let definition = @incr.InputField(self.runtime, cell_definition, label?)
+  let evaluator = FormulaEvaluator(evaluator)
+  let value = @incr.Derived(
+    self.runtime,
+    () => {
+      if presence.get() {
+        definition.get().evaluate(self, evaluator)
+      } else {
+        CellResult::ok(CellValue::blank())
+      }
+    },
+    label?,
+  )
+  let metadata_root = @incr.Derived(
+    self.runtime,
+    () => {
+      let _ = presence.get()
+      let _ = definition.get()
+      ()
+    },
+    label?,
+  )
+  let watch = value.watch()
+  let metadata_watch = metadata_root.watch()
+  CellSlot::{
+    presence,
+    definition,
+    evaluator,
+    value,
+    metadata_root,
+    watch,
+    metadata_watch,
+  }
+}
+
+///|
+fn Worksheet::store_new_slot(
+  self : Worksheet,
+  id : CellId,
+  slot : CellSlot,
+) -> Unit {
+  slot.presence.set(true)
+
+  let definition_id = slot.definition.id()
+  self.cells.set(id, slot)
+  self.logical_cell_by_runtime_cell.set(slot.value.id(), id)
+  self.runtime.record_batch_rollback(definition_id, () => {
+    self.dispose_slot(id, slot)
+  })
+  let _ = slot.metadata_watch.read()
+}
+
+///|
+fn Worksheet::is_compactable_deleted_cell(
+  self : Worksheet,
+  id : CellId,
+) -> Bool {
+  match self.cell_presence.get(id) {
+    Some(presence) => !presence.get()
+    None => true
+  }
+}
+
+///|
+fn Worksheet::dispose_slot(
+  self : Worksheet,
+  id : CellId,
+  slot : CellSlot,
+) -> Unit {
+  self.cells.remove(id)
+  self.logical_cell_by_runtime_cell.remove(slot.value.id())
+  slot.dispose(self.runtime)
+}
+
+///|
+fn Worksheet::cell_presence_for(
+  self : Worksheet,
+  id : CellId,
+) -> @incr.InputField[Bool] {
+  match self.cell_presence.get(id) {
+    Some(field) => field
+    None => {
+      let field = self.scope.input_field(false)
+      self.cell_presence.set(id, field)
+      self.logical_cell_by_runtime_cell.set(field.id(), id)
+      field
+    }
+  }
+}
+
+///|
+fn missing_cell_snapshot(id : CellId, result : CellResult) -> CellSnapshot {
+  {
+    id,
+    present: false,
+    kind: None,
+    result,
+    dependency_shape: None,
+    installed_dependencies: [],
+    static_references: [],
+    last_dynamic_dependencies: [],
+  }
+}
+
+///|
+fn Worksheet::set_cell_definition(
+  self : Worksheet,
+  id : CellId,
+  definition : CellDefinition,
+  evaluator : (Worksheet) -> CellResult,
+  force~ : Bool,
+  label? : String,
+) -> Unit {
+  match self.cells.get(id) {
+    Some(slot) => {
+      let was_absent = !slot.presence.get()
+      if was_absent {
+        slot.presence.set(true)
+      }
+      if force || was_absent || slot.definition.peek() != definition {
+        let previous_evaluator = slot.evaluator.evaluate
+        // Evaluators live outside the comparable InputField, so they need a
+        // distinct undo key from the definition cell during batch rollback.
+        self.runtime.record_batch_rollback(slot.value.id(), () => {
+          slot.evaluator.evaluate = previous_evaluator
+        })
+        slot.evaluator.evaluate = evaluator
+      }
+      if force {
+        slot.definition.force_set(definition)
+      } else {
+        slot.definition.set(definition)
+      }
+    }
+    None => {
+      let slot = self.new_slot(id, definition, evaluator, label?)
+      self.store_new_slot(id, slot)
+    }
+  }
+}
+
+///|
+fn Worksheet::all_cell_ids_owned(self : Worksheet, ids : Array[CellId]) -> Bool {
+  ids.all(id => self.owns_cell_id(id))
+}
+
+///|
+fn CellDefinition::snapshot_metadata(
+  self : CellDefinition,
+) -> CellSnapshotMetadata {
+  match self {
+    CellDefinition::Input(_) =>
+      {
+        kind: Some(CellKind::Input),
+        dependency_shape: None,
+        installed_dependencies: [],
+        static_references: [],
+      }
+    CellDefinition::Formula(facts) =>
+      {
+        kind: Some(CellKind::Formula),
+        dependency_shape: Some(facts.dependency_shape()),
+        installed_dependencies: facts.installed_dependencies.copy(),
+        static_references: facts.static_references.copy(),
+      }
+  }
+}
+
+///|
+fn FormulaFacts::dependency_shape(
+  self : FormulaFacts,
+) -> FormulaDependencyShape {
+  match self.identity {
+    Ast(formula) => formula.dependency_shape()
+    Custom(_) => Applicative
+  }
+}
+
+///|
+fn CellDefinition::evaluate(
+  self : CellDefinition,
+  worksheet : Worksheet,
+  evaluator : FormulaEvaluator,
+) -> CellResult {
+  match self {
+    CellDefinition::Input(value) => CellResult::Ok(value)
+    CellDefinition::Formula(facts) => {
+      let result = (evaluator.evaluate)(worksheet)
+      match result {
+        CellResult::Ok(value) =>
+          if facts.declared == CellType::TAny || facts.declared.accepts(value) {
+            CellResult::Ok(value)
+          } else {
+            CellResult::TypeError(
+              "formula result mismatch: expected " +
+              facts.declared.to_string() +
+              " and got " +
+              value.cell_type().to_string(),
+            )
+          }
+        _ => result
+      }
+    }
+  }
+}
+
+///|
+fn type_error(cell_type : CellType, value : CellValue) -> CellResult {
+  CellResult::TypeError(
+    "value type mismatch: expected " +
+    cell_type.to_string() +
+    " and got " +
+    value.cell_type().to_string(),
+  )
+}
+
+///|
+fn inert_formula_evaluator(_worksheet : Worksheet) -> CellResult {
+  CellResult::RefError("cell has no formula evaluator")
+}
+
+///|
+fn CellSlot::read(self : CellSlot) -> CellResult {
+  match self.watch.read() {
+    Ok(value) => value
+    Err(err) => CellResult::CycleError(err.format_path())
+  }
+}
+
+///|
+fn CellSlot::get(self : CellSlot) -> CellResult {
+  match self.value.get() {
+    Ok(value) => value
+    Err(err) => CellResult::CycleError(err.format_path())
+  }
+}
+
+///|
+fn CellSlot::dispose(self : CellSlot, runtime : @incr.Runtime) -> Unit {
+  self.watch.dispose()
+  self.metadata_watch.dispose()
+  runtime.dispose_cell(self.definition.id())
+  runtime.dispose_cell(self.value.id())
+  runtime.dispose_cell(self.metadata_root.id())
+}

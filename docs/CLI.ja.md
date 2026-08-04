@@ -73,6 +73,7 @@ moon run src/cli -- external inspect ensenzu-app --json
 moon run src/cli -- external inspect signal-reader --json
 moon run src/cli -- external inspect moonbit-editor-file-tree --json
 moon run src/cli -- external inspect canopy-components --json
+moon run src/cli -- external inspect incr-typed-spreadsheet --json
 ```
 
 manifestのentry point、source SHA-256、effect policy、有効property、upstreamへの明示的な`read-only` policyを返します。
@@ -95,6 +96,7 @@ moon run src/cli -- external run ensenzu-app --json
 moon run src/cli -- external run signal-reader --json
 moon run src/cli -- external run moonbit-editor-file-tree --json
 moon run src/cli -- external run canopy-components --json
+moon run src/cli -- external run incr-typed-spreadsheet --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -107,8 +109,9 @@ moon run src/cli -- external run all --output artifacts --json
 | `signal-reader` | `feed responses match the current subscription` | `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)` |
 | `moonbit-editor-file-tree` | `asynchronous resolve responses preserve newer tree intent` | `ToggleDirectory("readonly-remote://workspace/tests") -> SetActive("readonly-remote://workspace/src/lib/util.mbt") -> DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")` |
 | `canopy-components` | `positive resize nudges do not decrease width` | `ResizeNudge(dw=2147483647, dh=0)` |
+| `incr-typed-spreadsheet` | `positive formula addition does not wrap backward` | `UpdateDraft(A1, "2147483647") -> ApplySelected` |
 
-Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。MoonBit Editorはauto-reveal開始後に手動collapseしたdirectoryがlate successで再展開される最小traceも保持します。Canopyのmenu focus・tabs selection propertyはpassし、pinned APIにdisabled entry modelがないためdisabled selection propertyは非適用です。
+Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。MoonBit Editorはauto-reveal開始後に手動collapseしたdirectoryがlate successで再展開される最小traceも保持します。Canopyのmenu focus・tabs selection propertyはpassし、pinned APIにdisabled entry modelがないためdisabled selection propertyは非適用です。 incr targetはformulaのrecomputed・changed・unchanged traceを保存し、Eqとno-backdateのdownstream count差も確認します。
 
 ### `external handoff <id|all>`
 
@@ -116,6 +119,7 @@ Signal Readerはstale saved-state callbackと古いlive-search responseの最小
 moon run src/cli -- external handoff signal-reader --output artifacts --json
 moon run src/cli -- external handoff moonbit-editor-file-tree --output artifacts --json
 moon run src/cli -- external handoff canopy-components --output artifacts --json
+moon run src/cli -- external handoff incr-typed-spreadsheet --output artifacts --json
 ```
 
 `<output>/handoff/<id>/`へ`issue.md`、`reproduction.md`、`fix-plan.md`、`pr-body.md`、`machine.json`をローカル生成します。metadataの`upstreamWritePerformed`は常に`false`で、GitHubやupstream APIを呼びません。

@@ -17,6 +17,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `ensenzu-app` | `shiguri-01/ensenzu app/src` | 605 lines | failure | 19-field numeric corpus, native calculation core, deterministic download effect |
 | `moonbit-editor-file-tree` | `moonbitlang/editor internal/shell` | 708 lines | failure | two finite workspaces and injected directory-resolve responses |
 | `canopy-components` | `dowdiness/canopy` component modules | 471 lines | failure | resizable, menu, and tabs pure finite state |
+| `incr-typed-spreadsheet` | `dowdiness/incr` typed spreadsheet | 2,349 preserved lines | failure | isolated runtime replay, worksheet traces, Eq/no-backdate probe |
 
 ## Counter
 
@@ -123,4 +124,17 @@ The public resizable message accepts arbitrary `Int` deltas and adds them before
 
 The run explores 720 states and 2,618 transitions with one retained failure and zero diagnostics. Constraint bounds, stale movement after `EndResize`, menu focus range, tab selection, and rendered-state properties pass. The normal keyboard integration emits small deltas, so the failure is scoped to direct dispatch or malformed generated input. Disabled menu/tab selection is not tested because the pinned component APIs have no disabled-entry model.
 
-CodeMirror, context-menu nesting, the Ideal editor, and incr typed-spreadsheet behavior continue in separate issues.
+CodeMirror, context-menu nesting, and the Ideal editor continue in a separate issue.
+
+## incr typed spreadsheet
+
+The Apache-2.0 typed worksheet, formula parser, operation runner, and Rabbita model evidence are pinned at revision `afc715b261d99f35245f1a14a2390ae8ad86d7d0`; builds use `dowdiness/incr@0.15.0`. The finite adapter reconstructs an isolated runtime from committed text for each transition, preventing mutable graph state from crossing exploration branches while retaining exact worksheet snapshots and recomputation traces.
+
+With seeded formula `B1=A1+1`, setting A1 to the largest Int wraps B1 to a negative successful result:
+
+1. `UpdateDraft(A1, "2147483647")`
+2. `ApplySelected`
+
+The run explores 900 states and 1,347 transitions with one retained failure and zero diagnostics. Parse failure preservation, delete propagation, changed-formula trace classification, stale inline blur, and rendered-state checks pass.
+
+A real runtime probe also fixes the intended backdating distinction for input 4→6, where parity remains even: Eq-backed middle/downstream counts are 2/1, while `derived_no_backdate` counts are 2/2. The no-backdate always-false comparator is intentional propagation semantics, not an invalid equality implementation.

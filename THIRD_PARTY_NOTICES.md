@@ -121,3 +121,15 @@ The Apache License 2.0 text is included at `src/vendor/moonbit_editor_file_tree/
 - Adapted source: `src/vendor/canopy_components/canopy_components.mbt`
 
 The upstream Apache License 2.0 text is included at `src/vendor/canopy_components/LICENSE`. The adapter combines the three private-state component models into a finite native/JavaScript exploration target and replaces browser event, focus, and subscription boundaries with typed messages. Exact source hashes and scope qualifications are recorded in `src/vendor/canopy_components/UPSTREAM.md`.
+
+## incr typed spreadsheet
+
+- Project: `dowdiness/incr`
+- Source paths: `examples/typed_spreadsheet`, `examples/typed_spreadsheet_demo`, `examples/typed_spreadsheet_rabbita_demo`, and `incr/cells`
+- Revision: `afc715b261d99f35245f1a14a2390ae8ad86d7d0`
+- Published package: `dowdiness/incr@0.15.0`
+- License: Apache License 2.0
+- Preserved source: `src/vendor/incr_typed_spreadsheet_core/`, `src/vendor/incr_typed_spreadsheet_demo/`, and `src/vendor/incr_typed_spreadsheet/upstream/`
+- Adapted source: `src/vendor/incr_typed_spreadsheet/incr_typed_spreadsheet.mbt`
+
+The Apache License 2.0 text is included in each vendor package. The adapter limits the UI to three cells, reconstructs isolated runtimes for deterministic branch exploration, and preserves the published incr equality/backdating behavior. Exact source hashes and adaptation boundaries are recorded in each `UPSTREAM.md`.

@@ -130,3 +130,22 @@ test "Canopy component manifest and handoff record bounded direct dispatch" {
   assert_eq(handoff.action_ids, ["resize-nudge:2147483647:0"])
   assert_eq(handoff.visibility, @disclosure.PublicBug)
 }
+
+///|
+test "incr typed spreadsheet manifest and handoff preserve overflow evidence" {
+  let manifest = incr_typed_spreadsheet_manifest()
+  assert_eq(validate_manifest(manifest), [])
+  assert_eq(manifest.strategy, Pure)
+  assert_eq(manifest.effect_policy, "none")
+  assert_true(
+    manifest.properties.contains(
+      "Eq and no-backdate probes preserve declared semantics",
+    ),
+  )
+  let handoff = incr_typed_spreadsheet_handoff()
+  assert_eq(handoff.minimal_trace, [
+    "UpdateDraft(A1, \"2147483647\")", "ApplySelected",
+  ])
+  assert_eq(handoff.action_ids, ["draft:A1:10:2147483647", "apply-selected"])
+  assert_eq(handoff.visibility, @disclosure.PublicBug)
+}

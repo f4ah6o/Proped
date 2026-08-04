@@ -1,0 +1,10 @@
+import {
+  "dowdiness/incr",
+  "f4ah6o/proped-rabbita" @proped,
+  "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_core" @sheet,
+  "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_demo" @demo,
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+}
+
+supported_targets = "+native+js"

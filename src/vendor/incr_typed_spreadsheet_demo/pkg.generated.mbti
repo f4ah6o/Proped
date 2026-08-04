@@ -1,0 +1,72 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_demo"
+
+import {
+  "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn cell_id_strings(Array[@incr_typed_spreadsheet_core.CellId]) -> Array[String]
+
+pub fn cell_id_to_string(@incr_typed_spreadsheet_core.CellId) -> String
+
+pub fn format_cell_ids(Array[@incr_typed_spreadsheet_core.CellId]) -> String
+
+pub fn format_cell_result(@incr_typed_spreadsheet_core.CellResult) -> String
+
+pub fn format_dependency_shape(@incr_typed_spreadsheet_core.FormulaDependencyShape?) -> String
+
+pub fn format_op(SheetOp) -> String
+
+pub fn format_outcome(OpOutcome) -> String
+
+pub fn format_snapshot(@incr_typed_spreadsheet_core.CellSnapshot) -> String
+
+pub fn parse_cell_text_op(@incr_typed_spreadsheet_core.CellId, String) -> Result[SheetOp, FormulaTextParseError]
+
+pub fn run_batched_op(@incr_typed_spreadsheet_core.Worksheet, SheetOp, capture? : Array[@incr_typed_spreadsheet_core.CellId], trace_cells? : Array[@incr_typed_spreadsheet_core.CellId]) -> WorksheetStepResult
+
+pub fn run_op(@incr_typed_spreadsheet_core.Worksheet, SheetOp, capture? : Array[@incr_typed_spreadsheet_core.CellId], trace_cells? : Array[@incr_typed_spreadsheet_core.CellId]) -> WorksheetStepResult
+
+pub fn snapshot_kind(@incr_typed_spreadsheet_core.CellSnapshot) -> String
+
+// Errors
+
+// Types and methods
+pub struct CellSnapshotChange {
+  id : @incr_typed_spreadsheet_core.CellId
+  before : @incr_typed_spreadsheet_core.CellSnapshot
+  after : @incr_typed_spreadsheet_core.CellSnapshot
+}
+
+pub(all) enum FormulaTextParseError {
+  EmptyInput
+  InvalidInteger(String)
+  InvalidCellReference(String)
+  UnsupportedFormula(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum OpOutcome {
+  SetInput(@incr_typed_spreadsheet_core.CellResult)
+  SetFormulaAst(Result[Unit, @incr_typed_spreadsheet_core.WorksheetError])
+  Delete(@incr_typed_spreadsheet_core.CellResult)
+}
+
+pub(all) enum SheetOp {
+  SetInput(@incr_typed_spreadsheet_core.CellId, @incr_typed_spreadsheet_core.CellValue)
+  SetFormulaAst(@incr_typed_spreadsheet_core.CellId, @incr_typed_spreadsheet_core.CellType, @incr_typed_spreadsheet_core.Formula)
+  Delete(@incr_typed_spreadsheet_core.CellId)
+}
+
+pub struct WorksheetStepResult {
+  operation : SheetOp
+  outcome : OpOutcome
+  trace : @incr_typed_spreadsheet_core.WorksheetTrace
+  cell_snapshots : Array[CellSnapshotChange]
+}
+
+// Type aliases
+
+// Traits
+

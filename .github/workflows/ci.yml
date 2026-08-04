@@ -54,6 +54,7 @@ jobs:
           moon run src/cli -- external inspect signal-reader --json > /tmp/proped-rabbita-signal-inspection.json
           moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json > /tmp/proped-rabbita-editor-inspection.json
           moon run src/cli -- external inspect canopy-components --json > /tmp/proped-rabbita-canopy-inspection.json
+          moon run src/cli -- external inspect incr-typed-spreadsheet --json > /tmp/proped-rabbita-incr-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -68,6 +69,7 @@ jobs:
           signal_inspection = json.loads(Path('/tmp/proped-rabbita-signal-inspection.json').read_text())
           editor_inspection = json.loads(Path('/tmp/proped-rabbita-editor-inspection.json').read_text())
           canopy_inspection = json.loads(Path('/tmp/proped-rabbita-canopy-inspection.json').read_text())
+          incr_inspection = json.loads(Path('/tmp/proped-rabbita-incr-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -84,9 +86,10 @@ jobs:
               'signal-reader',
               'moonbit-editor-file-tree',
               'canopy-components',
+              'incr-typed-spreadsheet',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.9.0'
+          assert schema['version'] == '0.10.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -158,6 +161,18 @@ jobs:
           assert canopy_app['findingVisibility'] == 'public-bug'
           assert canopy_app['expectedFailure'] == 'ResizeNudge(dw=2147483647, dh=0)'
           assert canopy_app['upstreamWritePolicy'] == 'read-only'
+          incr_app = incr_inspection['application']
+          assert incr_app['id'] == 'incr-typed-spreadsheet'
+          assert incr_app['strategy'] == 'pure'
+          assert incr_app['effectPolicy'] == 'none'
+          assert incr_app['findingVisibility'] == 'public-bug'
+          assert incr_app['expectedFailure'] == (
+              'UpdateDraft(A1, \"2147483647\") -> ApplySelected'
+          )
+          assert incr_app['upstreamWritePolicy'] == 'read-only'
+          assert 'Eq and no-backdate probes preserve declared semantics' in (
+              incr_app['properties']
+          )
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -270,6 +285,28 @@ jobs:
               'resize-nudge:2147483647:0',
           ]
 
+          incr = external_runs['incr-typed-spreadsheet']
+          assert incr['expectationMet'] is True
+          assert incr['states'] == 900
+          assert incr['transitions'] == 1347
+          assert incr['failures'] == 1
+          assert incr['diagnostics'] == 0
+          assert incr['firstFailure']['property'] == (
+              'positive formula addition does not wrap backward'
+          )
+          assert incr['firstFailure']['trace'] == [
+              'UpdateDraft(A1, \"2147483647\")',
+              'ApplySelected',
+          ]
+          assert incr['firstFailure']['actionIds'] == [
+              'draft:A1:10:2147483647',
+              'apply-selected',
+          ]
+          incr_atlas = json.loads(
+              (Path(incr['output']) / 'atlas.json').read_text()
+          )
+          assert len(incr_atlas['failures']) == 1
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -326,5 +363,11 @@ jobs:
           ).read_bytes()
           assert hashlib.sha256(canopy_source).hexdigest() == (
               'ac88ca22d332ea66853e7ad34f07492f97d150e11155ff66bd821b8413ae55cb'
+          )
+          incr_formula = Path(
+              'src/vendor/incr_typed_spreadsheet_core/formula.mbt'
+          ).read_bytes()
+          assert hashlib.sha256(incr_formula).hexdigest() == (
+              '6b4c85f453e8bd0622e10f5c5b41025e0d4f9c8d9a246eb93f661365e3182391'
           )
           PY

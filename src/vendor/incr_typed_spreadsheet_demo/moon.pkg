@@ -1,0 +1,6 @@
+import {
+  "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_core" @typed_spreadsheet,
+  "moonbitlang/core/string",
+}
+
+supported_targets = "+native+js"

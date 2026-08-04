@@ -1,0 +1,32 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "incr-typed-spreadsheet",
+  "repository": "dowdiness/incr",
+  "revision": "afc715b261d99f35245f1a14a2390ae8ad86d7d0",
+  "license": "Apache-2.0",
+  "packages": [
+    "dowdiness/incr/cells@0.15.0",
+    "examples/typed_spreadsheet",
+    "examples/typed_spreadsheet_demo",
+    "examples/typed_spreadsheet_rabbita_demo"
+  ],
+  "entryPoints": {
+    "model": "Model",
+    "message": "Msg",
+    "update": "update",
+    "view": "view"
+  },
+  "strategy": "pure",
+  "effectPolicy": "none",
+  "sourceSha256": "6b4c85f453e8bd0622e10f5c5b41025e0d4f9c8d9a246eb93f661365e3182391",
+  "properties": [
+    "positive formula addition does not wrap backward",
+    "parse failure preserves committed worksheet",
+    "deleted input invalidates dependent formula",
+    "Eq and no-backdate probes preserve declared semantics",
+    "worksheet trace records changed formula dependents",
+    "stale inline apply is idempotent",
+    "rendered spreadsheet state matches model"
+  ],
+  "findingVisibility": "public-bug"
+}

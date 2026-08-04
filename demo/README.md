@@ -35,7 +35,7 @@ moon run src/cli -- external list --json
 moon run src/cli -- external run all --json
 ```
 
-The campaign includes `proton-demo-todo`, `ensenzu-app`, `signal-reader`, `moonbit-editor-file-tree`, and `canopy-components`. Canopy covers resizable, menu, and tabs behavior and minimizes its direct-dispatch overflow to `ResizeNudge(dw=2147483647, dh=0)`. Outputs are written under `demo/out/external/<id>/`.
+The campaign includes six targets. `incr-typed-spreadsheet` uses the pinned worksheet and incr runtime, explores 900 states and 1,347 transitions, and minimizes formula overflow to `UpdateDraft(A1, "2147483647") -> ApplySelected`. Outputs are written under `demo/out/external/<id>/`.
 
 Generate local issue and PR drafts without contacting upstream:
 
@@ -43,4 +43,5 @@ Generate local issue and PR drafts without contacting upstream:
 moon run src/cli -- external handoff signal-reader --json
 moon run src/cli -- external handoff moonbit-editor-file-tree --json
 moon run src/cli -- external handoff canopy-components --json
+moon run src/cli -- external handoff incr-typed-spreadsheet --json
 ```

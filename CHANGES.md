@@ -1,5 +1,24 @@
 # Changes
 
+## 0.10.0 - 2026-08-05
+
+### Added
+
+- Added `incr-typed-spreadsheet` as the sixth external target using the pinned typed worksheet, formula parser, operation runner, and `dowdiness/incr@0.15.0` runtime.
+- Added deterministic worksheet recomputation traces plus a real Eq-backed versus no-backdate probe.
+- Preserved the Apache-2.0 typed-spreadsheet sources and Rabbita application evidence at revision `afc715b261d99f35245f1a14a2390ae8ad86d7d0`.
+
+### Fixed
+
+- Found that typed spreadsheet integer addition wraps at the Int32 boundary and is returned as a successful value; minimized to `UpdateDraft(A1, "2147483647") -> ApplySelected` for seeded formula `B1=A1+1`.
+- Removed a stale Canopy manifest property that was not present in the final adapter.
+- Removed a duplicate `expectedFailure` JSON key from external inspection output.
+
+### Changed
+
+- Expanded the external campaign to six deterministic targets and bumped the package and CLI version to `0.10.0`.
+- Documented no-backdate's always-false comparator as intentional change-propagation semantics rather than an invalid equality implementation.
+
 ## 0.9.0 - 2026-08-05
 
 ### Added

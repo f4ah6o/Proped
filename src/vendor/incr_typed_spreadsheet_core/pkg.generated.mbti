@@ -1,0 +1,159 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_core"
+
+import {
+  "dowdiness/incr/cells",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct CellId {
+  sheet_id : SheetId
+  address : String
+} derive(Eq, @debug.Debug)
+pub fn CellId::CellId(SheetId, String) -> Self
+pub fn CellId::of(SheetId, String) -> Self
+pub impl Hash for CellId
+
+pub enum CellKind {
+  Input
+  Formula
+}
+
+pub enum CellResult {
+  Ok(CellValue)
+  ParseError(String)
+  TypeError(String)
+  RefError(String)
+  CycleError(String)
+} derive(Eq, @debug.Debug)
+pub fn CellResult::cycle_error(String) -> Self
+pub fn CellResult::is_ok(Self) -> Bool
+pub fn CellResult::ok(CellValue) -> Self
+pub fn CellResult::parse_error(String) -> Self
+pub fn CellResult::ref_error(String) -> Self
+pub fn CellResult::type_error(String) -> Self
+
+type CellSlot
+
+pub struct CellSnapshot {
+  id : CellId
+  present : Bool
+  kind : CellKind?
+  result : CellResult
+  dependency_shape : FormulaDependencyShape?
+  installed_dependencies : Array[CellId]
+  static_references : Array[CellId]
+  last_dynamic_dependencies : Array[CellId]
+}
+
+pub enum CellType {
+  TInt
+  TBool
+  TString
+  TBlank
+  TAny
+} derive(Eq, @debug.Debug)
+pub fn CellType::accepts(Self, CellValue) -> Bool
+pub fn CellType::t_any() -> Self
+pub fn CellType::t_blank() -> Self
+pub fn CellType::t_bool() -> Self
+pub fn CellType::t_int() -> Self
+pub fn CellType::t_string() -> Self
+pub fn CellType::to_string(Self) -> String
+
+pub enum CellValue {
+  Int(Int)
+  Bool(Bool)
+  Text(String)
+  Blank
+} derive(Eq, @debug.Debug)
+pub fn CellValue::blank() -> Self
+pub fn CellValue::cell_type(Self) -> CellType
+pub fn CellValue::from_bool(Bool) -> Self
+pub fn CellValue::from_int(Int) -> Self
+pub fn CellValue::from_text(String) -> Self
+
+pub enum Formula {
+  Literal(CellValue)
+  Ref(CellId)
+  Add(Formula, Formula)
+  Mul(Formula, Formula)
+  Eq(Formula, Formula)
+  Gt(Formula, Formula)
+  If(Formula, Formula, Formula)
+} derive(Eq)
+pub fn Formula::add(Self, Self) -> Self
+pub fn Formula::cell_ref(CellId) -> Self
+pub fn Formula::dependency_shape(Self) -> FormulaDependencyShape
+pub fn Formula::eq(Self, Self) -> Self
+pub fn Formula::gt(Self, Self) -> Self
+pub fn Formula::if_(Self, Self, Self) -> Self
+pub fn Formula::literal(CellValue) -> Self
+pub fn Formula::mul(Self, Self) -> Self
+pub fn Formula::refs(Self) -> Array[CellId]
+
+pub enum FormulaAstQueryError {
+  ForeignCellId(CellId)
+  MissingCell(CellId)
+  DeletedCell(CellId)
+  NotFormula(CellId)
+  OpaqueFormula(CellId)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum FormulaDependencyShape {
+  Applicative
+  Selective
+  Dynamic
+} derive(Eq, @debug.Debug)
+
+pub struct SheetId {
+  value : Int
+} derive(Eq, @debug.Debug)
+pub fn SheetId::SheetId(Int) -> Self
+pub impl Hash for SheetId
+
+pub struct Worksheet {
+  runtime : @cells.Runtime
+  sheet_id : SheetId
+  scope : @cells.Scope
+  cells : @hashmap.HashMap[CellId, CellSlot]
+  cell_presence : @hashmap.HashMap[CellId, @cells.InputField[Bool]]
+  // private fields
+}
+pub fn Worksheet::Worksheet(@cells.Runtime, SheetId) -> Self
+pub fn Worksheet::compact_deleted_cells(Self) -> Int
+pub fn Worksheet::delete(Self, CellId) -> CellResult
+pub fn Worksheet::dispose(Self) -> Unit
+pub fn Worksheet::force_set_input(Self, CellId, CellValue, declared? : CellType, label? : String) -> CellResult
+pub fn Worksheet::formula_ast(Self, CellId) -> Result[Formula, FormulaAstQueryError]
+pub fn Worksheet::inspect_cell(Self, CellId) -> CellSnapshot
+pub fn Worksheet::is_disposed(Self) -> Bool
+pub fn Worksheet::read(Self, CellId) -> CellResult
+pub fn Worksheet::set_formula(Self, CellId, CellType, Array[CellId], (Array[CellValue]) -> CellResult, fingerprint? : String, label? : String) -> Result[Unit, WorksheetError]
+pub fn Worksheet::set_formula_ast(Self, CellId, CellType, Formula, label? : String) -> Result[Unit, WorksheetError]
+pub fn Worksheet::set_input(Self, CellId, CellValue, declared? : CellType, label? : String) -> CellResult
+pub fn Worksheet::sheet_id(Self) -> SheetId
+pub fn[T] Worksheet::trace(Self, () -> T) -> (T, WorksheetTrace)
+pub fn[T] Worksheet::trace_observed_formulas(Self, Array[CellId], () -> T) -> (T, WorksheetTrace)
+
+pub enum WorksheetError {
+  RefError(String)
+} derive(Eq, @debug.Debug)
+pub fn WorksheetError::ref_error(String) -> Self
+
+pub struct WorksheetTrace {
+  recomputed : Array[CellId]
+  changed : Array[CellId]
+  unchanged : Array[CellId]
+}
+
+// Type aliases
+
+// Traits
+

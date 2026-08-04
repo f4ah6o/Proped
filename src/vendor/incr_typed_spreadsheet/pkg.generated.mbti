@@ -1,0 +1,105 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+// Errors
+
+// Types and methods
+pub(all) struct BackdateProbe {
+  history : Array[Int]
+  eq_middle_count : Int
+  eq_downstream_count : Int
+  no_backdate_middle_count : Int
+  no_backdate_downstream_count : Int
+  eq_value : String
+  no_backdate_value : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CellDraft {
+  cell : String
+  text : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CellSnapshotView {
+  cell : String
+  present : Bool
+  kind : String
+  result : String
+  value : CellValueView
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CellValueView {
+  IntValue(Int)
+  BoolValue(Bool)
+  TextValue(String)
+  BlankValue
+  ErrorValue(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Model {
+  drafts : Array[CellDraft]
+  committed : Array[CellDraft]
+  selected_cell : String
+  editing_cell : String?
+  snapshots : Array[CellSnapshotView]
+  trace : TraceView
+  status : String
+  error : String?
+  last_edit : String
+  probe : BackdateProbe
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  SelectCell(String)
+  UpdateDraft(String, String)
+  ApplySelected
+  DeleteSelected
+  ResetSheet
+  CancelSelected
+  BeginInlineEdit(String)
+  ApplyInlineEdit(String)
+  SetProbeInput(Int)
+  ResetProbe
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TraceView {
+  recomputed : Array[String]
+  changed : Array[String]
+  unchanged : Array[String]
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

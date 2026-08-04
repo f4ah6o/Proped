@@ -79,3 +79,16 @@ The active `Frequency` field accepts `Infinity`: parsing succeeds and the downst
 1. `Change(Frequency, "Infinity")`
 
 The pinned run explores 834 states and 1,900 transitions with zero runner diagnostics. The action corpus covers all 19 `FieldKey` values with empty, partial, zero, negative, finite, `NaN`, and `Infinity` representatives.
+
+
+## Signal Reader clean-room adapter
+
+Signal Reader is pinned at revision `e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a`. The module metadata declares MIT, but the pinned revision has no standalone LICENSE file. No upstream source is copied. `src/vendor/signal_reader/` contains an Apache-2.0 clean-room finite adapter and source hashes only.
+
+The adapter records feed, search, and saved-state HTTP requests and injects responses in bounded orders. It retains three failures:
+
+1. `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)`
+2. `ToggleItemSaved(1, true) -> ToggleItemSaved(1, false) -> ItemSavedSet(request=1, item=1, saved=true, success=true)`
+3. `OpenSearchModal -> UpdateSearchQuery("alpha") -> UpdateSearchQuery("beta") -> SearchLoaded(request=1, query="alpha")`
+
+The run explores 720 states and 1,265 transitions with zero diagnostics. The adapter demonstrates response acceptance under modeled ordering; it does not claim a particular network scheduler always produces that order.

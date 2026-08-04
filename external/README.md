@@ -16,5 +16,8 @@ responses.
 | --- | --- | --- |
 | `proton-demo-todo` | `subscription-model` | stale snapshot version rollback |
 | `ensenzu-app` | `effect-model` | accepted non-finite frequency |
+| `signal-reader` | `effect-model` | stale feed, search, and saved-state responses |
 
-Run both with `moon run src/cli -- external run all --json`.
+All tracked manifests are `public-bug`. Security-sensitive manifests and evidence must stay below `.private/disclosures/` and are rejected by `scripts/check_public_disclosure.py` if tracked.
+
+Run all targets with `moon run src/cli -- external run all --json`. Generate local communication drafts with `moon run src/cli -- external handoff <id> --json`; no upstream API is called.

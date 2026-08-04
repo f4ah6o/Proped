@@ -43,9 +43,11 @@ vendor source、revision、hash、license、adapter変更、failureの根拠は 
 
 外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。
 
-external campaignには `proton-demo-todo` と `ensenzu-app` が含まれます。Protonは320 state・618 transitionを探索し、snapshot rollbackを `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` へ縮約します。Ensenzuは834 state・1,900 transitionを探索し、非有限frequencyの受理を `Change(Frequency, "Infinity")` へ縮約します。外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。
+external campaignには `proton-demo-todo`、`ensenzu-app`、`signal-reader` が含まれます。Signal Readerは720 state・1,265 transitionを探索し、feed切替、live search、saved optimistic updateの3種類のresponse-order failureを保持します。primary traceは `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)` です。
 
-各runは `atlas.html`、`atlas.svg`、`atlas.json`、`atlas.dot`、`summary.json` を生成します。
+外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。`external handoff <id>`はissue、再現、fix plan、PR本文のローカル下書きだけを生成します。security-sensitive findingはpublic exportを拒否し、Gitでignoreされる `.private/disclosures/`へ隔離します。詳細は [docs/DISCLOSURE.ja.md](docs/DISCLOSURE.ja.md) を参照してください。
+
+public runは `atlas.html`、`atlas.svg`、`atlas.json`、`atlas.dot`、`summary.json` を生成します。
 
 ## ライブラリモデル
 

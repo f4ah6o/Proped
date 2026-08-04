@@ -4,7 +4,9 @@
   "repository": "shiguri-01/ensenzu",
   "revision": "f1fbec776a393e7023c8fa8324ea26c0774752e5",
   "license": "Apache-2.0",
-  "packages": ["app/src"],
+  "packages": [
+    "app/src"
+  ],
   "entryPoints": {
     "model": "Model",
     "message": "Msg",
@@ -21,5 +23,6 @@
     "advanced toggle preserves calculation",
     "download effect IDs remain unique",
     "rendered status matches validation state"
-  ]
+  ],
+  "findingVisibility": "public-bug"
 }

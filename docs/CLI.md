@@ -70,6 +70,7 @@ Lists reviewed external targets, their pinned repository and revision, adapter s
 ```bash
 moon run src/cli -- external inspect proton-demo-todo --json
 moon run src/cli -- external inspect ensenzu-app --json
+moon run src/cli -- external inspect signal-reader --json
 ```
 
 Returns manifest entry points, source SHA-256, effect policy, enabled properties, and the explicit `read-only` upstream write policy.
@@ -88,6 +89,7 @@ Mechanically scans one local MoonBit source file for Rabbita imports, state cons
 ```bash
 moon run src/cli -- external run proton-demo-todo --json
 moon run src/cli -- external run ensenzu-app --json
+moon run src/cli -- external run signal-reader --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -97,6 +99,19 @@ Runs deterministic external adapters under `<output>/external/<id>/`. Native, ne
 | --- | --- | --- |
 | `proton-demo-todo` | `snapshot version never decreases` | `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` |
 | `ensenzu-app` | `active numeric fields reject non-finite input` | `Change(Frequency, "Infinity")` |
+| `signal-reader` | `feed responses match the current subscription` | `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)` |
+
+Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response.
+
+### `external handoff <id|all>`
+
+```bash
+moon run src/cli -- external handoff signal-reader --output artifacts --json
+```
+
+Writes local `issue.md`, `reproduction.md`, `fix-plan.md`, `pr-body.md`, and `machine.json` drafts under `<output>/handoff/<id>/`. The metadata fixes `upstreamWritePerformed` to `false`; the command never calls GitHub or an upstream API.
+
+Every manifest declares `findingVisibility`. `public-bug` may use normal output. `private-security` is blocked from public handoff, redirected to `.private/disclosures/<id>/`, and represented on stdout by a redacted summary. Tracked manifests may not use `private-security`; see [DISCLOSURE.md](DISCLOSURE.md).
 
 External repositories are read-only inputs. These commands do not create upstream issues, pull requests, comments, or commits.
 

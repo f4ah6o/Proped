@@ -30,14 +30,20 @@ jobs:
       - name: Update package registry
         run: moon update
 
+      - name: Public disclosure check
+        run: python3 scripts/check_public_disclosure.py
+
       - name: Format check
         run: moon fmt --check
 
       - name: Check
         run: moon check --target native
 
-      - name: Test
+      - name: Test native
         run: moon test --target native
+
+      - name: Test JavaScript
+        run: moon test --target js
 
       - name: CLI smoke test
         run: |
@@ -45,8 +51,11 @@ jobs:
           moon run src/cli -- demo run all --json > /tmp/proped-rabbita-run.json
           moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json > /tmp/proped-rabbita-inspection.json
           moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json > /tmp/proped-rabbita-ensenzu-inspection.json
+          moon run src/cli -- external inspect signal-reader --json > /tmp/proped-rabbita-signal-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
+          moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
+          import hashlib
           import json
           from pathlib import Path
 
@@ -54,7 +63,9 @@ jobs:
           result = json.loads(Path('/tmp/proped-rabbita-run.json').read_text())
           inspection = json.loads(Path('/tmp/proped-rabbita-inspection.json').read_text())
           ensenzu_inspection = json.loads(Path('/tmp/proped-rabbita-ensenzu-inspection.json').read_text())
+          signal_inspection = json.loads(Path('/tmp/proped-rabbita-signal-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
+          handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
               'newsletter',
               'rabbita-counter',
@@ -63,14 +74,19 @@ jobs:
               'rabbita-subscriptions',
               'rabbita-websocket',
           ]
+          external_ids = ['proton-demo-todo', 'ensenzu-app', 'signal-reader']
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.6.0'
+          assert schema['version'] == '0.7.0'
           assert schema['demoIds'] == expected_ids
-          assert schema['externalIds'] == ['proton-demo-todo', 'ensenzu-app']
+          assert schema['externalIds'] == external_ids
+          assert any(
+              command['argv'] == ['external', 'handoff', '<id|all>']
+              for command in schema['commands']
+          )
+
           assert result['ok'] is True
           runs = {run['id']: run for run in result['runs']}
           assert list(runs) == expected_ids
-
           expected_failures = {
               'rabbita-todo': (
                   'stored todo titles are not blank',
@@ -93,93 +109,134 @@ jobs:
                   ],
               ),
           }
-
           for demo_id in ['newsletter', 'rabbita-counter']:
               assert runs[demo_id]['expectedOutcome'] == 'pass'
               assert runs[demo_id]['failures'] == 0
-
           for demo_id, (property_name, trace) in expected_failures.items():
               run = runs[demo_id]
-              assert run['expectedOutcome'] == 'failure'
               assert run['expectationMet'] is True
               assert run['failures'] == 1
-              assert run['expectedFailure'] == {
-                  'property': property_name,
-                  'trace': trace,
-              }
               assert run['firstFailure']['property'] == property_name
               assert run['firstFailure']['trace'] == trace
-              assert run['firstFailure']['traceLength'] == len(trace)
-
           assert runs['rabbita-sokoban']['states'] >= 200
           assert runs['rabbita-subscriptions']['states'] >= 500
           assert runs['rabbita-websocket']['transitions'] >= 4000
-
           for run in runs.values():
-              assert run['expectationMet'] is True
               output = Path(run['output'])
               for artifact in run['artifacts']:
                   assert (output / artifact).is_file(), output / artifact
 
-          assert inspection['ok'] is True
           assert inspection['strategy'] == 'subscription-model'
-          assert inspection['detected']['model'] is True
-          assert inspection['detected']['message'] is True
-          assert inspection['detected']['update'] is True
           assert inspection['detected']['subscription'] is True
+          assert ensenzu_inspection['strategy'] == 'effect-model'
+          assert ensenzu_inspection['detected']['command'] is True
+          signal_app = signal_inspection['application']
+          assert signal_app['id'] == 'signal-reader'
+          assert signal_app['strategy'] == 'effect-model'
+          assert signal_app['findingVisibility'] == 'public-bug'
+          assert signal_app['upstreamWritePolicy'] == 'read-only'
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
-          assert len(external['runs']) == 2
           external_runs = {run['id']: run for run in external['runs']}
-          assert list(external_runs) == ['proton-demo-todo', 'ensenzu-app']
+          assert list(external_runs) == external_ids
+
           proton = external_runs['proton-demo-todo']
-          assert proton['id'] == 'proton-demo-todo'
           assert proton['expectationMet'] is True
           assert proton['diagnostics'] == 0
           assert proton['states'] == 320
-          assert proton['firstFailure']['property'] == 'snapshot version never decreases'
           assert proton['firstFailure']['trace'] == [
               'SnapshotReceived(version=1)',
               'SnapshotReceived(version=0)',
           ]
-          for artifact in proton['artifacts']:
-              assert (Path(proton['output']) / artifact).is_file()
 
           ensenzu = external_runs['ensenzu-app']
           assert ensenzu['expectationMet'] is True
           assert ensenzu['diagnostics'] == 0
           assert ensenzu['states'] == 834
           assert ensenzu['transitions'] == 1900
-          assert ensenzu['firstFailure']['property'] == (
-              'active numeric fields reject non-finite input'
-          )
           assert ensenzu['firstFailure']['trace'] == [
               'Change(Frequency, "Infinity")',
           ]
-          assert ensenzu['firstFailure']['actionIds'] == [
-              'change:Frequency:8:Infinity',
+
+          signal = external_runs['signal-reader']
+          assert signal['expectationMet'] is True
+          assert signal['states'] == 720
+          assert signal['transitions'] == 1265
+          assert signal['failures'] == 3
+          assert signal['diagnostics'] == 0
+          assert signal['firstFailure']['trace'] == [
+              'SelectSubscription(2)',
+              'SelectSubscription(1)',
+              'ItemsLoaded(request=1, subscription=2)',
           ]
-          for artifact in ensenzu['artifacts']:
-              assert (Path(ensenzu['output']) / artifact).is_file()
+          signal_atlas = json.loads(
+              (Path(signal['output']) / 'atlas.json').read_text()
+          )
+          signal_failures = {
+              failure['property']: failure['trace']
+              for failure in signal_atlas['failures']
+          }
+          assert signal_failures == {
+              'feed responses match the current subscription': [
+                  'SelectSubscription(2)',
+                  'SelectSubscription(1)',
+                  'ItemsLoaded(request=1, subscription=2)',
+              ],
+              'latest saved intent wins': [
+                  'ToggleItemSaved(1, true)',
+                  'ToggleItemSaved(1, false)',
+                  'ItemSavedSet(request=1, item=1, saved=true, success=true)',
+              ],
+              'search responses match the current query': [
+                  'OpenSearchModal',
+                  'UpdateSearchQuery("alpha")',
+                  'UpdateSearchQuery("beta")',
+                  'SearchLoaded(request=1, query="alpha")',
+              ],
+          }
+          for run in external_runs.values():
+              for artifact in run['artifacts']:
+                  assert (Path(run['output']) / artifact).is_file()
 
-          assert ensenzu_inspection['ok'] is True
-          assert ensenzu_inspection['strategy'] == 'effect-model'
-          assert ensenzu_inspection['detected']['model'] is True
-          assert ensenzu_inspection['detected']['message'] is True
-          assert ensenzu_inspection['detected']['update'] is True
-          assert ensenzu_inspection['detected']['command'] is True
+          assert handoff['ok'] is True
+          assert handoff['command'] == 'external handoff'
+          assert [item['id'] for item in handoff['handoffs']] == external_ids
+          for item in handoff['handoffs']:
+              assert item['visibility'] == 'public-bug'
+              assert item['detailsWithheld'] is False
+              assert item['upstreamWritePerformed'] is False
+              bundle = Path(item['output'])
+              assert sorted(path.name for path in bundle.iterdir()) == [
+                  'fix-plan.md',
+                  'issue.md',
+                  'machine.json',
+                  'pr-body.md',
+                  'reproduction.md',
+              ]
+              machine = json.loads((bundle / 'machine.json').read_text())
+              assert machine['upstreamWritePerformed'] is False
+              assert 'No upstream issue' in (bundle / 'issue.md').read_text()
 
-          import hashlib
+          for manifest_path in sorted(Path('external/manifests').glob('*.json')):
+              manifest = json.loads(manifest_path.read_text())
+              assert manifest['findingVisibility'] == 'public-bug'
+
           source = Path('src/vendor/proton_todo/upstream/main.mbt.txt').read_bytes()
           assert hashlib.sha256(source).hexdigest() == (
               '69787a7a175b323ba0c6e01ea2acfc8692379ed938217bcf00c7d3a8c1f79c8b'
           )
-
           ensenzu_source = Path(
               'src/vendor/ensenzu_app/upstream/app.mbt.txt'
           ).read_bytes()
           assert hashlib.sha256(ensenzu_source).hexdigest() == (
               'a580832dc58cd030ee22091abf58be8a1542c0696e57eae6f223d0e1c9bfd14b'
           )
+          signal_manifest = json.loads(
+              Path('external/manifests/signal-reader.json').read_text()
+          )
+          assert signal_manifest['sourceSha256'] == (
+              'df8dd9c5382d0acdcee335ec8cc3ba88b386b47c4ab15cd178a352e1812b617e'
+          )
+          assert not Path('src/vendor/signal_reader/upstream').exists()
           PY

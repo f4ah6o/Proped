@@ -20,7 +20,7 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 - [x] `justjavac/proton-demo`
 - [ ] `moonbit-community/proton` framework internals
 - [x] `shiguri-01/ensenzu`
-- [ ] `CAIMEOX/signal_reader`
+- [x] `CAIMEOX/signal_reader`
 - [ ] `moonbitlang/editor` file tree
 - [ ] `CAIMEOX/circular`
 - [ ] `moonbit-community/isomorphic` application suite
@@ -65,6 +65,7 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 - `20260804-isomorphic-suite-exploration.md`
 - `20260804-rabbita-xterm-exploration.md`
 - `20260804-rabbita-utility-apps-batch.md`
+- `20260805-private-security-disclosure-handoff.md`
 
 ## 共通実施手順
 

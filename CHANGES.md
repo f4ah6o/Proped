@@ -1,5 +1,26 @@
 # Changes
 
+## 0.7.0 - 2026-08-05
+
+### Added
+
+- Added `signal-reader` as the third external target using a clean-room finite adapter with recorded HTTP request descriptors and no copied upstream source.
+- Added three response-order properties for feed selection, live search, and optimistic saved-state callbacks.
+- Added `external handoff <id|all>` to generate local `issue.md`, `reproduction.md`, `fix-plan.md`, `pr-body.md`, and `machine.json` drafts without calling upstream APIs.
+- Added `FindingVisibility`, private security disclosure bundles, redacted private run summaries, `.private/` isolation, and `scripts/check_public_disclosure.py`.
+- Added English and Japanese disclosure policy documents.
+
+### Fixed
+
+- Found that the pinned Signal Reader frontend can apply a feed response after a different subscription is selected; minimized to `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)`.
+- Found that a stale saved-state success callback can reverse the latest unsave intent.
+- Found that an older live-search response can replace results for a newer query.
+
+### Changed
+
+- Required `findingVisibility` in every external manifest.
+- Expanded the external campaign to three deterministic targets and bumped the package and CLI version to `0.7.0`.
+
 ## 0.6.0 - 2026-08-05
 
 ### Added

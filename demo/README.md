@@ -35,4 +35,10 @@ moon run src/cli -- external list --json
 moon run src/cli -- external run all --json
 ```
 
-The campaign includes `proton-demo-todo`, with minimized trace `SnapshotReceived(version=1) -> SnapshotReceived(version=0)`, and `ensenzu-app`, with minimized trace `Change(Frequency, "Infinity")`. Outputs are written under `demo/out/external/<id>/`.
+The campaign includes `proton-demo-todo`, `ensenzu-app`, and `signal-reader`. Signal Reader retains feed, search, and saved-state response-order failures; its primary minimized trace is `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)`. Outputs are written under `demo/out/external/<id>/`.
+
+Generate local issue and PR drafts without contacting upstream:
+
+```bash
+moon run src/cli -- external handoff signal-reader --json
+```

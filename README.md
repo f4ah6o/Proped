@@ -43,9 +43,11 @@ Vendored source, revision, hashes, license, adapter changes, and failure rationa
 
 External targets are pinned by manifests under `external/manifests/`. `external inspect-source` mechanically detects common `Model`, `Msg`, `update`, `view`, command, and subscription boundaries in a local source file. Effects are recorded as deterministic descriptors rather than executing upstream network or native operations.
 
-The external campaign currently includes `proton-demo-todo` and `ensenzu-app`. Proton explores 320 states and 618 transitions and minimizes snapshot rollback to `SnapshotReceived(version=1) -> SnapshotReceived(version=0)`. Ensenzu explores 834 states and 1,900 transitions and minimizes acceptance of a non-finite frequency to `Change(Frequency, "Infinity")`. Upstream repositories are read-only inputs: this project does not create issues, pull requests, comments, or commits in them.
+The external campaign currently includes `proton-demo-todo`, `ensenzu-app`, and `signal-reader`. Signal Reader explores 720 states and 1,265 transitions and retains three response-order failures covering feed selection, live search, and optimistic saved-state callbacks. Its primary trace minimizes to `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)`.
 
-Each run writes `atlas.html`, `atlas.svg`, `atlas.json`, `atlas.dot`, and `summary.json`.
+Upstream repositories are read-only inputs: this project does not create issues, pull requests, comments, or commits in them. `external handoff <id>` generates local issue, reproduction, fix-plan, and PR-body drafts only. Security-sensitive findings are blocked from public export and isolated below ignored `.private/disclosures/`; see [docs/DISCLOSURE.md](docs/DISCLOSURE.md).
+
+Each public run writes `atlas.html`, `atlas.svg`, `atlas.json`, `atlas.dot`, and `summary.json`.
 
 ## Library model
 

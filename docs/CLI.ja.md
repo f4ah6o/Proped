@@ -70,6 +70,7 @@ review済みexternal targetのrepository、固定revision、adapter strategy、l
 ```bash
 moon run src/cli -- external inspect proton-demo-todo --json
 moon run src/cli -- external inspect ensenzu-app --json
+moon run src/cli -- external inspect signal-reader --json
 ```
 
 manifestのentry point、source SHA-256、effect policy、有効property、upstreamへの明示的な`read-only` policyを返します。
@@ -88,6 +89,7 @@ local MoonBit source fileからRabbita import、state constructor、`Model`、`M
 ```bash
 moon run src/cli -- external run proton-demo-todo --json
 moon run src/cli -- external run ensenzu-app --json
+moon run src/cli -- external run signal-reader --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -97,6 +99,19 @@ moon run src/cli -- external run all --output artifacts --json
 | --- | --- | --- |
 | `proton-demo-todo` | `snapshot version never decreases` | `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` |
 | `ensenzu-app` | `active numeric fields reject non-finite input` | `Change(Frequency, "Infinity")` |
+| `signal-reader` | `feed responses match the current subscription` | `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)` |
+
+Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。
+
+### `external handoff <id|all>`
+
+```bash
+moon run src/cli -- external handoff signal-reader --output artifacts --json
+```
+
+`<output>/handoff/<id>/`へ`issue.md`、`reproduction.md`、`fix-plan.md`、`pr-body.md`、`machine.json`をローカル生成します。metadataの`upstreamWritePerformed`は常に`false`で、GitHubやupstream APIを呼びません。
+
+manifestは`findingVisibility`を必須とします。`public-bug`は通常出力できます。`private-security`はpublic handoffを拒否し、`.private/disclosures/<id>/`へ強制隔離し、stdoutにはredacted summaryだけを返します。tracked manifestでは`private-security`を禁止します。詳細は [DISCLOSURE.ja.md](DISCLOSURE.ja.md) を参照してください。
 
 外部repositoryはread-only inputです。相手側にissue、PR、comment、commitを作成しません。
 

@@ -14,30 +14,97 @@
     "strategy",
     "effectPolicy",
     "sourceSha256",
-    "properties"
+    "properties",
+    "findingVisibility"
   ],
   "properties": {
-    "id": { "type": "string", "minLength": 1, "pattern": "^[a-z0-9][a-z0-9-]*$" },
-    "repository": { "type": "string", "pattern": "^[^/]+/[^/]+$" },
-    "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "license": { "type": "string", "minLength": 1 },
-    "packages": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1
+    },
+    "packages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "entryPoints": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["model", "message", "update", "view"],
+      "required": [
+        "model",
+        "message",
+        "update",
+        "view"
+      ],
       "properties": {
-        "model": { "type": "string", "minLength": 1 },
-        "message": { "type": "string", "minLength": 1 },
-        "update": { "type": "string", "minLength": 1 },
-        "view": { "type": "string", "minLength": 1 }
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "update": {
+          "type": "string",
+          "minLength": 1
+        },
+        "view": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "strategy": {
-      "enum": ["pure", "effect-model", "subscription-model", "browser-replay", "unsupported"]
+      "enum": [
+        "pure",
+        "effect-model",
+        "subscription-model",
+        "browser-replay",
+        "unsupported"
+      ]
     },
-    "effectPolicy": { "enum": ["none", "record-and-inject", "browser-replay"] },
-    "sourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "properties": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+    "effectPolicy": {
+      "enum": [
+        "none",
+        "record-and-inject",
+        "browser-replay",
+        "record-download-command"
+      ]
+    },
+    "sourceSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "properties": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "findingVisibility": {
+      "enum": [
+        "public-bug",
+        "private-security"
+      ]
+    }
   }
 }

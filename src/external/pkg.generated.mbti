@@ -3,11 +3,14 @@ package "f4ah6o/proped-rabbita/external"
 
 import {
   "f4ah6o/proped-rabbita",
+  "f4ah6o/proped-rabbita/disclosure",
   "moonbitlang/core/debug",
 }
 
 // Values
 pub fn effect_ids_unique(Array[EffectDescriptor]) -> Bool
+
+pub fn ensenzu_handoff() -> @disclosure.FindingHandoff
 
 pub fn ensenzu_manifest() -> ExternalManifest
 
@@ -15,9 +18,15 @@ pub fn inspect_source(String) -> SourceInspection
 
 pub fn[Model, Msg] monotonic_int_property(String, (Model) -> Int, (Msg) -> Bool) -> @proped-rabbita.Property[Model, Msg]
 
+pub fn proton_todo_handoff() -> @disclosure.FindingHandoff
+
 pub fn proton_todo_manifest() -> ExternalManifest
 
 pub fn response_orders(Array[EffectDescriptor]) -> Array[Array[Int]]
+
+pub fn signal_reader_handoff() -> @disclosure.FindingHandoff
+
+pub fn signal_reader_manifest() -> ExternalManifest
 
 pub fn[Model, Msg] unique_effect_ids_property(String, (Model) -> Array[EffectDescriptor]) -> @proped-rabbita.Property[Model, Msg]
 
@@ -66,6 +75,7 @@ pub(all) struct ExternalManifest {
   effect_policy : String
   source_sha256 : String
   properties : Array[String]
+  finding_visibility : @disclosure.FindingVisibility
 } derive(Eq, @debug.Debug)
 
 pub(all) enum ManifestError {

@@ -1,0 +1,108 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/signal_reader"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "f4ah6o/proped-rabbita/external",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+// Errors
+
+// Types and methods
+pub(all) enum ActiveView {
+  FeedView
+  SavedView
+} derive(Eq, @debug.Debug)
+pub fn ActiveView::to_string(Self) -> String
+
+pub(all) struct Item {
+  id : Int
+  subscription_id : Int
+  title : String
+  read : Bool
+  saved : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Model {
+  active_view : ActiveView
+  selected_subscription_id : Int
+  unread_only : Bool
+  search_modal_open : Bool
+  search_query : String
+  items : Array[Item]
+  search_results : Array[SearchResult]
+  loading : Bool
+  status_line : String
+  pending_requests : Array[PendingRequest]
+  next_request_id : Int
+  latest_items_request_id : Int
+  latest_search_request_id : Int
+  latest_saved_request_id : Int
+  desired_saved : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  SelectSubscription(Int)
+  OpenSearchModal
+  CloseSearchModal
+  UpdateSearchQuery(String)
+  ToggleItemSaved(Int, Bool)
+  ItemsLoaded(Int, Int, Array[Item])
+  SearchLoaded(Int, String, Array[SearchResult])
+  ItemSavedSet(Int, Int, Bool, Bool)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PendingRequest {
+  effect : @external.EffectDescriptor
+  kind : RequestKind
+  subscription_id : Int
+  query : String
+  item_id : Int
+  saved : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) enum RequestKind {
+  LoadItems
+  Search
+  SetSaved
+} derive(Eq, @debug.Debug)
+pub fn RequestKind::to_string(Self) -> String
+
+pub(all) struct SearchResult {
+  item_id : Int
+  query : String
+  title : String
+  saved : Bool
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

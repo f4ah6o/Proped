@@ -87,3 +87,14 @@ The full MIT license is included at `src/vendor/proton_todo/LICENSE`. The adapte
 - Preserved calculation source: `src/vendor/ensenzu_core/`
 
 The Apache License 2.0 text is included in both vendor directories. The calculation source is vendored because the upstream workspace references `shiguri-01/ensenzu@0.1.0`, but that module is not available from the public MoonBit registry. The application adapter replaces only the browser download command and exploration boundary; source revision, hashes, and changes are documented in each `UPSTREAM.md`.
+
+
+## Signal Reader behavioral reference
+
+- Project: `CAIMEOX/signal_reader`
+- Revision: `e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a`
+- Module-declared license: MIT
+- Relevant paths: `frontend/model.mbt`, `frontend/update.mbt`, `frontend/commands.mbt`
+- Adapter: `src/vendor/signal_reader/signal_reader.mbt`
+
+The pinned revision does not include a standalone LICENSE file. No upstream source is included in Proped Rabbita. The adapter is a clean-room finite behavioral model; exact source hashes and the modeled boundary are recorded in `src/vendor/signal_reader/UPSTREAM.md`.

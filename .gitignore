@@ -8,3 +8,5 @@ demo/out/
 .claude/skills/
 
 .tmp/
+
+.private/

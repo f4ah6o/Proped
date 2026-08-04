@@ -3,7 +3,9 @@
   "repository": "justjavac/proton-demo",
   "revision": "5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d",
   "license": "MIT",
-  "packages": ["frontend/main"],
+  "packages": [
+    "frontend/main"
+  ],
   "entryPoints": {
     "model": "Model",
     "message": "Msg",
@@ -17,5 +19,6 @@
     "snapshot version never decreases",
     "pending effect IDs remain unique",
     "rendered revision matches snapshot"
-  ]
+  ],
+  "findingVisibility": "public-bug"
 }

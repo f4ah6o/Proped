@@ -36,6 +36,7 @@ pub(all) struct ExternalManifest {
   effect_policy : String
   source_sha256 : String
   properties : Array[String]
+  finding_visibility : @disclosure.FindingVisibility
 } derive(Debug, Eq)
 
 ///|
@@ -286,6 +287,7 @@ pub fn proton_todo_manifest() -> ExternalManifest {
     properties: [
       "snapshot version never decreases", "pending effect IDs remain unique", "rendered revision matches snapshot",
     ],
+    finding_visibility: @disclosure.PublicBug,
   }
 }
 
@@ -309,5 +311,129 @@ pub fn ensenzu_manifest() -> ExternalManifest {
       "invalid input preserves previous result", "advanced toggle preserves calculation",
       "download effect IDs remain unique", "rendered status matches validation state",
     ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn proton_todo_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "proton-demo-todo",
+    repository: "justjavac/proton-demo",
+    revision: "5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d",
+    title: "Ignore stale Todo snapshots that would roll back the visible revision",
+    summary: "The frontend accepts every SnapshotReceived value without correlating it to the request or rejecting an older revision.",
+    impact: "A late response or subscription delivery can replace newer Todo state with older data, making the UI revision and rows move backward.",
+    expected: "After revision 1 is visible, a later delivery of revision 0 is ignored or otherwise prevented from replacing the newer snapshot.",
+    actual: "SnapshotReceived(version=0) replaces SnapshotReceived(version=1).",
+    property: "snapshot version never decreases",
+    minimal_trace: [
+      "SnapshotReceived(version=1)", "SnapshotReceived(version=0)",
+    ],
+    action_ids: ["snapshot:1", "snapshot:0"],
+    evidence: [
+      "320 reachable states and 618 transitions explored deterministically.", "The failure shrinks to two response deliveries with zero runner diagnostics.",
+    ],
+    suggested_fix: [
+      "Carry a request/generation identifier through snapshot deliveries, or reject snapshots older than the current revision.",
+      "Keep the newest accepted snapshot when responses arrive out of order.",
+    ],
+    verification: [
+      "Add a regression test that delivers revision 1 and then revision 0.", "Add a reverse-order response test for concurrent list/create/update operations.",
+      "Confirm the rendered revision never decreases.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn ensenzu_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "ensenzu-app",
+    repository: "shiguri-01/ensenzu",
+    revision: "f1fbec776a393e7023c8fa8324ea26c0774752e5",
+    title: "Reject non-finite numeric input in the interactive circle-diagram form",
+    summary: "The frequency field accepts the JavaScript/MoonBit numeric literal Infinity because parsing succeeds and the validation checks only whether the value is positive.",
+    impact: "The form can enter a state reported as valid even though a non-finite value cannot represent a usable physical parameter and may produce unstable downstream calculations.",
+    expected: "Every active numeric field rejects NaN and positive or negative infinity before calculation and rendering.",
+    actual: "Change(Frequency, \"Infinity\") results in pending_input=false and error=None.",
+    property: "active numeric fields reject non-finite input",
+    minimal_trace: ["Change(Frequency, \"Infinity\")"],
+    action_ids: ["change:Frequency:8:Infinity"],
+    evidence: [
+      "All 19 field keys were explored with empty, partial, zero, negative, finite, NaN, and Infinity inputs.",
+      "834 states and 1,900 transitions were explored with zero runner diagnostics.",
+    ],
+    suggested_fix: [
+      "Reject non-finite Double values immediately after parsing.", "Use a shared finite-number guard for every interactive decimal field.",
+    ],
+    verification: [
+      "Add table-driven tests for NaN, Infinity, and -Infinity across active numeric fields.",
+      "Preserve the previous SVG and calculation result while reporting a validation error.",
+      "Confirm ordinary finite values and partial input behavior remain unchanged.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn signal_reader_manifest() -> ExternalManifest {
+  {
+    id: "signal-reader",
+    repository: "CAIMEOX/signal_reader",
+    revision: "e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a",
+    license: "MIT",
+    packages: ["frontend"],
+    model_entry: "Model",
+    message_entry: "Msg",
+    update_entry: "update",
+    view_entry: "view",
+    strategy: EffectModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "df8dd9c5382d0acdcee335ec8cc3ba88b386b47c4ab15cd178a352e1812b617e",
+    properties: [
+      "feed responses match the current subscription", "search responses match the current query",
+      "latest saved intent wins", "pending request IDs remain unique", "rendered selection and query match model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn signal_reader_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "signal-reader",
+    repository: "CAIMEOX/signal_reader",
+    revision: "e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a",
+    title: "Correlate asynchronous feed, search, and saved-state responses",
+    summary: "The frontend response messages do not carry request or generation identity, so a late response can overwrite state created by a newer user action.",
+    impact: "The visible feed can show another subscription's items, live-search results can move back to an older query, and a stale saved-state callback can reverse the user's latest intent.",
+    expected: "Only the response associated with the latest relevant feed selection, search criteria, or saved-state intent updates the visible model.",
+    actual: "Responses are applied by response type alone, even when the current selection, query, or saved intent has changed.",
+    property: "feed responses match the current subscription",
+    minimal_trace: [
+      "SelectSubscription(2)", "SelectSubscription(1)", "ItemsLoaded(request=1, subscription=2)",
+    ],
+    action_ids: [
+      "select-subscription:2", "select-subscription:1", "items-loaded:1:2",
+    ],
+    evidence: [
+      "Saved-state race: ToggleItemSaved(1, true) -> ToggleItemSaved(1, false) -> ItemSavedSet(request=1, item=1, saved=true, success=true).",
+      "Search race: OpenSearchModal -> UpdateSearchQuery(\"alpha\") -> UpdateSearchQuery(\"beta\") -> SearchLoaded(request=1, query=\"alpha\").",
+      "All HTTP work is modeled as descriptors; no upstream service or network request is executed.",
+      "No upstream source is copied because the pinned revision has no standalone LICENSE file; MIT is declared in moon.mod.json.",
+    ],
+    suggested_fix: [
+      "Add a generation or request ID to ItemsLoaded and SearchLoaded, and ignore responses older than the latest request for that domain.",
+      "Track the latest saved-state request per item and ignore stale success or rollback callbacks.",
+      "Keep feed, search, and item mutation correlation independent so one domain cannot invalidate another.",
+    ],
+    verification: [
+      "Select feed A, then feed B, then deliver A's response and confirm B remains visible.",
+      "Issue searches for alpha and beta, deliver alpha last, and confirm beta results remain visible.",
+      "Save then unsave an item, deliver the save callback last, and confirm the item remains unsaved.",
+      "Repeat each case with success and failure responses in both delivery orders.",
+    ],
+    visibility: @disclosure.PublicBug,
   }
 }

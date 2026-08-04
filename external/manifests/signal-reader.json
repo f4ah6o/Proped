@@ -1,0 +1,27 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "signal-reader",
+  "repository": "CAIMEOX/signal_reader",
+  "revision": "e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a",
+  "license": "MIT",
+  "packages": [
+    "frontend"
+  ],
+  "entryPoints": {
+    "model": "Model",
+    "message": "Msg",
+    "update": "update",
+    "view": "view"
+  },
+  "strategy": "effect-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "df8dd9c5382d0acdcee335ec8cc3ba88b386b47c4ab15cd178a352e1812b617e",
+  "properties": [
+    "feed responses match the current subscription",
+    "search responses match the current query",
+    "latest saved intent wins",
+    "pending request IDs remain unique",
+    "rendered selection and query match model"
+  ],
+  "findingVisibility": "public-bug"
+}

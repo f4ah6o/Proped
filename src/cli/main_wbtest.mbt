@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.6.0"))
+  assert_true(schema.contains("0.7.0"))
 }
 
 ///|
@@ -188,8 +188,31 @@ test "Ensenzu inspection reports finite-input property and provenance" {
 }
 
 ///|
-test "external list exposes both pinned applications" {
+test "external list exposes all pinned applications" {
   let json = external_list_json()
   assert_true(json.contains("proton-demo-todo"))
   assert_true(json.contains("ensenzu-app"))
+  assert_true(json.contains("signal-reader"))
+}
+
+///|
+test "Signal Reader inspection and handoff expose response ordering" {
+  let json = signal_reader_external_inspection_json()
+  assert_true(json.contains("CAIMEOX/signal_reader"))
+  assert_true(json.contains("feed responses match the current subscription"))
+  assert_true(json.contains("ItemsLoaded"))
+  let spec = handoff_spec("signal-reader").unwrap()
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "private security external run policy always uses ignored private root" {
+  let private_manifest = {
+    ..@external.signal_reader_manifest(),
+    id: "security-fixture",
+    finding_visibility: @disclosure.PrivateSecurity,
+  }
+  let policy = external_run_policy(private_manifest, "public-output")
+  assert_true(policy.details_withheld)
+  assert_eq(policy.output, ".private/disclosures/security-fixture/run")
 }

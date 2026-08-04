@@ -61,3 +61,23 @@ test "source detector classifies effect-model applications" {
   assert_true(inspection.has_command)
   assert_eq(inspection.strategy, EffectModel)
 }
+
+///|
+test "public external findings produce complete handoff bundles" {
+  for spec in [proton_todo_handoff(), ensenzu_handoff()] {
+    let files = @disclosure.public_handoff_files(spec).unwrap()
+    assert_eq(files.length(), 5)
+    assert_true(files.any(file => file.name == "issue.md"))
+    assert_true(files.any(file => file.name == "reproduction.md"))
+    assert_true(files.any(file => file.name == "fix-plan.md"))
+    assert_true(files.any(file => file.name == "pr-body.md"))
+    assert_true(files.any(file => file.name == "machine.json"))
+  }
+}
+
+///|
+test "Signal Reader manifest and handoff are valid" {
+  assert_eq(validate_manifest(signal_reader_manifest()), [])
+  let files = @disclosure.public_handoff_files(signal_reader_handoff()).unwrap()
+  assert_eq(files.length(), 5)
+}

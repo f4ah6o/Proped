@@ -70,7 +70,7 @@ fn parse_args(raw : Array[String]) -> CliArgs {
 
 ///|
 fn print_help() -> Unit {
-  println("Proped Rabbita CLI 0.6.0")
+  println("Proped Rabbita CLI 0.7.0")
   println("")
   println("Usage:")
   println("  moon run src/cli -- <command> [arguments] [--json] [--output DIR]")
@@ -95,6 +95,9 @@ fn print_help() -> Unit {
     "  external inspect-source <file>  Detect Rabbita boundaries in a local source file",
   )
   println("  external run <id|all>      Explore pinned external applications")
+  println(
+    "  external handoff <id|all>  Generate local issue and PR draft bundles",
+  )
   println("")
   println("Demo IDs:")
   println("  newsletter                 Passing newsletter form example")
@@ -113,6 +116,7 @@ fn print_help() -> Unit {
   println(
     "  ensenzu-app                Ensenzu non-finite numeric input failure",
   )
+  println("  signal-reader              Signal Reader response-order failures")
   println("")
   println(
     "Exit codes: 0 expectation met, 2 usage error, 3 expectation mismatch",
@@ -122,7 +126,7 @@ fn print_help() -> Unit {
 ///|
 fn schema_json() -> String {
   (
-    #|{"name":"proped-rabbita","version":"0.6.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo","ensenzu-app"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
+    #|{"name":"proped-rabbita","version":"0.7.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","handoff","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["issue.md","reproduction.md","fix-plan.md","pr-body.md","machine.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo","ensenzu-app","signal-reader"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
   )
 }
 
@@ -136,7 +140,7 @@ fn demo_list_json() -> String {
 ///|
 fn external_list_json() -> String {
   (
-    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"},{"id":"ensenzu-app","repository":"shiguri-01/ensenzu","revision":"f1fbec776a393e7023c8fa8324ea26c0774752e5","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Ensenzu numeric forms, SVG calculation, reset, and non-finite input exploration"}]}
+    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"},{"id":"ensenzu-app","repository":"shiguri-01/ensenzu","revision":"f1fbec776a393e7023c8fa8324ea26c0774752e5","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Ensenzu numeric forms, SVG calculation, reset, and non-finite input exploration"},{"id":"signal-reader","repository":"CAIMEOX/signal_reader","revision":"e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a","license":"MIT","strategy":"effect-model","expectedOutcome":"failure","description":"Signal Reader stale feed, search, and saved-state response exploration"}]}
   )
 }
 
@@ -175,6 +179,8 @@ fn external_inspection_json(
   output.write_string(json_string(manifest.view_entry))
   output.write_string("},\"properties\":")
   write_json_string_array(output, manifest.properties)
+  output.write_string(",\"findingVisibility\":")
+  output.write_string(json_string(manifest.finding_visibility.to_string()))
   output.write_string(",\"effectKinds\":")
   write_json_string_array(output, effect_kinds)
   output.write_string(",\"responseOrdering\":")
@@ -202,6 +208,16 @@ fn ensenzu_external_inspection_json() -> String {
     ["dom-command"],
     "not applicable",
     "Change(Frequency, \"Infinity\")",
+  )
+}
+
+///|
+fn signal_reader_external_inspection_json() -> String {
+  external_inspection_json(
+    @external.signal_reader_manifest(),
+    ["http-request"],
+    "all bounded domain-local permutations",
+    "SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)",
   )
 }
 
@@ -234,6 +250,14 @@ fn print_ensenzu_external_inspection() -> Unit {
   print_external_inspection(
     @external.ensenzu_manifest(),
     "Change(Frequency, \"Infinity\")",
+  )
+}
+
+///|
+fn print_signal_reader_external_inspection() -> Unit {
+  print_external_inspection(
+    @external.signal_reader_manifest(),
+    "SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)",
   )
 }
 
@@ -686,16 +710,86 @@ async fn run_websocket(output_root : String) -> RunSummary {
 }
 
 ///|
+struct ExternalRunPolicy {
+  output : String
+  details_withheld : Bool
+}
+
+///|
+fn external_run_policy(
+  manifest : @external.ExternalManifest,
+  output_root : String,
+) -> ExternalRunPolicy {
+  match manifest.finding_visibility {
+    @disclosure.PublicBug =>
+      { output: "\{output_root}/\{manifest.id}", details_withheld: false }
+    @disclosure.PrivateSecurity =>
+      {
+        output: ".private/disclosures/\{manifest.id}/run",
+        details_withheld: true,
+      }
+  }
+}
+
+///|
+async fn finish_external_run(
+  manifest : @external.ExternalManifest,
+  output_root : String,
+  expected_failure_property : String,
+  expected_failure_trace : Array[String],
+  report : @proped.RunReport,
+) -> RunSummary {
+  let policy = external_run_policy(manifest, output_root)
+  if !policy.details_withheld {
+    return finish_run(
+      manifest.id,
+      policy.output,
+      true,
+      expected_failure_property,
+      expected_failure_trace,
+      report,
+    )
+  }
+  write_report_files(policy.output, report)
+  let redacted_failure : MinimalFailure = {
+    property: "private security finding withheld",
+    message: "Detailed reproduction is available only in the ignored private disclosure bundle.",
+    state_id: "withheld",
+    trace: [],
+    action_ids: [],
+  }
+  let summary : RunSummary = {
+    id: manifest.id,
+    output: policy.output,
+    schema_version: report.schema_version,
+    seed: report.seed,
+    states: report.states.length(),
+    transitions: report.transitions.length(),
+    failures: report.failures.length(),
+    diagnostics: report.diagnostics.length(),
+    expected_failure: true,
+    expected_failure_property: "private security finding withheld",
+    expected_failure_trace: [],
+    first_failure: Some(redacted_failure),
+  }
+  @fs.write_file(
+    "\{policy.output}/summary.json",
+    summary_to_json(summary),
+    create_mode=@fs.CreateMode::CreateOrTruncate,
+  )
+  summary
+}
+
+///|
 async fn run_proton_todo(output_root : String) -> RunSummary {
   let report = @proped.run(
     @proton_todo.machine(),
     @proton_todo.properties(),
     @proton_todo.default_config(),
   )
-  finish_run(
-    "proton-demo-todo",
-    "\{output_root}/proton-demo-todo",
-    true,
+  finish_external_run(
+    @external.proton_todo_manifest(),
+    output_root,
     "snapshot version never decreases",
     ["SnapshotReceived(version=1)", "SnapshotReceived(version=0)"],
     report,
@@ -709,12 +803,29 @@ async fn run_ensenzu(output_root : String) -> RunSummary {
     @ensenzu_app.properties(),
     @ensenzu_app.default_config(),
   )
-  finish_run(
-    "ensenzu-app",
-    "\{output_root}/ensenzu-app",
-    true,
+  finish_external_run(
+    @external.ensenzu_manifest(),
+    output_root,
     "active numeric fields reject non-finite input",
     ["Change(Frequency, \"Infinity\")"],
+    report,
+  )
+}
+
+///|
+async fn run_signal_reader(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @signal_reader.machine(),
+    @signal_reader.properties(),
+    @signal_reader.default_config(),
+  )
+  finish_external_run(
+    @external.signal_reader_manifest(),
+    output_root,
+    "feed responses match the current subscription",
+    [
+      "SelectSubscription(2)", "SelectSubscription(1)", "ItemsLoaded(request=1, subscription=2)",
+    ],
     report,
   )
 }
@@ -770,6 +881,65 @@ fn print_summaries(summaries : Array[RunSummary]) -> Unit {
 }
 
 ///|
+fn handoff_spec(id : String) -> @disclosure.FindingHandoff? {
+  if id == "proton-demo-todo" {
+    Some(@external.proton_todo_handoff())
+  } else if id == "ensenzu-app" {
+    Some(@external.ensenzu_handoff())
+  } else if id == "signal-reader" {
+    Some(@external.signal_reader_handoff())
+  } else {
+    None
+  }
+}
+
+///|
+async fn write_handoff_files(
+  root : String,
+  files : Array[@disclosure.HandoffFile],
+) -> Unit {
+  if !@fs.exists(root) {
+    @fs.mkdir(root, recursive=true)
+  }
+  for file in files {
+    @fs.write_file(
+      "\{root}/\{file.name}",
+      file.content,
+      create_mode=@fs.CreateMode::CreateOrTruncate,
+    )
+  }
+}
+
+///|
+async fn generate_handoff(
+  output_root : String,
+  spec : @disclosure.FindingHandoff,
+) -> String {
+  match spec.visibility {
+    @disclosure.PublicBug => {
+      let output = "\{output_root}/handoff/\{spec.id}"
+      match @disclosure.public_handoff_files(spec) {
+        Ok(files) => write_handoff_files(output, files)
+        Err(_) => ()
+      }
+      @disclosure.safe_status_json(spec, output)
+    }
+    @disclosure.PrivateSecurity => {
+      let output = ".private/disclosures/\{spec.id}"
+      write_handoff_files(output, @disclosure.private_handoff_files(spec))
+      @disclosure.safe_status_json(spec, output)
+    }
+  }
+}
+
+///|
+fn handoff_envelope(statuses : Array[String]) -> String {
+  "{\"ok\":true,\"command\":\"external handoff\",\"handoffs\":[" +
+  statuses.join(",") +
+  "]}"
+}
+
+///|
 fn usage_error(message : String, json : Bool) -> Unit {
   if json {
     println(
@@ -804,9 +974,9 @@ async fn main {
       return
     }
     if parsed.json {
-      println("{\"ok\":true,\"version\":\"0.6.0\"}")
+      println("{\"ok\":true,\"version\":\"0.7.0\"}")
     } else {
-      println("proped-rabbita 0.6.0")
+      println("proped-rabbita 0.7.0")
     }
     return
   }
@@ -821,7 +991,7 @@ async fn main {
   if args[0] == "external" {
     if args.length() < 2 {
       usage_error(
-        "use external list, external inspect <id>, or external run <id|all>",
+        "use external list, inspect, inspect-source, handoff, or run",
         parsed.json,
       )
       return
@@ -843,6 +1013,48 @@ async fn main {
         println(
           "ensenzu-app\tshiguri-01/ensenzu\teffect-model\tfailure\tNon-finite numeric input exploration",
         )
+        println(
+          "signal-reader\tCAIMEOX/signal_reader\teffect-model\tfailure\tResponse-order exploration",
+        )
+      }
+      return
+    }
+
+    if args[1] == "handoff" {
+      if args.length() != 3 {
+        usage_error(
+          "external handoff requires exactly one id or all",
+          parsed.json,
+        )
+        return
+      }
+      let requested = args[2]
+      let statuses : Array[String] = []
+      if requested == "all" {
+        statuses.push(
+          generate_handoff(parsed.output, @external.proton_todo_handoff()),
+        )
+        statuses.push(
+          generate_handoff(parsed.output, @external.ensenzu_handoff()),
+        )
+        statuses.push(
+          generate_handoff(parsed.output, @external.signal_reader_handoff()),
+        )
+      } else {
+        match handoff_spec(requested) {
+          Some(spec) => statuses.push(generate_handoff(parsed.output, spec))
+          None => {
+            usage_error("unknown external id: \{requested}", parsed.json)
+            return
+          }
+        }
+      }
+      if parsed.json {
+        println(handoff_envelope(statuses))
+      } else {
+        for status in statuses {
+          println(status)
+        }
       }
       return
     }
@@ -889,6 +1101,12 @@ async fn main {
         } else {
           print_ensenzu_external_inspection()
         }
+      } else if inspect_id == "signal-reader" {
+        if parsed.json {
+          println(signal_reader_external_inspection_json())
+        } else {
+          print_signal_reader_external_inspection()
+        }
       } else {
         usage_error("unknown external id: \{inspect_id}", parsed.json)
         return
@@ -897,7 +1115,7 @@ async fn main {
     }
     if args[1] != "run" || args.length() != 3 {
       usage_error(
-        "use external list, external inspect <id>, or external run <id|all>",
+        "use external list, inspect, inspect-source, handoff, or run",
         parsed.json,
       )
       return
@@ -909,9 +1127,12 @@ async fn main {
       external_summaries.push(run_proton_todo(external_root))
     } else if external_id == "ensenzu-app" {
       external_summaries.push(run_ensenzu(external_root))
+    } else if external_id == "signal-reader" {
+      external_summaries.push(run_signal_reader(external_root))
     } else if external_id == "all" {
       external_summaries.push(run_proton_todo(external_root))
       external_summaries.push(run_ensenzu(external_root))
+      external_summaries.push(run_signal_reader(external_root))
     } else {
       usage_error("unknown external id: \{external_id}", parsed.json)
       return

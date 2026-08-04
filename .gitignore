@@ -6,3 +6,5 @@ target/
 demo/out/
 .agents/skills/
 .claude/skills/
+
+.tmp/

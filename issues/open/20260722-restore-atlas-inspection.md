@@ -3,7 +3,7 @@
 Status: open
 Model: gpt-5.6-luna
 Created: 2026-07-22
-Updated: 2026-07-22
+Updated: 2026-08-04
 Branch: codex/feat/20260722-flow-canvas-demo
 
 ## 概要
@@ -14,11 +14,11 @@ Flow Canvas ベースの静的 Atlas への移行後も、状態遷移を調査�
 
 既存の `src/atlas_html.mbt` は、inline SVG と JavaScript により、ノード／エッジ選択、Rendered app の preview、Atlas metadata、関連 transition、property failure の詳細、英語／日本語の表示切り替えを提供していた。
 
-Flow Canvas (`src/flow.mbt`、`src/flow_atlas.mbt`) は、`RunReport` から再利用可能な `FlowGraph` を構築し、静的 SVG を生成する。まず `src/demo` と `report_to_html` のグラフ描画を Flow Canvas に一本化するが、Flow Canvas の現行公開 API は静的 SVG が中心であり、旧 Atlas の調査 UI はそのまま移植しない。
+Flow Canvas (`src/flow.mbt`、`src/flow_atlas.mbt`) は、`RunReport` から再利用可能な `FlowGraph` を構築し、静的 SVG を生成する。`src/cli` が生成する Atlas と `report_to_html` のグラフ描画は Flow Canvas に一本化されたが、Flow Canvas の現行公開 API は静的 SVG が中心であり、旧 Atlas の調査 UI はそのまま移植しない。
 
 関連:
 
-- `issues/open/20260722-atlas-ui.md`
+- `issues/closed/20260722-atlas-ui.md`
 - `docs/FLOW.ja.md`
 - `src/flow_atlas.mbt`
 - `src/atlas_html.mbt`
@@ -78,7 +78,7 @@ Flow Canvas 化により、静的 SVG だけでは次の既存機能が失われ
 - `moon fmt`
 - `moon check --target native`
 - `moon test --target native`
-- `moon run demo`
+- `moon run src/cli -- demo run all --json`
 - 生成された `demo/out/atlas.html` をブラウザで開き、ノード選択、エッジ選択、preview、metadata、関連 transition、failure trace、英語／日本語切り替えを手動確認する。
 - `demo/out/atlas.json` を解析し、既存の `states`、`transitions`、`failures`、raw action が保持されていることを確認する。
 - `git diff --check`
@@ -99,3 +99,5 @@ Flow Canvas 化により、静的 SVG だけでは次の既存機能が失われ
 
 - 2026-07-22: Flow Canvas 化に伴って失われる機能のうち、状態調査と多言語表示に有用なものだけを将来作業として記録した。
 - 2026-07-22: 実装方式は YAGNI に従い固定せず、実装着手時の API と利用要件に基づいて決定する。
+
+- 2026-08-04: CLI移行と完了issueの整理に合わせ、参照pathと検証commandを更新した。

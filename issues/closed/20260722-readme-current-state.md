@@ -1,9 +1,9 @@
 # READMEから将来候補と検証範囲を分離する
 
-Status: open
+Status: closed
 Model: unknown
 Created: 2026-07-22
-Updated: 2026-07-22
+Updated: 2026-08-04
 Branch: codex/docs/20260722-current-readme
 
 ## 概要
@@ -63,12 +63,12 @@ Proped Rabbita には、`Machine`、`Property`、状態空間の探索、失敗�
 
 ## 受け入れ条件
 
-- [ ] README.md に現在の実装と将来候補を区別するための MVP、Phase、Roadmap、Future、未対応機能の列挙がない。
-- [ ] README.ja.md が README.md と同じ現在の機能範囲を記載している。
-- [ ] 上記の実装候補が、重複なくこの issue で確認できる。
-- [ ] ブラウザ固有の検証範囲が、状態検証や静的 HTML 生成の説明と区別されている。
-- [ ] Warren 連携と明示的な依存識別子による現在の状態選択が別の項目として記載されている。
-- [ ] 各実装候補の着手時に、独立した受け入れ条件とテスト計画を持つ issue を作成できる。
+- [x] README.md に現在の実装と将来候補を区別するための MVP、Phase、Roadmap、Future、未対応機能の列挙がない。
+- [x] README.ja.md が README.md と同じ現在の機能範囲を記載している。
+- [x] 上記の実装候補が、重複なくこの issue で確認できる。
+- [x] ブラウザ固有の検証範囲が、状態検証や静的 HTML 生成の説明と区別されている。
+- [x] Warren 連携と明示的な依存識別子による現在の状態選択が別の項目として記載されている。
+- [x] 各実装候補の着手時に、独立した受け入れ条件とテスト計画を持つ issue を作成できる。
 
 ## テスト計画
 
@@ -91,3 +91,5 @@ Proped Rabbita には、`Machine`、`Property`、状態空間の探索、失敗�
 ## 注記
 
 - 2026-07-22: README の現在位置を実装済み機能と利用方法に限定し、将来候補と検証範囲をこの issue に分離した。
+
+- 2026-08-04: English and Japanese READMEs now describe only implemented behavior and link future work to issues; issue closed.

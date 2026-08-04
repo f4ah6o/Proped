@@ -38,3 +38,25 @@ jobs:
 
       - name: Test
         run: moon test --target native
+
+
+      - name: CLI smoke test
+        run: |
+          moon run src/cli -- schema --json > /tmp/proped-rabbita-schema.json
+          moon run src/cli -- demo run all --json > /tmp/proped-rabbita-run.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          schema = json.loads(Path('/tmp/proped-rabbita-schema.json').read_text())
+          result = json.loads(Path('/tmp/proped-rabbita-run.json').read_text())
+          assert schema['name'] == 'proped-rabbita'
+          assert schema['demoIds'] == ['newsletter', 'rabbita-counter']
+          assert result['ok'] is True
+          assert [run['id'] for run in result['runs']] == ['newsletter', 'rabbita-counter']
+          for run in result['runs']:
+              assert run['failures'] == 0
+              output = Path(run['output'])
+              for artifact in run['artifacts']:
+                  assert (output / artifact).is_file(), output / artifact
+          PY

@@ -1,14 +1,14 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita/demo"
+package "f4ah6o/proped-rabbita/cli"
 
 // Values
 
 // Errors
 
 // Types and methods
-type NewsletterModel derive(Eq)
+type CliArgs
 
-type NewsletterMsg
+type RunSummary
 
 // Type aliases
 

@@ -1,33 +1,33 @@
 ///|
-struct NewsletterModel {
+pub(all) struct Model {
   email : String
   consented : Bool
   submitted : Bool
-} derive(Eq)
+} derive(Debug, Eq)
 
 ///|
-enum NewsletterMsg {
+pub(all) enum Msg {
   SetEmail(String)
   ToggleConsent
   Submit
   Reset
-}
+} derive(Debug, Eq)
 
 ///|
-fn newsletter_initial() -> NewsletterModel {
+pub fn initial() -> Model {
   { email: "", consented: false, submitted: false }
 }
 
 ///|
-fn newsletter_ready(model : NewsletterModel) -> Bool {
+pub fn ready(model : Model) -> Bool {
   model.email == "alice@example.com" && model.consented && !model.submitted
 }
 
 ///|
-fn newsletter_phase(model : NewsletterModel) -> String {
+pub fn phase(model : Model) -> String {
   if model.submitted {
     "submitted"
-  } else if newsletter_ready(model) {
+  } else if ready(model) {
     "ready"
   } else if model.email == "" && !model.consented {
     "empty"
@@ -37,29 +37,26 @@ fn newsletter_phase(model : NewsletterModel) -> String {
 }
 
 ///|
-fn newsletter_update(
-  model : NewsletterModel,
-  msg : NewsletterMsg,
-) -> NewsletterModel {
+pub fn update(model : Model, msg : Msg) -> Model {
   match msg {
     SetEmail(email) => { email, consented: model.consented, submitted: false }
     ToggleConsent =>
       { email: model.email, consented: !model.consented, submitted: false }
     Submit =>
-      if newsletter_ready(model) {
+      if ready(model) {
         { email: model.email, consented: model.consented, submitted: true }
       } else {
         model
       }
-    Reset => newsletter_initial()
+    Reset => initial()
   }
 }
 
 ///|
-fn newsletter_actions(model : NewsletterModel) -> Array[NewsletterMsg] {
+pub fn actions(model : Model) -> Array[Msg] {
   if model.submitted {
     [Reset]
-  } else if newsletter_ready(model) {
+  } else if ready(model) {
     [Submit, SetEmail(""), ToggleConsent, Reset]
   } else {
     [SetEmail(""), SetEmail("alice@example.com"), ToggleConsent, Reset]
@@ -67,7 +64,7 @@ fn newsletter_actions(model : NewsletterModel) -> Array[NewsletterMsg] {
 }
 
 ///|
-fn newsletter_shrink(msg : NewsletterMsg) -> Array[NewsletterMsg] {
+pub fn shrink(msg : Msg) -> Array[Msg] {
   match msg {
     SetEmail(email) if email != "" => [SetEmail("")]
     _ => []
@@ -75,7 +72,7 @@ fn newsletter_shrink(msg : NewsletterMsg) -> Array[NewsletterMsg] {
 }
 
 ///|
-fn newsletter_describe(msg : NewsletterMsg) -> String {
+pub fn describe(msg : Msg) -> String {
   match msg {
     SetEmail(email) => "SetEmail(\"\{email}\")"
     ToggleConsent => "ToggleConsent"
@@ -85,7 +82,7 @@ fn newsletter_describe(msg : NewsletterMsg) -> String {
 }
 
 ///|
-fn newsletter_action_id(msg : NewsletterMsg) -> String {
+pub fn action_id(msg : Msg) -> String {
   match msg {
     SetEmail(email) => "set-email:\{email}"
     ToggleConsent => "toggle-consent"
@@ -95,11 +92,11 @@ fn newsletter_action_id(msg : NewsletterMsg) -> String {
 }
 
 ///|
-fn newsletter_fingerprint(model : NewsletterModel) -> String {
-  "newsletter:\{newsletter_phase(model)}:\{model.email}:\{model.consented}:\{model.submitted}"
+pub fn fingerprint(model : Model) -> String {
+  "newsletter:\{phase(model)}:\{model.email}:\{model.consented}:\{model.submitted}"
 }
 
 ///|
-fn newsletter_dependencies(_ : NewsletterModel) -> Array[String] {
-  ["src/demo/model.mbt", "src/demo/view.mbt"]
+pub fn dependencies(_ : Model) -> Array[String] {
+  ["src/examples/newsletter/model.mbt", "src/examples/newsletter/view.mbt"]
 }

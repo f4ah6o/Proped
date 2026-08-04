@@ -1,0 +1,13 @@
+import {
+  "f4ah6o/proped-rabbita" @proped,
+  "f4ah6o/proped-rabbita/examples/newsletter",
+  "f4ah6o/proped-rabbita/vendor/rabbita_counter" @counter,
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/x/sys",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

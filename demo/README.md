@@ -1,28 +1,38 @@
-# Newsletter atlas demo
+# Runnable atlases
 
-This executable demonstrates the complete local Proped Rabbita flow:
-
-- reachable newsletter-form state transitions;
-- model and rendered-HTML properties;
-- Rabbita browserless rendering through `rabbita_machine`;
-- static Flow Canvas HTML and SVG, JSON, and Graphviz DOT atlas exports.
-
-Run it from the module root:
+The CLI generates two end-to-end examples:
 
 ```bash
-moon run src/demo
+moon run src/cli -- demo list --json
+moon run src/cli -- demo run all --json
 ```
 
-The command writes generated artifacts to `demo/out/`:
+Outputs are grouped by stable demo ID:
 
-- `atlas.html` — English-only static report containing the Flow Canvas graph,
-  exploration overview, property-failure summary, and links to the machine-
-  readable artifacts;
-- `atlas.svg` — standalone Flow Canvas SVG containing the same graph as the
-  inline SVG in `atlas.html`;
-- `atlas.json` — machine-readable report for CI or another visualizer;
-- `atlas.dot` — Graphviz transition graph source.
+```text
+demo/out/
+  newsletter/
+    atlas.html
+    atlas.svg
+    atlas.json
+    atlas.dot
+    summary.json
+  rabbita-counter/
+    atlas.html
+    atlas.svg
+    atlas.json
+    atlas.dot
+    summary.json
+```
 
-The demo is native-only because it writes local files. The Rabbita
-`render_to_string` warning is expected: Rabbita currently marks that server-side
-rendering entrypoint as an Experimental API.
+`newsletter` exercises form validation, consent, submission, reset behavior, state properties, and transition properties.
+
+`rabbita-counter` uses the vendored source from Rabbita's official `examples/counter`, pinned to revision `67e8169efa1bb2e8bd17018b62b41211cbc4c357`. Its adapter preserves upstream increment/decrement behavior and bounds exploration to values from -3 through 3.
+
+Use a different output root with:
+
+```bash
+moon run src/cli -- demo run all --output artifacts --json
+```
+
+The CLI returns exit code `3` when any property fails, making the same command suitable for local inspection and CI gating.

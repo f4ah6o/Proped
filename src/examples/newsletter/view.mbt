@@ -1,10 +1,10 @@
 ///|
-fn newsletter_view(model : NewsletterModel) -> @rabbita.Val[@rabbita.Html] {
-  let ready = newsletter_ready(model)
-  let phase = newsletter_phase(model)
+pub fn view(model : Model) -> @rabbita.Val[@rabbita.Html] {
+  let is_ready = ready(model)
+  let current_phase = phase(model)
   let status_message = if model.submitted {
     "Thanks for subscribing!"
-  } else if phase == "invalid" {
+  } else if current_phase == "invalid" {
     "Enter the sample email and accept the consent checkbox to continue."
   } else {
     "The atlas follows this form through reachable states."
@@ -17,7 +17,10 @@ fn newsletter_view(model : NewsletterModel) -> @rabbita.Val[@rabbita.Html] {
   let page = @html.main_(class="newsletter-demo", [
     @html.h1("Newsletter signup"),
     @html.p("A small Rabbita model rendered by Proped Rabbita."),
-    @html.div(class="state", [@html.strong("State: "), @html.text(phase)]),
+    @html.div(class="state", [
+      @html.strong("State: "),
+      @html.text(current_phase),
+    ]),
     @html.label(for_="email", "Email"),
     @html.input(
       id="email",
@@ -33,7 +36,7 @@ fn newsletter_view(model : NewsletterModel) -> @rabbita.Val[@rabbita.Html] {
       ),
       @html.text(consent_message),
     ]),
-    @html.button(disabled=!ready, "Subscribe"),
+    @html.button(disabled=!is_ready, "Subscribe"),
     @html.p(status_message),
   ])
   @rabbita.Val::constant(page)

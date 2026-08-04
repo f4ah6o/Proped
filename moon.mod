@@ -1,6 +1,6 @@
 name = "f4ah6o/proped-rabbita"
 
-version = "0.1.0"
+version = "0.2.0"
 
 source = "src"
 
@@ -18,7 +18,7 @@ keywords = [
   "moonbit",
 ]
 
-description = "Property-based, model-based UI verification and static state atlases for Rabbita"
+description = "CLI and library for deterministic property-based Rabbita UI state exploration"
 
 preferred_target = "native"
 
@@ -27,4 +27,5 @@ supported_targets = "+native+js"
 import {
   "moonbit-community/rabbita@0.13.1",
   "moonbitlang/async@0.20.2",
+  "moonbitlang/x@0.4.46",
 }

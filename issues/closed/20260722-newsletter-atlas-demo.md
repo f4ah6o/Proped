@@ -1,9 +1,9 @@
 # ニュースレター登録フォームの実行可能な atlas PoC を追加
 
-Status: open
+Status: closed
 Model: unknown
 Created: 2026-07-22
-Updated: 2026-07-22
+Updated: 2026-08-04
 Branch: codex/feat/20260722-newsletter-atlas-demo
 
 ## 概要
@@ -81,3 +81,5 @@ Rabbita 0.13.1 の `render_to_string` は `Experimental API` として alert を
 実装ブランチ: `codex/feat/20260722-newsletter-atlas-demo`
 
 検証結果: `moon fmt --check`、`moon check --target all`、`moon test --target native`、`moon run demo`、JSON parse を実行済み。すべて成功し、warning 0014 のみ残る。
+
+- 2026-08-04: The newsletter flow was migrated into a reusable package and exposed through the CLI; issue closed.

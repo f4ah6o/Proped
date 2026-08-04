@@ -2,20 +2,50 @@
 
 [日本語](README.ja.md) | English
 
-Property-based, model-based UI verification and static state atlases for [Rabbita](https://github.com/moonbit-community/rabbita).
+Proped Rabbita explores reachable Rabbita UI states, checks model and transition properties, shrinks failures, and exports deterministic HTML, SVG, JSON, and Graphviz atlases.
 
-Proped Rabbita treats the following as first-class UI framework concepts:
+## Run the CLI
 
-- reachable application states
-- typed user and system actions
-- state and transition properties
-- generated action traces
-- automatic failure shrinking
-- browserless Rabbita rendering
-- static HTML, JSON, and Graphviz state atlases
-- dependency-based differential UI builds
+```bash
+moon run src/cli -- help
+moon run src/cli -- demo list --json
+moon run src/cli -- demo run all --json
+```
 
-The core model is:
+The last command writes each demo to `demo/out/<demo-id>/` and prints one JSON result envelope to stdout.
+
+```json
+{"ok":true,"command":"demo run","runs":[{"id":"newsletter","states":5,"failures":0},{"id":"rabbita-counter","states":7,"failures":0}]}
+```
+
+Use `schema` as the stable discovery entry point for agents and scripts:
+
+```bash
+moon run src/cli -- schema --json
+```
+
+CLI exit codes are `0` for success, `2` for invalid usage, and `3` when a property fails. `--json` may appear anywhere in the argument list. `--output <dir>` changes the artifact root.
+
+See [docs/CLI.md](docs/CLI.md) for the complete command and output contract.
+
+## Included demos
+
+| ID | Source | Purpose |
+| --- | --- | --- |
+| `newsletter` | Project example | Validation, consent, submission, reset, state and transition properties |
+| `rabbita-counter` | Vendored Rabbita official example | Finite exploration of the upstream `Inc` and `Dec` counter semantics |
+
+The counter preserves the upstream source and license at `src/vendor/rabbita_counter/`, pinned to revision `67e8169efa1bb2e8bd17018b62b41211cbc4c357`. The adapted package bounds generated states to `[-3, 3]` so exploration terminates deterministically.
+
+Each run writes:
+
+- `atlas.html` — standalone human-readable state atlas
+- `atlas.svg` — standalone Flow Canvas graph
+- `atlas.json` — complete machine-readable run report
+- `atlas.dot` — Graphviz transition graph
+- `summary.json` — compact CLI result for automation
+
+## Library model
 
 ```text
 initial Model
@@ -28,47 +58,7 @@ initial Model
   = verified reachable UI state graph
 ```
 
-Proped Rabbita asks the model for actions that are valid in the current state, executes typed transitions, checks properties, reduces failures to reproducible traces, and records which inputs affect each rendered state.
-
-## Current package
-
-- Version: `0.1.0`
-- Targets: native and JS
-- License: Apache-2.0
-
-## Features
-
-### Reachable-state exploration
-
-`Machine::actions` receives the current model and returns only currently valid messages. Generated traces therefore remain in the reachable state space rather than constructing arbitrary field combinations.
-
-### State and transition properties
-
-```moonbit
-let properties : Array[Property[Model, Msg]] = [
-  state_property("loading disables submit", fn(model, html) {
-    if model.loading && !html.contains("disabled") {
-      Fail("submit remained enabled")
-    } else {
-      Pass
-    }
-  }),
-  transition_property("cancel restores persisted data", fn(before, msg, after) {
-    match msg {
-      Cancel if after.form != before.persisted => Fail("form was not restored")
-      _ => Pass
-    }
-  }),
-]
-```
-
-### Failure shrinking
-
-When a property fails, Proped Rabbita first removes unnecessary actions from the trace, then applies the message-specific shrinker. Reports contain the minimized sequence rather than only the original generated sequence. Shrinking records visited traces and uses `RunConfig.shrink_budget`, so cyclic, duplicate, and self-referential shrink candidates terminate with a diagnostic when the budget is exhausted.
-
-### Browserless Rabbita rendering
-
-`rabbita_machine_with_action_id` uses Rabbita's server-side renderer and keeps stable action IDs separate from display labels:
+`Machine::actions` returns only messages valid for the supplied model. Proped Rabbita executes typed transitions, renders each discovered model without a browser, checks state and transition properties, and minimizes failing action traces.
 
 ```moonbit
 let machine = rabbita_machine_with_action_id(
@@ -76,161 +66,48 @@ let machine = rabbita_machine_with_action_id(
   update,
   available_actions,
   shrink_msg,
-  fn(model) { @rabbita.Val::constant(view(model)) },
+  view,
   model_fingerprint,
   stable_action_id,
   describe_msg,
-  fn(model) { dependencies_for(model) },
+  dependencies_for,
 )
-```
-
-State and structural properties run without Playwright or a browser because the adapter renders each model through Rabbita's server-side renderer.
-
-### Differential UI builds
-
-Every discovered state records stable dependency identifiers such as source files, fixtures, stylesheets, and design tokens.
-
-```moonbit
-let affected = affected_state_ids(report, [
-  "theme/tokens.mbt",
-  "components/button.mbt",
-])
-```
-
-`affected_state_ids` returns the states whose recorded dependencies intersect the supplied identifiers. Callers can use those state IDs to select re-rendering or property checks.
-
-## Minimal example
-
-```moonbit
-enum Msg {
-  Inc(Int)
-  Reset
-}
-
-struct Model {
-  count : Int
-}
-
-let machine : Machine[Model, Msg] = {
-  initial: { count: 0 },
-  update: fn(model, msg) {
-    match msg {
-      Inc(amount) => { count: model.count + amount }
-      Reset => { count: 0 }
-    }
-  },
-  actions: fn(model) {
-    if model.count < 3 { [Inc(1), Inc(2)] } else { [Reset] }
-  },
-  shrink: fn(msg) {
-    match msg {
-      Inc(amount) if amount > 1 => [Inc(1)]
-      _ => []
-    }
-  },
-  render: fn(model) { "<button>\{model.count}</button>" },
-  fingerprint: fn(model) { "counter:\{model.count}" },
-  action_id: fn(msg) { msg.to_string() },
-  describe_msg: fn(msg) { msg.to_string() },
-  dependencies: fn(model) {
-    if model.count == 0 {
-      ["counter/view.mbt", "theme/base.css"]
-    } else {
-      ["counter/view.mbt"]
-    }
-  },
-}
-
-let properties : Array[Property[Model, Msg]] = [
-  state_property("count is non-negative", fn(model, _) {
-    if model.count >= 0 { Pass } else { Fail("negative count") }
-  }),
-]
 
 let report = run(machine, properties, RunConfig::default())
-let atlas_html = report_to_html(report)
-let graph_json = report_to_json(report)
-let graph_dot = report_to_dot(report)
-let changed_states = affected_state_ids(report, ["theme/base.css"])
+let html = report_to_html(report)
+let svg = report_to_flow_svg(report)
+let json = report_to_json(report)
+let dot = report_to_dot(report)
 ```
 
-## Runnable demo
+`RunReport` records the effective seed, exploration bounds, states, raw transitions, structured failure traces, dependencies, and diagnostics. `affected_state_ids` selects states whose dependency identifiers intersect a supplied change set.
 
-Run the local end-to-end newsletter form example with:
+## Core API
 
-```bash
-moon run src/demo
-```
-
-See [demo/README.md](demo/README.md) for the generated Flow Canvas HTML/SVG, JSON, and Graphviz DOT atlas artifacts.
-
-## API
-
-### `Machine[Model, Msg]`
-
-| Field | Purpose |
+| API | Purpose |
 | --- | --- |
-| `initial` | Initial application model |
-| `update` | Pure typed transition function |
-| `actions` | Valid action candidates for the current model |
-| `shrink` | Smaller representatives for a message |
-| `render` | Browserless state renderer |
-| `fingerprint` | Stable state identity and deduplication key; collisions are reported |
-| `action_id` | Stable machine-readable action identity used by replay and graph edges |
-| `describe_msg` | Human-readable trace label; labels may be shared |
-| `dependencies` | Stable inputs that affect a rendered state |
+| `Machine[Model, Msg]` | Pure update, reachable actions, rendering, identities, shrinking, dependencies |
+| `state_property` | Validate a model and its rendered HTML |
+| `transition_property` | Validate a before/message/after transition |
+| `run` | Deterministic exploration with validated defaults |
+| `run_checked` | Exploration with typed configuration errors |
+| `affected_state_ids` | Plan differential UI rebuilds |
+| `report_to_html` | Standalone state atlas |
+| `report_to_flow_svg` | Standalone graph |
+| `report_to_json` | CI and agent report |
+| `report_to_dot` | Graphviz report |
 
-### `Property[Model, Msg]`
-
-A property may inspect rendered state, transitions, or both.
-
-- `state_property(name, check)`
-- `transition_property(name, check)`
-
-### Reports and differential builds
-
-- `run`: explore states, evaluate properties, and generate a report. The report stores the effective seed, bounds, PRNG strategy, diagnostics, and schema version.
-- `run_checked`: the same exploration with explicit `RunConfigError` results. `RunConfig::validate` checks `cases >= 0`, `max_depth >= 0`, `max_states > 0`, and `shrink_budget > 0`.
-- `affected_state_ids`: select states affected by changed dependency identifiers
-
-Each `FailureReport` retains the legacy human-readable `trace` and a `structured_trace` of exact `from`, `action_id`, label, and `to` transition records. Atlas exporters use the structured records when marking failure edges. Existing callers can keep using `rabbita_machine`; it uses `describe_msg` as the action ID for compatibility. New machines should use `rabbita_machine_with_action_id` or provide distinct `Machine.action_id` and `Machine.describe_msg` functions.
-
-### Exporters
-
-- `report_to_html`: dependency-free static UI atlas
-- `report_to_json`: machine-readable CI artifact, including dependencies
-- `report_to_dot`: Graphviz transition graph
-
-## Verified behavior
-
-- typed model transitions
-- reachable-state invariants
-- transition invariants
-- generated and replayable traces
-- minimized failure traces
-- static rendered HTML
-- state and transition graph structure
-- state-level dependency impact for differential builds
-
-## Architecture
+## Repository layout
 
 ```text
-proped-rabbita core
-  ├─ state-machine runner
-  ├─ property evaluation
-  ├─ trace replay
-  ├─ shrinking
-  ├─ state dependency index
-  ├─ differential-build planner
-  └─ report model
-
-Rabbita adapter
-  └─ Model -> Val[Html] -> static HTML
-
-Atlas exporters
-  ├─ HTML state-flow atlas
-  ├─ JSON graph
-  └─ Graphviz DOT
+src/
+  cli/                         CLI and machine-readable command contract
+  examples/newsletter/         reusable project demo package
+  vendor/rabbita_counter/      pinned upstream source and adapter
+  core.mbt                     exploration and shrinking
+  rabbita_adapter.mbt          browserless Rabbita rendering
+  atlas*.mbt                   report exporters
+  flow*.mbt                    deterministic graph layout
 ```
 
 ## Development
@@ -240,8 +117,11 @@ moon update
 moon fmt --check
 moon check --target native
 moon test --target native
+moon run src/cli -- demo run all --json
 ```
+
+The server-side Rabbita renderer is marked experimental upstream, so `moon check` emits warning `0014` from `rabbita_adapter.mbt`.
 
 ## License
 
-Apache-2.0
+Proped Rabbita is Apache-2.0. Vendored attribution is recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

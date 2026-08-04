@@ -1,9 +1,9 @@
 # RabbitaアプリをvendorしてAtlasで解析するAdapter PoCを追加
 
-Status: open
+Status: closed
 Model: unknown
 Created: 2026-07-22
-Updated: 2026-07-22
+Updated: 2026-08-04
 Branch: codex/feat/20260722-newsletter-atlas-demo
 
 ## 概要
@@ -56,13 +56,13 @@ Proped RabbitaのMVPは、`Machine[Model, Msg]`、`rabbita_machine`、browserles
 
 ## 受け入れ条件
 
-- [ ] `examples/counter`の対象revision、vendor方法、ライセンス情報、依存関係がリポジトリ内に記録されている。
-- [ ] vendorしたcounterアプリをProped RabbitaのAdapter経由でnative targetからビルド・実行できる。
-- [ ] Adapter経由で初期状態、増加、リセットを含む到達可能状態と遷移が探索される。
-- [ ] Adapter経由の探索結果からHTML、JSON、DOTのAtlasが生成され、状態fingerprintとraw Action値が確認できる。
-- [ ] `Machine`、`RunReport`、JSON/DOTの既存公開契約に不要な変更がない。
-- [ ] Adapter方式の制約（Action列挙、外部I/O、black-box解析との差異）がREADMEまたは関連ドキュメントに記載されている。
-- [ ] `examples`内の追加候補と`website/playground`を、次の検証対象として分類した結果が注記またはドキュメントに残っている。
+- [x] `examples/counter`の対象revision、vendor方法、ライセンス情報、依存関係がリポジトリ内に記録されている。
+- [x] vendorしたcounterアプリをProped RabbitaのAdapter経由でnative targetからビルド・実行できる。
+- [x] Adapter経由で初期状態、増加、減少を含む到達可能状態と遷移が探索される。
+- [x] Adapter経由の探索結果からHTML、JSON、DOTのAtlasが生成され、状態fingerprintとraw Action値が確認できる。
+- [x] `Machine`、`RunReport`、JSON/DOTの既存公開契約に不要な変更がない。
+- [x] Adapter方式の制約（Action列挙、外部I/O、black-box解析との差異）がREADMEまたは関連ドキュメントに記載されている。
+- [x] `examples`内の追加候補と`website/playground`を、次の検証対象として分類した結果が注記またはドキュメントに残っている。
 
 ## テスト計画
 
@@ -93,3 +93,5 @@ Proped RabbitaのMVPは、`Machine[Model, Msg]`、`rabbita_machine`、browserles
 ## 注記
 
 - 2026-07-22: 候補比較の結果、最初の実行対象を最小構成の`examples/counter`とした。`examples`の他アプリおよび`website/playground`は複雑度・build境界の評価後に拡張する。
+
+- 2026-08-04: The pinned Rabbita counter source, adapter, CLI demo, attribution, and example classification were completed; issue closed.

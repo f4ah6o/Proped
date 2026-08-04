@@ -1,5 +1,23 @@
 # Changes
 
+## 0.4.0 - 2026-08-04
+
+### Added
+
+- Vendored Rabbita's official Sokoban (259 lines), subscriptions (420 lines), and WebSocket (956 lines) examples with pinned source, stylesheets, SHA-256 hashes, Apache-2.0 licenses, and deterministic native adapters.
+- Added `rabbita-sokoban`, `rabbita-subscriptions`, and `rabbita-websocket` expected-failure CLI demos.
+- Added exact property-and-trace signatures for malformed timeline input, a queued timer callback after pause, and repeated disconnect while closing.
+
+### Fixed
+
+- Found Sokoban malformed timeline text rewinding history to cursor `0`; minimized to `Move(Up) -> JumpTo("not-a-number")`.
+- Found a queued subscription tick incrementing a paused counter; minimized to `ToggleTicker -> Tick`.
+- Found the WebSocket disconnect control remaining active in `closing` and accepting another close request; minimized to `ClientConnectRequested -> ClientDisconnectRequested -> ClientDisconnectRequested`.
+
+### Changed
+
+- Expanded `demo run all` from three to six demos and bumped the package and CLI version to `0.4.0`.
+
 ## 0.3.0 - 2026-08-04
 
 ### Added

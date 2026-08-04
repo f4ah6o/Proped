@@ -38,6 +38,10 @@ test "CLI parsing rejects unknown options" {
 test "command schema exposes demos artifacts and exit codes" {
   let schema = schema_json()
   assert_true(schema.contains("rabbita-counter"))
+  assert_true(schema.contains("rabbita-todo"))
+  assert_true(schema.contains("rabbita-sokoban"))
+  assert_true(schema.contains("rabbita-subscriptions"))
+  assert_true(schema.contains("rabbita-websocket"))
   assert_true(schema.contains("summary.json"))
   assert_true(schema.contains("expectation_mismatch"))
 }
@@ -119,4 +123,17 @@ test "expected failure requires the declared property and minimized trace" {
     first_failure: Some(observed),
   }
   assert_true(!expectation_met(summary))
+}
+
+///|
+test "new practical demos describe exact failure signatures" {
+  assert_true(sokoban_description_json().contains("Move(Up)"))
+  assert_true(
+    subscriptions_description_json().contains(
+      "paused ticker ignores queued tick",
+    ),
+  )
+  assert_true(
+    websocket_description_json().contains("ClientDisconnectRequested"),
+  )
 }

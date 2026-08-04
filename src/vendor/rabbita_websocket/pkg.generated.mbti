@@ -1,0 +1,72 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/rabbita_websocket"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn client_connecting(String) -> Bool
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+// Errors
+
+// Types and methods
+pub(all) struct ChatEntry {
+  tone : String
+  label : String
+  body : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Model {
+  url_input : String
+  draft_input : String
+  client_status : String
+  client_open_count : Int
+  client_close_count : Int
+  client_error_count : Int
+  client_last_error : String
+  transcript : Array[ChatEntry]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  UrlChanged(String)
+  DraftChanged(String)
+  ClientConnectRequested
+  ClientDisconnectRequested
+  ClientOpened
+  ClientClosed(String)
+  ClientSendRaw
+  ClientFailed(String)
+  ClearTranscript
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

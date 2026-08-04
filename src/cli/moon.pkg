@@ -3,9 +3,11 @@ import {
   "f4ah6o/proped-rabbita/examples/newsletter",
   "f4ah6o/proped-rabbita/vendor/rabbita_counter" @counter,
   "f4ah6o/proped-rabbita/vendor/rabbita_todo" @todo,
+  "f4ah6o/proped-rabbita/vendor/rabbita_sokoban" @sokoban,
+  "f4ah6o/proped-rabbita/vendor/rabbita_subscriptions" @subscriptions,
+  "f4ah6o/proped-rabbita/vendor/rabbita_websocket" @websocket,
   "moonbitlang/async",
   "moonbitlang/async/fs",
-  "moonbitlang/core/env",
   "moonbitlang/core/env",
   "moonbitlang/x/sys",
 }

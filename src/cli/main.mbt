@@ -70,7 +70,7 @@ fn parse_args(raw : Array[String]) -> CliArgs {
 
 ///|
 fn print_help() -> Unit {
-  println("Proped Rabbita CLI 0.3.0")
+  println("Proped Rabbita CLI 0.4.0")
   println("")
   println("Usage:")
   println("  moon run src/cli -- <command> [arguments] [--json] [--output DIR]")
@@ -96,6 +96,9 @@ fn print_help() -> Unit {
   println(
     "  rabbita-todo               Vendored practical TODO with expected failure",
   )
+  println("  rabbita-sokoban            Vendored Sokoban timeline failure")
+  println("  rabbita-subscriptions      Vendored stale timer failure")
+  println("  rabbita-websocket          Vendored duplicate disconnect failure")
   println("")
   println(
     "Exit codes: 0 expectation met, 2 usage error, 3 expectation mismatch",
@@ -104,18 +107,43 @@ fn print_help() -> Unit {
 
 ///|
 fn schema_json() -> String {
-  "{\"name\":\"proped-rabbita\",\"version\":\"0.3.0\",\"commands\":[{\"argv\":[\"schema\"],\"output\":\"command-contract-json\"},{\"argv\":[\"version\"],\"output\":\"version\"},{\"argv\":[\"demo\",\"list\"],\"flags\":[\"--json\"]},{\"argv\":[\"demo\",\"describe\",\"<id>\"],\"flags\":[\"--json\"]},{\"argv\":[\"demo\",\"run\",\"<id|all>\"],\"flags\":[\"--json\",\"--output <dir>\"],\"artifacts\":[\"atlas.html\",\"atlas.svg\",\"atlas.json\",\"atlas.dot\",\"summary.json\"]}],\"demoIds\":[\"newsletter\",\"rabbita-counter\",\"rabbita-todo\"],\"summaryFields\":[\"expectedOutcome\",\"expectationMet\",\"expectedFailure\",\"firstFailure\"],\"exitCodes\":{\"0\":\"expectation_met\",\"2\":\"usage_error\",\"3\":\"expectation_mismatch\"}}"
+  (
+    #|{"name":"proped-rabbita","version":"0.4.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
+  )
 }
 
 ///|
 fn demo_list_json() -> String {
-  "{\"ok\":true,\"command\":\"demo list\",\"demos\":[{\"id\":\"newsletter\",\"origin\":\"project\",\"expectedOutcome\":\"pass\",\"description\":\"Newsletter form with validation, consent, submit, and reset states\"},{\"id\":\"rabbita-counter\",\"origin\":\"vendored\",\"expectedOutcome\":\"pass\",\"description\":\"Rabbita official counter adapted for finite deterministic exploration\",\"upstreamRevision\":\"67e8169efa1bb2e8bd17018b62b41211cbc4c357\"},{\"id\":\"rabbita-todo\",\"origin\":\"vendored\",\"expectedOutcome\":\"failure\",\"description\":\"Rabbita official TODO adapted for practical state exploration and minimal failure shrinking\",\"upstreamRevision\":\"67e8169efa1bb2e8bd17018b62b41211cbc4c357\"}]}"
+  (
+    #|{"ok":true,"command":"demo list","demos":[{"id":"newsletter","origin":"project","expectedOutcome":"pass","description":"Newsletter form with validation, consent, submit, and reset states"},{"id":"rabbita-counter","origin":"vendored","expectedOutcome":"pass","description":"Rabbita official counter adapted for finite deterministic exploration","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"},{"id":"rabbita-todo","origin":"vendored","expectedOutcome":"failure","description":"Rabbita official TODO blank-title failure and minimal shrinking","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"},{"id":"rabbita-sokoban","origin":"vendored","expectedOutcome":"failure","description":"Rabbita Sokoban malformed timeline input failure","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"},{"id":"rabbita-subscriptions","origin":"vendored","expectedOutcome":"failure","description":"Rabbita subscriptions stale timer callback failure","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"},{"id":"rabbita-websocket","origin":"vendored","expectedOutcome":"failure","description":"Rabbita WebSocket duplicate disconnect failure","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"}]}
+  )
 }
 
 ///|
 fn todo_description_json() -> String {
   (
     #|{"ok":true,"command":"demo describe","demo":{"id":"rabbita-todo","origin":"vendored","expectedOutcome":"failure","upstream":"moonbit-community/rabbita examples/todo","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357","model":"title, item collection, next id, active tab","actions":["title-changed","add","delete","toggle","set-tab"],"properties":["stored todo titles are not blank","next id remains ahead of stored ids","rendered header reports active count"],"knownMinimalTrace":["space-title","add"],"defaults":{"cases":192,"maxDepth":14,"maxStates":320,"seed":29,"shrinkBudget":4096},"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}}
+  )
+}
+
+///|
+fn sokoban_description_json() -> String {
+  (
+    #|{"ok":true,"command":"demo describe","demo":{"id":"rabbita-sokoban","origin":"vendored","expectedOutcome":"failure","upstream":"moonbit-community/rabbita examples/sokoban","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357","model":"board, player, crates, branching history, timeline cursor","actions":["move","jump-to"],"properties":["invalid timeline input preserves cursor","cursor remains inside history","all historical worlds remain valid","rendered timeline matches model"],"knownMinimalTrace":["Move(Up)","JumpTo(\"not-a-number\")"],"defaults":{"cases":192,"maxDepth":12,"maxStates":480,"seed":41,"shrinkBudget":4096},"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}}
+  )
+}
+
+///|
+fn subscriptions_description_json() -> String {
+  (
+    #|{"ok":true,"command":"demo describe","demo":{"id":"rabbita-subscriptions","origin":"vendored","expectedOutcome":"failure","upstream":"moonbit-community/rabbita examples/subscriptions","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357","model":"seven subscription tabs, counters, event payloads, queued timer callback","actions":["select-tab","toggle-ticker","tick","resize","scroll","keydown","keyup","visibility","mouse"],"properties":["paused ticker ignores queued tick","subscription counters stay non-negative","rendered output identifies active tab"],"knownMinimalTrace":["ToggleTicker","Tick"],"defaults":{"cases":256,"maxDepth":14,"maxStates":640,"seed":43,"shrinkBudget":4096},"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}}
+  )
+}
+
+///|
+fn websocket_description_json() -> String {
+  (
+    #|{"ok":true,"command":"demo describe","demo":{"id":"rabbita-websocket","origin":"vendored","expectedOutcome":"failure","upstream":"moonbit-community/rabbita examples/websocket","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357","model":"URL, draft, client lifecycle, transcript, command outcomes","actions":["url-changed","draft-changed","connect","disconnect","opened","closed","send-raw","failed","clear-transcript"],"properties":["closing client rejects repeated disconnect","transcript remains capped","rendered status matches model"],"knownMinimalTrace":["ClientConnectRequested","ClientDisconnectRequested","ClientDisconnectRequested"],"defaults":{"cases":320,"maxDepth":16,"maxStates":800,"seed":47,"shrinkBudget":8192},"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}}
   )
 }
 
@@ -131,6 +159,12 @@ fn demo_description_json(id : String) -> String? {
     )
   } else if id == "rabbita-todo" {
     Some(todo_description_json())
+  } else if id == "rabbita-sokoban" {
+    Some(sokoban_description_json())
+  } else if id == "rabbita-subscriptions" {
+    Some(subscriptions_description_json())
+  } else if id == "rabbita-websocket" {
+    Some(websocket_description_json())
   } else {
     None
   }
@@ -163,12 +197,38 @@ fn print_demo_description(id : String) -> Bool {
     println("id: rabbita-todo")
     println("origin: vendored moonbit-community/rabbita examples/todo")
     println("expected-outcome: failure")
-    println("upstream-revision: 67e8169efa1bb2e8bd17018b62b41211cbc4c357")
-    println("model: title, item collection, next id, active tab")
-    println("actions: title-changed, add, delete, toggle, set-tab")
     println("known-minimal-failure: TitleChanged(\" \") -> Add")
     println(
       "defaults: cases=192 max-depth=14 max-states=320 seed=29 shrink-budget=4096",
+    )
+    true
+  } else if id == "rabbita-sokoban" {
+    println("id: rabbita-sokoban")
+    println("origin: vendored moonbit-community/rabbita examples/sokoban")
+    println("expected-outcome: failure")
+    println("known-minimal-failure: Move(Up) -> JumpTo(\"not-a-number\")")
+    println(
+      "defaults: cases=192 max-depth=12 max-states=480 seed=41 shrink-budget=4096",
+    )
+    true
+  } else if id == "rabbita-subscriptions" {
+    println("id: rabbita-subscriptions")
+    println("origin: vendored moonbit-community/rabbita examples/subscriptions")
+    println("expected-outcome: failure")
+    println("known-minimal-failure: ToggleTicker -> Tick")
+    println(
+      "defaults: cases=256 max-depth=14 max-states=640 seed=43 shrink-budget=4096",
+    )
+    true
+  } else if id == "rabbita-websocket" {
+    println("id: rabbita-websocket")
+    println("origin: vendored moonbit-community/rabbita examples/websocket")
+    println("expected-outcome: failure")
+    println(
+      "known-minimal-failure: ClientConnectRequested -> ClientDisconnectRequested -> ClientDisconnectRequested",
+    )
+    println(
+      "defaults: cases=320 max-depth=16 max-states=800 seed=47 shrink-budget=8192",
     )
     true
   } else {
@@ -402,6 +462,59 @@ async fn run_todo(output_root : String) -> RunSummary {
 }
 
 ///|
+async fn run_sokoban(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @sokoban.machine(),
+    @sokoban.properties(),
+    @sokoban.default_config(),
+  )
+  finish_run(
+    "rabbita-sokoban",
+    "\{output_root}/rabbita-sokoban",
+    true,
+    "invalid timeline input preserves cursor",
+    ["Move(Up)", "JumpTo(\"not-a-number\")"],
+    report,
+  )
+}
+
+///|
+async fn run_subscriptions(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @subscriptions.machine(),
+    @subscriptions.properties(),
+    @subscriptions.default_config(),
+  )
+  finish_run(
+    "rabbita-subscriptions",
+    "\{output_root}/rabbita-subscriptions",
+    true,
+    "paused ticker ignores queued tick",
+    ["ToggleTicker", "Tick"],
+    report,
+  )
+}
+
+///|
+async fn run_websocket(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @websocket.machine(),
+    @websocket.properties(),
+    @websocket.default_config(),
+  )
+  finish_run(
+    "rabbita-websocket",
+    "\{output_root}/rabbita-websocket",
+    true,
+    "closing client rejects repeated disconnect",
+    [
+      "ClientConnectRequested", "ClientDisconnectRequested", "ClientDisconnectRequested",
+    ],
+    report,
+  )
+}
+
+///|
 fn summaries_json(summaries : Array[RunSummary]) -> String {
   let output = StringBuilder::new()
   output.write_string("{\"ok\":")
@@ -476,9 +589,9 @@ async fn main {
       return
     }
     if parsed.json {
-      println("{\"ok\":true,\"version\":\"0.3.0\"}")
+      println("{\"ok\":true,\"version\":\"0.4.0\"}")
     } else {
-      println("proped-rabbita 0.3.0")
+      println("proped-rabbita 0.4.0")
     }
     return
   }
@@ -508,6 +621,15 @@ async fn main {
       )
       println(
         "rabbita-todo\tvendored\tfailure\tOfficial Rabbita TODO minimal-failure exploration",
+      )
+      println(
+        "rabbita-sokoban\tvendored\tfailure\tSokoban malformed timeline exploration",
+      )
+      println(
+        "rabbita-subscriptions\tvendored\tfailure\tSubscriptions stale timer exploration",
+      )
+      println(
+        "rabbita-websocket\tvendored\tfailure\tWebSocket duplicate disconnect exploration",
       )
     }
     return
@@ -547,10 +669,19 @@ async fn main {
     summaries.push(run_counter(parsed.output))
   } else if id == "rabbita-todo" {
     summaries.push(run_todo(parsed.output))
+  } else if id == "rabbita-sokoban" {
+    summaries.push(run_sokoban(parsed.output))
+  } else if id == "rabbita-subscriptions" {
+    summaries.push(run_subscriptions(parsed.output))
+  } else if id == "rabbita-websocket" {
+    summaries.push(run_websocket(parsed.output))
   } else if id == "all" {
     summaries.push(run_newsletter(parsed.output))
     summaries.push(run_counter(parsed.output))
     summaries.push(run_todo(parsed.output))
+    summaries.push(run_sokoban(parsed.output))
+    summaries.push(run_subscriptions(parsed.output))
+    summaries.push(run_websocket(parsed.output))
   } else {
     usage_error("unknown demo id: \{id}", parsed.json)
     return

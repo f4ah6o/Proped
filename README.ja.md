@@ -24,30 +24,20 @@ moon run src/cli -- schema --json
 
 ## 同梱demo
 
-| ID | 出所 | 期待結果 | 検証内容 |
-| --- | --- | --- | --- |
-| `newsletter` | プロジェクト内の例 | pass | 入力検証、同意、送信、reset、状態・遷移property |
-| `rabbita-counter` | Rabbita公式exampleのvendor | pass | upstreamの`Inc`・`Dec` semanticsを有限状態で探索 |
-| `rabbita-todo` | Rabbita公式exampleのvendor | failure | add/delete/toggle/tabを含む実用規模探索と最小counterexample縮約 |
+| ID | 出所 | 期待結果 | 検証内容 | 最小counterexample |
+| --- | --- | --- | --- | --- |
+| `newsletter` | project | pass | validation、consent、submit、reset | — |
+| `rabbita-counter` | Rabbita `examples/counter` | pass | 有限counter状態空間 | — |
+| `rabbita-todo` | Rabbita `examples/todo` | failure | CRUD、tab、filter、statistics | `TitleChanged(" ") -> Add` |
+| `rabbita-sokoban` | Rabbita `examples/sokoban` | failure | move、crate、branch history、timeline | `Move(Up) -> JumpTo("not-a-number")` |
+| `rabbita-subscriptions` | Rabbita `examples/subscriptions` | failure | timerと6種類のbrowser event subscription | `ToggleTicker -> Tick` |
+| `rabbita-websocket` | Rabbita `examples/websocket` | failure | command client lifecycleとtranscript | `Connect -> Disconnect -> Disconnect` |
 
-TODO demoは固定した決定的設定で169状態・2,251 transitionを探索します。upstream実装が空白だけのtitleを受け付けるbehaviorを検出し、failureを次の2 actionまで縮約します。
+追加した実用runは、Sokoban 255 state・1,163 transition、subscriptions 640 state・1,718 transition、WebSocket 800 state・4,428 transitionを探索します。expected failureはproperty名と最小traceが宣言済みsignatureに一致した場合だけ成功扱いになります。
 
-```text
-TitleChanged(" ")
-Add
-```
+vendor source、revision、hash、license、adapter変更、failureの根拠は `src/vendor/`、[docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md)、[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記録しています。
 
-CLIはこれを期待済みfailureとして扱い、`firstFailure` にproperty、message、state ID、trace長、人間向けtrace、stable action IDを出力します。
-
-vendorしたsource、revision、hash、license、adapter変更点は `src/vendor/`、[docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md)、[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記録しています。
-
-各実行は次のartifactを生成します。
-
-- `atlas.html` — 単独で開ける人間向けstate Atlas
-- `atlas.svg` — 単独のFlow Canvas graph
-- `atlas.json` — 完全なmachine-readable run report
-- `atlas.dot` — Graphviz transition graph
-- `summary.json` — 最初の最小failureを含む簡潔なCLI result
+各runは `atlas.html`、`atlas.svg`、`atlas.json`、`atlas.dot`、`summary.json` を生成します。
 
 ## ライブラリモデル
 
@@ -105,14 +95,17 @@ let dot = report_to_dot(report)
 
 ```text
 src/
-  cli/                         CLIとmachine-readable command契約
-  examples/newsletter/         再利用可能なproject demo package
-  vendor/rabbita_counter/      固定したcounter sourceとadapter
-  vendor/rabbita_todo/         固定した実用TODO sourceとadapter
-  core.mbt                     探索、shrink、最小failure保持
-  rabbita_adapter.mbt          browserless Rabbita rendering
-  atlas*.mbt                   report exporter
-  flow*.mbt                    決定的graph layout
+  cli/                              CLIとmachine-readable command契約
+  examples/newsletter/              再利用可能なproject demo package
+  vendor/rabbita_counter/           passするcounter baseline
+  vendor/rabbita_todo/              blank title failure
+  vendor/rabbita_sokoban/           malformed timeline failure
+  vendor/rabbita_subscriptions/     stale timer failure
+  vendor/rabbita_websocket/         duplicate disconnect failure
+  core.mbt                          探索、shrink、最小failure保持
+  rabbita_adapter.mbt               browserless Rabbita rendering
+  atlas*.mbt                        report exporter
+  flow*.mbt                         決定的graph layout
 ```
 
 ## 開発

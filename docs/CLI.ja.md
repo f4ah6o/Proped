@@ -55,6 +55,17 @@ moon run src/cli -- demo run all --output artifacts --json
 
 demoは `expectedOutcome` として `pass` または `failure` を宣言します。expected-failure demoは、正確な`expectedFailure` propertyと最小traceも宣言します。観測したcounterexampleがそのsignatureと一致した場合だけcommandは成功します。これにより、無関係なfailureを成功扱いせず、failure discoveryとshrinkが機能し続けることを回帰fixtureで検証できます。
 
+## Expected-failure fixtures
+
+| Demo | Property | Exact minimized trace |
+| --- | --- | --- |
+| `rabbita-todo` | `stored todo titles are not blank` | `TitleChanged(" ") -> Add` |
+| `rabbita-sokoban` | `invalid timeline input preserves cursor` | `Move(Up) -> JumpTo("not-a-number")` |
+| `rabbita-subscriptions` | `paused ticker ignores queued tick` | `ToggleTicker -> Tick` |
+| `rabbita-websocket` | `closing client rejects repeated disconnect` | `ClientConnectRequested -> ClientDisconnectRequested -> ClientDisconnectRequested` |
+
+`demo run all` は上記4件とpassを期待する2件を同時に実行します。
+
 ## JSON envelope
 
 実用規模のexpected-failure runは次の形です。

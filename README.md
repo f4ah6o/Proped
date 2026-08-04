@@ -24,30 +24,20 @@ See [docs/CLI.md](docs/CLI.md) for the complete command and output contract.
 
 ## Included demos
 
-| ID | Source | Expected outcome | Purpose |
-| --- | --- | --- | --- |
-| `newsletter` | Project example | Pass | Validation, consent, submission, reset, state and transition properties |
-| `rabbita-counter` | Vendored Rabbita official example | Pass | Finite exploration of the upstream `Inc` and `Dec` semantics |
-| `rabbita-todo` | Vendored Rabbita official example | Failure | Practical add/delete/toggle/tab exploration and minimal counterexample shrinking |
+| ID | Source | Expected | Coverage | Minimal counterexample |
+| --- | --- | --- | --- | --- |
+| `newsletter` | project | pass | validation, consent, submit, reset | — |
+| `rabbita-counter` | Rabbita `examples/counter` | pass | finite counter state space | — |
+| `rabbita-todo` | Rabbita `examples/todo` | failure | CRUD, tabs, filtering, statistics | `TitleChanged(" ") -> Add` |
+| `rabbita-sokoban` | Rabbita `examples/sokoban` | failure | movement, crates, branching history, timeline | `Move(Up) -> JumpTo("not-a-number")` |
+| `rabbita-subscriptions` | Rabbita `examples/subscriptions` | failure | timer and six browser event subscriptions | `ToggleTicker -> Tick` |
+| `rabbita-websocket` | Rabbita `examples/websocket` | failure | command-client lifecycle and transcript | `Connect -> Disconnect -> Disconnect` |
 
-The practical TODO run explores 169 states and 2,251 transitions with the pinned deterministic configuration. It finds the upstream behavior that accepts a whitespace-only title and shrinks the failure to two actions:
+The added practical runs cover 255 Sokoban states and 1,163 transitions, 640 subscription states and 1,718 transitions, and 800 WebSocket states and 4,428 transitions. Each expected failure is accepted only when both its property name and minimized trace match the declared signature.
 
-```text
-TitleChanged(" ")
-Add
-```
+Vendored source, revision, hashes, license, adapter changes, and failure rationale are recorded under `src/vendor/`, [docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-The CLI reports this as a matched expected failure and includes the property, message, state ID, trace length, human trace, and stable action IDs in `firstFailure`.
-
-Vendored source, revisions, hashes, licenses, and adapter changes are recorded under `src/vendor/`, [docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-Each run writes:
-
-- `atlas.html` — standalone human-readable state atlas
-- `atlas.svg` — standalone Flow Canvas graph
-- `atlas.json` — complete machine-readable run report
-- `atlas.dot` — Graphviz transition graph
-- `summary.json` — compact CLI result including the first minimized failure
+Each run writes `atlas.html`, `atlas.svg`, `atlas.json`, `atlas.dot`, and `summary.json`.
 
 ## Library model
 
@@ -105,14 +95,17 @@ let dot = report_to_dot(report)
 
 ```text
 src/
-  cli/                         CLI and machine-readable command contract
-  examples/newsletter/         reusable project demo package
-  vendor/rabbita_counter/      pinned counter source and adapter
-  vendor/rabbita_todo/         pinned practical TODO source and adapter
-  core.mbt                     exploration, shrinking, minimal failure retention
-  rabbita_adapter.mbt          browserless Rabbita rendering
-  atlas*.mbt                   report exporters
-  flow*.mbt                    deterministic graph layout
+  cli/                              CLI and machine-readable command contract
+  examples/newsletter/              reusable project demo package
+  vendor/rabbita_counter/           passing counter baseline
+  vendor/rabbita_todo/              blank-title failure
+  vendor/rabbita_sokoban/           malformed timeline failure
+  vendor/rabbita_subscriptions/     stale timer failure
+  vendor/rabbita_websocket/         duplicate disconnect failure
+  core.mbt                          exploration, shrinking, minimal failure retention
+  rabbita_adapter.mbt               browserless Rabbita rendering
+  atlas*.mbt                        report exporters
+  flow*.mbt                         deterministic graph layout
 ```
 
 ## Development

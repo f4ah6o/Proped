@@ -55,6 +55,17 @@ Runs one or all demos. Each run produces a compact summary in stdout and writes 
 
 A demo declares `expectedOutcome` as either `pass` or `failure`. Expected-failure demos also declare an exact `expectedFailure` property and minimized trace. The command succeeds only when the observed counterexample matches that signature. This allows a regression fixture to prove that failure discovery and shrinking still work without accepting an unrelated failure or making the complete demo suite permanently red.
 
+## Expected-failure fixtures
+
+| Demo | Property | Exact minimized trace |
+| --- | --- | --- |
+| `rabbita-todo` | `stored todo titles are not blank` | `TitleChanged(" ") -> Add` |
+| `rabbita-sokoban` | `invalid timeline input preserves cursor` | `Move(Up) -> JumpTo("not-a-number")` |
+| `rabbita-subscriptions` | `paused ticker ignores queued tick` | `ToggleTicker -> Tick` |
+| `rabbita-websocket` | `closing client rejects repeated disconnect` | `ClientConnectRequested -> ClientDisconnectRequested -> ClientDisconnectRequested` |
+
+`demo run all` executes these four fixtures together with the two expected-pass demos.
+
 ## JSON envelope
 
 A practical expected-failure run has this shape:

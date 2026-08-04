@@ -1,0 +1,80 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/rabbita_sokoban"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn initial_world() -> World
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn tile_at(Pos) -> Tile
+
+pub fn try_move(Direction, World) -> World?
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+// Errors
+
+// Types and methods
+pub(all) enum Direction {
+  Up
+  Down
+  Left
+  Right
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Model {
+  history : Array[World]
+  cursor : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  Move(Direction)
+  JumpTo(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Pos {
+  x : Int
+  y : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Tile {
+  Wall
+  Floor
+  Goal
+} derive(Eq, @debug.Debug)
+
+pub(all) struct World {
+  player : Pos
+  crates : Array[Pos]
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

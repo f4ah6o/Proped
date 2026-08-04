@@ -49,32 +49,64 @@ jobs:
 
           schema = json.loads(Path('/tmp/proped-rabbita-schema.json').read_text())
           result = json.loads(Path('/tmp/proped-rabbita-run.json').read_text())
-          assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.3.0'
-          assert schema['demoIds'] == [
+          expected_ids = [
               'newsletter',
               'rabbita-counter',
               'rabbita-todo',
+              'rabbita-sokoban',
+              'rabbita-subscriptions',
+              'rabbita-websocket',
           ]
+          assert schema['name'] == 'proped-rabbita'
+          assert schema['version'] == '0.4.0'
+          assert schema['demoIds'] == expected_ids
           assert result['ok'] is True
           runs = {run['id']: run for run in result['runs']}
-          assert list(runs) == ['newsletter', 'rabbita-counter', 'rabbita-todo']
-          assert runs['newsletter']['failures'] == 0
-          assert runs['rabbita-counter']['failures'] == 0
+          assert list(runs) == expected_ids
 
-          todo = runs['rabbita-todo']
-          assert todo['expectedOutcome'] == 'failure'
-          assert todo['expectationMet'] is True
-          assert todo['expectedFailure'] == {
-              'property': 'stored todo titles are not blank',
-              'trace': ['TitleChanged(" ")', 'Add'],
+          expected_failures = {
+              'rabbita-todo': (
+                  'stored todo titles are not blank',
+                  ['TitleChanged(" ")', 'Add'],
+              ),
+              'rabbita-sokoban': (
+                  'invalid timeline input preserves cursor',
+                  ['Move(Up)', 'JumpTo("not-a-number")'],
+              ),
+              'rabbita-subscriptions': (
+                  'paused ticker ignores queued tick',
+                  ['ToggleTicker', 'Tick'],
+              ),
+              'rabbita-websocket': (
+                  'closing client rejects repeated disconnect',
+                  [
+                      'ClientConnectRequested',
+                      'ClientDisconnectRequested',
+                      'ClientDisconnectRequested',
+                  ],
+              ),
           }
-          assert todo['failures'] == 1
-          assert todo['states'] >= 100
-          assert todo['transitions'] >= 1000
-          assert todo['firstFailure']['trace'] == ['TitleChanged(" ")', 'Add']
-          assert todo['firstFailure']['actionIds'] == ['title:1: ', 'add']
-          assert todo['firstFailure']['traceLength'] == 2
+
+          for demo_id in ['newsletter', 'rabbita-counter']:
+              assert runs[demo_id]['expectedOutcome'] == 'pass'
+              assert runs[demo_id]['failures'] == 0
+
+          for demo_id, (property_name, trace) in expected_failures.items():
+              run = runs[demo_id]
+              assert run['expectedOutcome'] == 'failure'
+              assert run['expectationMet'] is True
+              assert run['failures'] == 1
+              assert run['expectedFailure'] == {
+                  'property': property_name,
+                  'trace': trace,
+              }
+              assert run['firstFailure']['property'] == property_name
+              assert run['firstFailure']['trace'] == trace
+              assert run['firstFailure']['traceLength'] == len(trace)
+
+          assert runs['rabbita-sokoban']['states'] >= 200
+          assert runs['rabbita-subscriptions']['states'] >= 500
+          assert runs['rabbita-websocket']['transitions'] >= 4000
 
           for run in runs.values():
               assert run['expectationMet'] is True

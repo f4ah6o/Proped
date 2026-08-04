@@ -1,46 +1,60 @@
 # Vendored demo policy
 
-Proped Rabbita vendors upstream applications when preserving their source materially improves adapter testing, reproducibility, and demonstration value. Each vendored demo records its revision, license, unmodified source, SHA-256 hashes, adaptation boundary, finite exploration constraints, and observed properties.
+Proped Rabbita vendors upstream applications when preserving their source materially improves adapter testing, reproducibility, and demonstration value. Every vendor directory records the pinned revision, Apache-2.0 license, unmodified source, SHA-256 hashes, adaptation boundary, finite exploration constraints, and expected outcome.
 
-## Rabbita counter
+All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b41211cbc4c357`.
 
-- Upstream repository: `moonbit-community/rabbita`
-- Upstream path: `examples/counter`
-- Revision: `67e8169efa1bb2e8bd17018b62b41211cbc4c357`
-- License: Apache-2.0
-- Preserved source: `src/vendor/rabbita_counter/upstream/main.mbt.txt`
-- Adapter package: `src/vendor/rabbita_counter/counter.mbt`
-- Expected outcome: pass
+## Included examples
 
-The adapter keeps the upstream `Inc` and `Dec` update semantics and visible heading/buttons. It changes the application boundary from a mounted browser executable to a reusable pure package, then bounds generated actions to `[-3, 3]` so deterministic state exploration terminates.
+| CLI ID | Upstream path | Source size | Expected | Adapter boundary |
+| --- | --- | ---: | --- | --- |
+| `rabbita-counter` | `examples/counter` | 26 lines | pass | typed finite counter `[-3, 3]` |
+| `rabbita-todo` | `examples/todo` | 281 lines | failure | array-backed items, finite title corpus and item count |
+| `rabbita-sokoban` | `examples/sokoban` | 259 lines | failure | typed directions, array history, bounded branching |
+| `rabbita-subscriptions` | `examples/subscriptions` | 420 lines | failure | typed deterministic browser events plus one queued timer callback |
+| `rabbita-websocket` | `examples/websocket` | 956 lines | failure | deterministic command-client lifecycle and outcomes |
 
-## Rabbita todo
+## Counter
 
-- Upstream repository: `moonbit-community/rabbita`
-- Upstream path: `examples/todo`
-- Revision: `67e8169efa1bb2e8bd17018b62b41211cbc4c357`
-- Upstream source size: 281 MoonBit lines
-- License: Apache-2.0
-- Preserved source: `src/vendor/rabbita_todo/upstream/main.mbt.txt`
-- Adapter package: `src/vendor/rabbita_todo/todo.mbt`
-- Expected outcome: failure
+The adapter preserves `Inc` and `Dec`, renders the same visible controls, and bounds the model to seven integer states. It is a passing baseline.
 
-The adapter preserves the upstream model concepts and action semantics for title changes, add, delete, toggle, and tab selection. It replaces the browser-mounted state container with a pure model package, bounds generated items to two, and uses a finite title corpus. The rendered adapter retains the form, tab counts, filtered item list, status toggle, delete action, and statistics view.
+## TODO
 
-The upstream update logic handles `Add if title == ""` as a no-op but accepts whitespace-only input. The property `stored todo titles are not blank` discovers this behavior. With seed `29`, 192 cases, depth `14`, and at most 320 states, the run explores 169 states and 2,251 transitions and shrinks the counterexample to:
+The upstream update guard rejects only `title == ""`. A whitespace-only title is stored. Property `stored todo titles are not blank` shrinks to:
 
 1. `TitleChanged(" ")`
 2. `Add`
 
-Repeated discoveries from generated cases are normalized to the shortest counterexample for that property.
+The pinned run explores 169 states and 2,251 transitions.
 
-## Additional upstream examples
+## Sokoban
 
-| Example class | Representative Rabbita examples | Adapter concern |
-| --- | --- | --- |
-| Stateful game | `sokoban` | History branching, keyboard abstraction, board invariants, larger state spaces |
-| Browser/editor behavior | `shiki_editor` | Selection, focus, keyboard input, layout, and browser adapter boundaries |
-| External I/O | `websocket` | Deterministic command interpreter, mocks, timeouts, and replayable responses |
-| Build-system application | `website/playground` | Warren and asset generation boundaries before model exploration |
+The upstream timeline parser catches malformed input as index `0`. After any move, invalid text unexpectedly rewinds the cursor rather than preserving the current history point. Property `invalid timeline input preserves cursor` shrinks to:
 
-The counter and TODO are included in the executable CLI. Larger browser- or I/O-dependent examples require explicit deterministic boundaries rather than assuming arbitrary Rabbita applications can be analyzed unchanged.
+1. `Move(Up)`
+2. `JumpTo("not-a-number")`
+
+The pinned run explores 255 states and 1,163 transitions while checking board, crate, player, history, and rendering invariants.
+
+## Subscriptions
+
+The adapter models one timer callback already queued when pause removes the subscription. The upstream `Tick` update increments unconditionally, so the paused model changes when that stale callback arrives. Property `paused ticker ignores queued tick` shrinks to:
+
+1. `ToggleTicker`
+2. `Tick`
+
+The pinned run reaches 640 states and 1,718 transitions across all seven subscription tabs.
+
+## WebSocket
+
+The upstream helper considers `closing` to be a `client_connecting` state. The disconnect button therefore remains enabled while closing, and a second click appends and dispatches another close request. Property `closing client rejects repeated disconnect` shrinks to:
+
+1. `ClientConnectRequested`
+2. `ClientDisconnectRequested`
+3. `ClientDisconnectRequested`
+
+The pinned run reaches 800 states and 4,428 transitions across connection, send, close, failure, and transcript paths.
+
+## Remaining examples
+
+`shiki_editor`, animation, SSR, and the full website remain browser/build-system candidates. Their useful properties depend on DOM selection, focus, scrolling, animation timing, asset generation, or server boundaries and should use explicit deterministic adapters rather than pretending those effects are pure state transitions.

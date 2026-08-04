@@ -1,0 +1,8 @@
+import {
+  "f4ah6o/proped-rabbita" @proped,
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/string",
+}
+
+supported_targets = "+native+js"

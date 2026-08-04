@@ -1,5 +1,25 @@
 # Changes
 
+## 0.3.0 - 2026-08-04
+
+### Added
+
+- Vendored Rabbita's official 281-line TODO example at revision `67e8169efa1bb2e8bd17018b62b41211cbc4c357`, including preserved source, stylesheet, SHA-256 hashes, Apache-2.0 license, adaptation notes, and deterministic native exploration.
+- Added a practical `rabbita-todo` CLI demo covering title changes, add, delete, toggle, tab selection, filtered lists, statistics, 169 states, and 2,251 transitions.
+- Added expected-outcome metadata and exact expected failure signatures so passing examples and expected-failure regression fixtures can run together without accepting an unrelated failure.
+- Added `firstFailure` to CLI summaries with the property, message, state ID, trace length, human trace, and stable action IDs.
+
+### Changed
+
+- The runner now retains the shortest counterexample per property instead of recording repeated or longer failures from many generated cases.
+- CLI exit code `0` now means every selected demo matched its declared expected outcome; exit code `3` means an expectation mismatch.
+- Bumped the package and CLI version to `0.3.0`.
+
+### Fixed
+
+- Detected and documented that the pinned Rabbita TODO update guard rejects only an empty string and therefore stores a whitespace-only title.
+- Shrinking reduces the TODO failure to `TitleChanged(" ")` followed by `Add`.
+
 ## 0.2.0 - 2026-08-04
 
 ### Added

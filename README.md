@@ -12,30 +12,34 @@ moon run src/cli -- demo list --json
 moon run src/cli -- demo run all --json
 ```
 
-The last command writes each demo to `demo/out/<demo-id>/` and prints one JSON result envelope to stdout.
-
-```json
-{"ok":true,"command":"demo run","runs":[{"id":"newsletter","states":5,"failures":0},{"id":"rabbita-counter","states":7,"failures":0}]}
-```
-
-Use `schema` as the stable discovery entry point for agents and scripts:
+The last command writes each demo to `demo/out/<demo-id>/` and prints one JSON result envelope to stdout. Agents and scripts should discover the stable command contract with:
 
 ```bash
 moon run src/cli -- schema --json
 ```
 
-CLI exit codes are `0` for success, `2` for invalid usage, and `3` when a property fails. `--json` may appear anywhere in the argument list. `--output <dir>` changes the artifact root.
+CLI exit codes are `0` when each demo matches its declared expected outcome, `2` for invalid usage, and `3` for an expectation mismatch. `--json` may appear anywhere in the argument list. `--output <dir>` changes the artifact root.
 
 See [docs/CLI.md](docs/CLI.md) for the complete command and output contract.
 
 ## Included demos
 
-| ID | Source | Purpose |
-| --- | --- | --- |
-| `newsletter` | Project example | Validation, consent, submission, reset, state and transition properties |
-| `rabbita-counter` | Vendored Rabbita official example | Finite exploration of the upstream `Inc` and `Dec` counter semantics |
+| ID | Source | Expected outcome | Purpose |
+| --- | --- | --- | --- |
+| `newsletter` | Project example | Pass | Validation, consent, submission, reset, state and transition properties |
+| `rabbita-counter` | Vendored Rabbita official example | Pass | Finite exploration of the upstream `Inc` and `Dec` semantics |
+| `rabbita-todo` | Vendored Rabbita official example | Failure | Practical add/delete/toggle/tab exploration and minimal counterexample shrinking |
 
-The counter preserves the upstream source and license at `src/vendor/rabbita_counter/`, pinned to revision `67e8169efa1bb2e8bd17018b62b41211cbc4c357`. The adapted package bounds generated states to `[-3, 3]` so exploration terminates deterministically.
+The practical TODO run explores 169 states and 2,251 transitions with the pinned deterministic configuration. It finds the upstream behavior that accepts a whitespace-only title and shrinks the failure to two actions:
+
+```text
+TitleChanged(" ")
+Add
+```
+
+The CLI reports this as a matched expected failure and includes the property, message, state ID, trace length, human trace, and stable action IDs in `firstFailure`.
+
+Vendored source, revisions, hashes, licenses, and adapter changes are recorded under `src/vendor/`, [docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Each run writes:
 
@@ -43,7 +47,7 @@ Each run writes:
 - `atlas.svg` — standalone Flow Canvas graph
 - `atlas.json` — complete machine-readable run report
 - `atlas.dot` — Graphviz transition graph
-- `summary.json` — compact CLI result for automation
+- `summary.json` — compact CLI result including the first minimized failure
 
 ## Library model
 
@@ -58,7 +62,7 @@ initial Model
   = verified reachable UI state graph
 ```
 
-`Machine::actions` returns only messages valid for the supplied model. Proped Rabbita executes typed transitions, renders each discovered model without a browser, checks state and transition properties, and minimizes failing action traces.
+`Machine::actions` returns only messages valid for the supplied model. Proped Rabbita executes typed transitions, renders each discovered model without a browser, checks state and transition properties, and minimizes failing action traces. For practical runs, the runner retains the shortest counterexample per property instead of repeating equivalent failures from many generated cases.
 
 ```moonbit
 let machine = rabbita_machine_with_action_id(
@@ -80,7 +84,7 @@ let json = report_to_json(report)
 let dot = report_to_dot(report)
 ```
 
-`RunReport` records the effective seed, exploration bounds, states, raw transitions, structured failure traces, dependencies, and diagnostics. `affected_state_ids` selects states whose dependency identifiers intersect a supplied change set.
+`RunReport` records the effective seed, exploration bounds, states, raw transitions, structured minimized failure traces, dependencies, and diagnostics. `affected_state_ids` selects states whose dependency identifiers intersect a supplied change set.
 
 ## Core API
 
@@ -103,8 +107,9 @@ let dot = report_to_dot(report)
 src/
   cli/                         CLI and machine-readable command contract
   examples/newsletter/         reusable project demo package
-  vendor/rabbita_counter/      pinned upstream source and adapter
-  core.mbt                     exploration and shrinking
+  vendor/rabbita_counter/      pinned counter source and adapter
+  vendor/rabbita_todo/         pinned practical TODO source and adapter
+  core.mbt                     exploration, shrinking, minimal failure retention
   rabbita_adapter.mbt          browserless Rabbita rendering
   atlas*.mbt                   report exporters
   flow*.mbt                    deterministic graph layout

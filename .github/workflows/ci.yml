@@ -39,7 +39,6 @@ jobs:
       - name: Test
         run: moon test --target native
 
-
       - name: CLI smoke test
         run: |
           moon run src/cli -- schema --json > /tmp/proped-rabbita-schema.json
@@ -51,11 +50,34 @@ jobs:
           schema = json.loads(Path('/tmp/proped-rabbita-schema.json').read_text())
           result = json.loads(Path('/tmp/proped-rabbita-run.json').read_text())
           assert schema['name'] == 'proped-rabbita'
-          assert schema['demoIds'] == ['newsletter', 'rabbita-counter']
+          assert schema['version'] == '0.3.0'
+          assert schema['demoIds'] == [
+              'newsletter',
+              'rabbita-counter',
+              'rabbita-todo',
+          ]
           assert result['ok'] is True
-          assert [run['id'] for run in result['runs']] == ['newsletter', 'rabbita-counter']
-          for run in result['runs']:
-              assert run['failures'] == 0
+          runs = {run['id']: run for run in result['runs']}
+          assert list(runs) == ['newsletter', 'rabbita-counter', 'rabbita-todo']
+          assert runs['newsletter']['failures'] == 0
+          assert runs['rabbita-counter']['failures'] == 0
+
+          todo = runs['rabbita-todo']
+          assert todo['expectedOutcome'] == 'failure'
+          assert todo['expectationMet'] is True
+          assert todo['expectedFailure'] == {
+              'property': 'stored todo titles are not blank',
+              'trace': ['TitleChanged(" ")', 'Add'],
+          }
+          assert todo['failures'] == 1
+          assert todo['states'] >= 100
+          assert todo['transitions'] >= 1000
+          assert todo['firstFailure']['trace'] == ['TitleChanged(" ")', 'Add']
+          assert todo['firstFailure']['actionIds'] == ['title:1: ', 'add']
+          assert todo['firstFailure']['traceLength'] == 2
+
+          for run in runs.values():
+              assert run['expectationMet'] is True
               output = Path(run['output'])
               for artifact in run['artifacts']:
                   assert (output / artifact).is_file(), output / artifact

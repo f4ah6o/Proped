@@ -8,6 +8,15 @@ struct CliArgs {
 }
 
 ///|
+struct MinimalFailure {
+  property : String
+  message : String
+  state_id : String
+  trace : Array[String]
+  action_ids : Array[String]
+}
+
+///|
 struct RunSummary {
   id : String
   output : String
@@ -17,6 +26,10 @@ struct RunSummary {
   transitions : Int
   failures : Int
   diagnostics : Int
+  expected_failure : Bool
+  expected_failure_property : String
+  expected_failure_trace : Array[String]
+  first_failure : MinimalFailure?
 }
 
 ///|
@@ -57,7 +70,7 @@ fn parse_args(raw : Array[String]) -> CliArgs {
 
 ///|
 fn print_help() -> Unit {
-  println("Proped Rabbita CLI 0.2.0")
+  println("Proped Rabbita CLI 0.3.0")
   println("")
   println("Usage:")
   println("  moon run src/cli -- <command> [arguments] [--json] [--output DIR]")
@@ -76,34 +89,48 @@ fn print_help() -> Unit {
   )
   println("")
   println("Demo IDs:")
-  println("  newsletter                 Native Proped Rabbita form example")
+  println("  newsletter                 Passing newsletter form example")
   println(
-    "  rabbita-counter            Vendored Rabbita official counter example",
+    "  rabbita-counter            Passing vendored Rabbita counter example",
+  )
+  println(
+    "  rabbita-todo               Vendored practical TODO with expected failure",
   )
   println("")
-  println("Exit codes: 0 success, 2 usage error, 3 property failure")
+  println(
+    "Exit codes: 0 expectation met, 2 usage error, 3 expectation mismatch",
+  )
 }
 
 ///|
 fn schema_json() -> String {
-  "{\"name\":\"proped-rabbita\",\"version\":\"0.2.0\",\"commands\":[{\"argv\":[\"schema\"],\"output\":\"command-contract-json\"},{\"argv\":[\"version\"],\"output\":\"version\"},{\"argv\":[\"demo\",\"list\"],\"flags\":[\"--json\"]},{\"argv\":[\"demo\",\"describe\",\"<id>\"],\"flags\":[\"--json\"]},{\"argv\":[\"demo\",\"run\",\"<id|all>\"],\"flags\":[\"--json\",\"--output <dir>\"],\"artifacts\":[\"atlas.html\",\"atlas.svg\",\"atlas.json\",\"atlas.dot\",\"summary.json\"]}],\"demoIds\":[\"newsletter\",\"rabbita-counter\"],\"exitCodes\":{\"0\":\"success\",\"2\":\"usage_error\",\"3\":\"property_failure\"}}"
+  "{\"name\":\"proped-rabbita\",\"version\":\"0.3.0\",\"commands\":[{\"argv\":[\"schema\"],\"output\":\"command-contract-json\"},{\"argv\":[\"version\"],\"output\":\"version\"},{\"argv\":[\"demo\",\"list\"],\"flags\":[\"--json\"]},{\"argv\":[\"demo\",\"describe\",\"<id>\"],\"flags\":[\"--json\"]},{\"argv\":[\"demo\",\"run\",\"<id|all>\"],\"flags\":[\"--json\",\"--output <dir>\"],\"artifacts\":[\"atlas.html\",\"atlas.svg\",\"atlas.json\",\"atlas.dot\",\"summary.json\"]}],\"demoIds\":[\"newsletter\",\"rabbita-counter\",\"rabbita-todo\"],\"summaryFields\":[\"expectedOutcome\",\"expectationMet\",\"expectedFailure\",\"firstFailure\"],\"exitCodes\":{\"0\":\"expectation_met\",\"2\":\"usage_error\",\"3\":\"expectation_mismatch\"}}"
 }
 
 ///|
 fn demo_list_json() -> String {
-  "{\"ok\":true,\"command\":\"demo list\",\"demos\":[{\"id\":\"newsletter\",\"origin\":\"project\",\"description\":\"Newsletter form with validation, consent, submit, and reset states\"},{\"id\":\"rabbita-counter\",\"origin\":\"vendored\",\"description\":\"Rabbita official counter adapted for finite deterministic exploration\",\"upstreamRevision\":\"67e8169efa1bb2e8bd17018b62b41211cbc4c357\"}]}"
+  "{\"ok\":true,\"command\":\"demo list\",\"demos\":[{\"id\":\"newsletter\",\"origin\":\"project\",\"expectedOutcome\":\"pass\",\"description\":\"Newsletter form with validation, consent, submit, and reset states\"},{\"id\":\"rabbita-counter\",\"origin\":\"vendored\",\"expectedOutcome\":\"pass\",\"description\":\"Rabbita official counter adapted for finite deterministic exploration\",\"upstreamRevision\":\"67e8169efa1bb2e8bd17018b62b41211cbc4c357\"},{\"id\":\"rabbita-todo\",\"origin\":\"vendored\",\"expectedOutcome\":\"failure\",\"description\":\"Rabbita official TODO adapted for practical state exploration and minimal failure shrinking\",\"upstreamRevision\":\"67e8169efa1bb2e8bd17018b62b41211cbc4c357\"}]}"
+}
+
+///|
+fn todo_description_json() -> String {
+  (
+    #|{"ok":true,"command":"demo describe","demo":{"id":"rabbita-todo","origin":"vendored","expectedOutcome":"failure","upstream":"moonbit-community/rabbita examples/todo","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357","model":"title, item collection, next id, active tab","actions":["title-changed","add","delete","toggle","set-tab"],"properties":["stored todo titles are not blank","next id remains ahead of stored ids","rendered header reports active count"],"knownMinimalTrace":["space-title","add"],"defaults":{"cases":192,"maxDepth":14,"maxStates":320,"seed":29,"shrinkBudget":4096},"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}}
+  )
 }
 
 ///|
 fn demo_description_json(id : String) -> String? {
   if id == "newsletter" {
     Some(
-      "{\"ok\":true,\"command\":\"demo describe\",\"demo\":{\"id\":\"newsletter\",\"origin\":\"project\",\"model\":\"email, consented, submitted\",\"actions\":[\"set-email\",\"toggle-consent\",\"submit\",\"reset\"],\"defaults\":{\"cases\":24,\"maxDepth\":8,\"maxStates\":64,\"seed\":7,\"shrinkBudget\":1024},\"artifacts\":[\"atlas.html\",\"atlas.svg\",\"atlas.json\",\"atlas.dot\",\"summary.json\"]}}",
+      "{\"ok\":true,\"command\":\"demo describe\",\"demo\":{\"id\":\"newsletter\",\"origin\":\"project\",\"expectedOutcome\":\"pass\",\"model\":\"email, consented, submitted\",\"actions\":[\"set-email\",\"toggle-consent\",\"submit\",\"reset\"],\"defaults\":{\"cases\":24,\"maxDepth\":8,\"maxStates\":64,\"seed\":7,\"shrinkBudget\":1024},\"artifacts\":[\"atlas.html\",\"atlas.svg\",\"atlas.json\",\"atlas.dot\",\"summary.json\"]}}",
     )
   } else if id == "rabbita-counter" {
     Some(
-      "{\"ok\":true,\"command\":\"demo describe\",\"demo\":{\"id\":\"rabbita-counter\",\"origin\":\"vendored\",\"upstream\":\"moonbit-community/rabbita examples/counter\",\"upstreamRevision\":\"67e8169efa1bb2e8bd17018b62b41211cbc4c357\",\"model\":\"integer bounded to [-3,3] for exploration\",\"actions\":[\"inc\",\"dec\"],\"defaults\":{\"cases\":32,\"maxDepth\":10,\"maxStates\":16,\"seed\":11,\"shrinkBudget\":256},\"artifacts\":[\"atlas.html\",\"atlas.svg\",\"atlas.json\",\"atlas.dot\",\"summary.json\"]}}",
+      "{\"ok\":true,\"command\":\"demo describe\",\"demo\":{\"id\":\"rabbita-counter\",\"origin\":\"vendored\",\"expectedOutcome\":\"pass\",\"upstream\":\"moonbit-community/rabbita examples/counter\",\"upstreamRevision\":\"67e8169efa1bb2e8bd17018b62b41211cbc4c357\",\"model\":\"integer bounded to [-3,3] for exploration\",\"actions\":[\"inc\",\"dec\"],\"defaults\":{\"cases\":32,\"maxDepth\":10,\"maxStates\":16,\"seed\":11,\"shrinkBudget\":256},\"artifacts\":[\"atlas.html\",\"atlas.svg\",\"atlas.json\",\"atlas.dot\",\"summary.json\"]}}",
     )
+  } else if id == "rabbita-todo" {
+    Some(todo_description_json())
   } else {
     None
   }
@@ -114,6 +141,7 @@ fn print_demo_description(id : String) -> Bool {
   if id == "newsletter" {
     println("id: newsletter")
     println("origin: project")
+    println("expected-outcome: pass")
     println("model: email, consented, submitted")
     println("actions: set-email, toggle-consent, submit, reset")
     println(
@@ -123,11 +151,24 @@ fn print_demo_description(id : String) -> Bool {
   } else if id == "rabbita-counter" {
     println("id: rabbita-counter")
     println("origin: vendored moonbit-community/rabbita examples/counter")
+    println("expected-outcome: pass")
     println("upstream-revision: 67e8169efa1bb2e8bd17018b62b41211cbc4c357")
     println("model: integer bounded to [-3,3] for finite exploration")
     println("actions: inc, dec")
     println(
       "defaults: cases=32 max-depth=10 max-states=16 seed=11 shrink-budget=256",
+    )
+    true
+  } else if id == "rabbita-todo" {
+    println("id: rabbita-todo")
+    println("origin: vendored moonbit-community/rabbita examples/todo")
+    println("expected-outcome: failure")
+    println("upstream-revision: 67e8169efa1bb2e8bd17018b62b41211cbc4c357")
+    println("model: title, item collection, next id, active tab")
+    println("actions: title-changed, add, delete, toggle, set-tab")
+    println("known-minimal-failure: TitleChanged(\" \") -> Add")
+    println(
+      "defaults: cases=192 max-depth=14 max-states=320 seed=29 shrink-budget=4096",
     )
     true
   } else {
@@ -136,8 +177,122 @@ fn print_demo_description(id : String) -> Bool {
 }
 
 ///|
+fn first_failure(report : @proped.RunReport) -> MinimalFailure? {
+  if report.failures.is_empty() {
+    None
+  } else {
+    let failure = report.failures[0]
+    let action_ids : Array[String] = []
+    for transition in failure.structured_trace {
+      action_ids.push(transition.action_id)
+    }
+    Some({
+      property: failure.property,
+      message: failure.message,
+      state_id: failure.state_id,
+      trace: failure.trace.copy(),
+      action_ids,
+    })
+  }
+}
+
+///|
+fn expectation_met(summary : RunSummary) -> Bool {
+  if summary.expected_failure {
+    match summary.first_failure {
+      Some(failure) =>
+        failure.property == summary.expected_failure_property &&
+        failure.trace == summary.expected_failure_trace
+      None => false
+    }
+  } else {
+    summary.failures == 0
+  }
+}
+
+///|
+fn write_json_string_array(
+  output : StringBuilder,
+  values : Array[String],
+) -> Unit {
+  output.write_char('[')
+  for index, value in values {
+    if index > 0 {
+      output.write_char(',')
+    }
+    output.write_string(json_string(value))
+  }
+  output.write_char(']')
+}
+
+///|
+fn write_minimal_failure_json(
+  output : StringBuilder,
+  failure : MinimalFailure?,
+) -> Unit {
+  match failure {
+    None => output.write_string("null")
+    Some(value) => {
+      output.write_string("{\"property\":")
+      output.write_string(json_string(value.property))
+      output.write_string(",\"message\":")
+      output.write_string(json_string(value.message))
+      output.write_string(",\"stateId\":")
+      output.write_string(json_string(value.state_id))
+      output.write_string(",\"traceLength\":")
+      output.write_object(value.trace.length())
+      output.write_string(",\"trace\":")
+      write_json_string_array(output, value.trace)
+      output.write_string(",\"actionIds\":")
+      write_json_string_array(output, value.action_ids)
+      output.write_char('}')
+    }
+  }
+}
+
+///|
 fn summary_to_json(summary : RunSummary) -> String {
-  "{\"id\":\{json_string(summary.id)},\"ok\":\{summary.failures == 0},\"output\":\{json_string(summary.output)},\"schemaVersion\":\{summary.schema_version},\"seed\":\{summary.seed},\"states\":\{summary.states},\"transitions\":\{summary.transitions},\"failures\":\{summary.failures},\"diagnostics\":\{summary.diagnostics},\"artifacts\":[\"atlas.html\",\"atlas.svg\",\"atlas.json\",\"atlas.dot\",\"summary.json\"]}"
+  let output = StringBuilder::new()
+  output.write_string("{\"id\":")
+  output.write_string(json_string(summary.id))
+  output.write_string(",\"ok\":")
+  output.write_object(expectation_met(summary))
+  output.write_string(",\"expectedOutcome\":")
+  output.write_string(
+    json_string(if summary.expected_failure { "failure" } else { "pass" }),
+  )
+  output.write_string(",\"expectationMet\":")
+  output.write_object(expectation_met(summary))
+  output.write_string(",\"expectedFailure\":")
+  if summary.expected_failure {
+    output.write_string("{\"property\":")
+    output.write_string(json_string(summary.expected_failure_property))
+    output.write_string(",\"trace\":")
+    write_json_string_array(output, summary.expected_failure_trace)
+    output.write_char('}')
+  } else {
+    output.write_string("null")
+  }
+  output.write_string(",\"output\":")
+  output.write_string(json_string(summary.output))
+  output.write_string(",\"schemaVersion\":")
+  output.write_object(summary.schema_version)
+  output.write_string(",\"seed\":")
+  output.write_object(summary.seed)
+  output.write_string(",\"states\":")
+  output.write_object(summary.states)
+  output.write_string(",\"transitions\":")
+  output.write_object(summary.transitions)
+  output.write_string(",\"failures\":")
+  output.write_object(summary.failures)
+  output.write_string(",\"diagnostics\":")
+  output.write_object(summary.diagnostics)
+  output.write_string(",\"firstFailure\":")
+  write_minimal_failure_json(output, summary.first_failure)
+  output.write_string(
+    ",\"artifacts\":[\"atlas.html\",\"atlas.svg\",\"atlas.json\",\"atlas.dot\",\"summary.json\"]}",
+  )
+  output.to_string()
 }
 
 ///|
@@ -171,16 +326,17 @@ async fn write_report_files(
 }
 
 ///|
-async fn run_newsletter(output_root : String) -> RunSummary {
-  let report = @proped.run(
-    @newsletter.machine(),
-    @newsletter.properties(),
-    @newsletter.default_config(),
-  )
-  let output = "\{output_root}/newsletter"
+async fn finish_run(
+  id : String,
+  output : String,
+  expected_failure : Bool,
+  expected_failure_property : String,
+  expected_failure_trace : Array[String],
+  report : @proped.RunReport,
+) -> RunSummary {
   write_report_files(output, report)
   let summary : RunSummary = {
-    id: "newsletter",
+    id,
     output,
     schema_version: report.schema_version,
     seed: report.seed,
@@ -188,6 +344,10 @@ async fn run_newsletter(output_root : String) -> RunSummary {
     transitions: report.transitions.length(),
     failures: report.failures.length(),
     diagnostics: report.diagnostics.length(),
+    expected_failure,
+    expected_failure_property,
+    expected_failure_trace,
+    first_failure: first_failure(report),
   }
   @fs.write_file(
     "\{output}/summary.json",
@@ -195,6 +355,16 @@ async fn run_newsletter(output_root : String) -> RunSummary {
     create_mode=@fs.CreateMode::CreateOrTruncate,
   )
   summary
+}
+
+///|
+async fn run_newsletter(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @newsletter.machine(),
+    @newsletter.properties(),
+    @newsletter.default_config(),
+  )
+  finish_run("newsletter", "\{output_root}/newsletter", false, "", [], report)
 }
 
 ///|
@@ -204,24 +374,31 @@ async fn run_counter(output_root : String) -> RunSummary {
     @counter.properties(),
     @counter.default_config(),
   )
-  let output = "\{output_root}/rabbita-counter"
-  write_report_files(output, report)
-  let summary : RunSummary = {
-    id: "rabbita-counter",
-    output,
-    schema_version: report.schema_version,
-    seed: report.seed,
-    states: report.states.length(),
-    transitions: report.transitions.length(),
-    failures: report.failures.length(),
-    diagnostics: report.diagnostics.length(),
-  }
-  @fs.write_file(
-    "\{output}/summary.json",
-    summary_to_json(summary),
-    create_mode=@fs.CreateMode::CreateOrTruncate,
+  finish_run(
+    "rabbita-counter",
+    "\{output_root}/rabbita-counter",
+    false,
+    "",
+    [],
+    report,
   )
-  summary
+}
+
+///|
+async fn run_todo(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @todo.machine(),
+    @todo.properties(),
+    @todo.default_config(),
+  )
+  finish_run(
+    "rabbita-todo",
+    "\{output_root}/rabbita-todo",
+    true,
+    "stored todo titles are not blank",
+    ["TitleChanged(\" \")", "Add"],
+    report,
+  )
 }
 
 ///|
@@ -230,7 +407,7 @@ fn summaries_json(summaries : Array[RunSummary]) -> String {
   output.write_string("{\"ok\":")
   let mut ok = true
   for summary in summaries {
-    if summary.failures > 0 {
+    if !expectation_met(summary) {
       ok = false
     }
   }
@@ -249,10 +426,18 @@ fn summaries_json(summaries : Array[RunSummary]) -> String {
 ///|
 fn print_summaries(summaries : Array[RunSummary]) -> Unit {
   for summary in summaries {
-    let status = if summary.failures == 0 { "ok" } else { "failed" }
+    let status = if expectation_met(summary) { "ok" } else { "mismatch" }
+    let expectation = if summary.expected_failure { "failure" } else { "pass" }
     println(
-      "\{summary.id} \{status} states=\{summary.states} transitions=\{summary.transitions} failures=\{summary.failures} diagnostics=\{summary.diagnostics} output=\{summary.output}",
+      "\{summary.id} \{status} expected=\{expectation} states=\{summary.states} transitions=\{summary.transitions} failures=\{summary.failures} diagnostics=\{summary.diagnostics} output=\{summary.output}",
     )
+    match summary.first_failure {
+      Some(failure) => {
+        let trace = failure.trace.join(" -> ")
+        println("  minimal failure: \{failure.property}: \{trace}")
+      }
+      None => ()
+    }
   }
 }
 
@@ -291,9 +476,9 @@ async fn main {
       return
     }
     if parsed.json {
-      println("{\"ok\":true,\"version\":\"0.2.0\"}")
+      println("{\"ok\":true,\"version\":\"0.3.0\"}")
     } else {
-      println("proped-rabbita 0.2.0")
+      println("proped-rabbita 0.3.0")
     }
     return
   }
@@ -317,9 +502,12 @@ async fn main {
     if parsed.json {
       println(demo_list_json())
     } else {
-      println("newsletter\tproject\tNewsletter form state exploration")
+      println("newsletter\tproject\tpass\tNewsletter form state exploration")
       println(
-        "rabbita-counter\tvendored\tOfficial Rabbita counter state exploration",
+        "rabbita-counter\tvendored\tpass\tOfficial Rabbita counter state exploration",
+      )
+      println(
+        "rabbita-todo\tvendored\tfailure\tOfficial Rabbita TODO minimal-failure exploration",
       )
     }
     return
@@ -357,9 +545,12 @@ async fn main {
     summaries.push(run_newsletter(parsed.output))
   } else if id == "rabbita-counter" {
     summaries.push(run_counter(parsed.output))
+  } else if id == "rabbita-todo" {
+    summaries.push(run_todo(parsed.output))
   } else if id == "all" {
     summaries.push(run_newsletter(parsed.output))
     summaries.push(run_counter(parsed.output))
+    summaries.push(run_todo(parsed.output))
   } else {
     usage_error("unknown demo id: \{id}", parsed.json)
     return
@@ -370,7 +561,7 @@ async fn main {
     print_summaries(summaries)
   }
   for summary in summaries {
-    if summary.failures > 0 {
+    if !expectation_met(summary) {
       @sys.exit(3)
     }
   }

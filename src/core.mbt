@@ -530,6 +530,23 @@ fn[Model, Msg] shrink_trace(
 }
 
 ///|
+fn record_minimal_failure(
+  report : RunReport,
+  candidate : FailureReport,
+) -> Unit {
+  for index, existing in report.failures {
+    if existing.property == candidate.property {
+      if candidate.structured_trace.length() <
+        existing.structured_trace.length() {
+        report.failures[index] = candidate
+      }
+      return
+    }
+  }
+  report.failures.push(candidate)
+}
+
+///|
 fn[Model, Msg] append_failure(
   report : RunReport,
   observed : Array[ObservedAction],
@@ -565,7 +582,7 @@ fn[Model, Msg] append_failure(
       for transition in failure.structured_trace {
         rendered_trace.push(transition.action)
       }
-      report.failures.push({
+      record_minimal_failure(report, {
         property: property.name,
         message: failure.message,
         state_id: failure.state_id,

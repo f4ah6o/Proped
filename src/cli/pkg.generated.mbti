@@ -8,6 +8,8 @@ package "f4ah6o/proped-rabbita/cli"
 // Types and methods
 type CliArgs
 
+type MinimalFailure
+
 type RunSummary
 
 // Type aliases

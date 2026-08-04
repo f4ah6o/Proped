@@ -39,7 +39,7 @@ test "command schema exposes demos artifacts and exit codes" {
   let schema = schema_json()
   assert_true(schema.contains("rabbita-counter"))
   assert_true(schema.contains("summary.json"))
-  assert_true(schema.contains("property_failure"))
+  assert_true(schema.contains("expectation_mismatch"))
 }
 
 ///|
@@ -53,9 +53,70 @@ test "run summaries are stable machine-readable envelopes" {
     transitions: 5,
     failures: 0,
     diagnostics: 0,
+    expected_failure: false,
+    expected_failure_property: "",
+    expected_failure_trace: [],
+    first_failure: None,
   }
   let json = summaries_json([summary])
   assert_true(json.contains("\"ok\":true"))
   assert_true(json.contains("\"states\":3"))
   assert_true(json.contains("atlas.json"))
+}
+
+///|
+test "expected failure summaries expose the minimized counterexample" {
+  let failure : MinimalFailure = {
+    property: "stored todo titles are not blank",
+    message: "todo 0 has a blank title",
+    state_id: "todo-state",
+    trace: ["TitleChanged(\" \")", "Add"],
+    action_ids: ["title:1: ", "add"],
+  }
+  let summary : RunSummary = {
+    id: "rabbita-todo",
+    output: "demo/out/rabbita-todo",
+    schema_version: 2,
+    seed: 29,
+    states: 100,
+    transitions: 500,
+    failures: 1,
+    diagnostics: 0,
+    expected_failure: true,
+    expected_failure_property: "stored todo titles are not blank",
+    expected_failure_trace: ["TitleChanged(\" \")", "Add"],
+    first_failure: Some(failure),
+  }
+  let json = summary_to_json(summary)
+  assert_true(json.contains("\"expectedOutcome\":\"failure\""))
+  assert_true(json.contains("\"expectationMet\":true"))
+  assert_true(json.contains("\"expectedFailure\":{"))
+  assert_true(json.contains("\"traceLength\":2"))
+  assert_true(json.contains("\"actionIds\":[\"title:1: \",\"add\"]"))
+}
+
+///|
+test "expected failure requires the declared property and minimized trace" {
+  let observed : MinimalFailure = {
+    property: "different property",
+    message: "different failure",
+    state_id: "state",
+    trace: ["TitleChanged(\" \")", "Add"],
+    action_ids: ["title:1: ", "add"],
+  }
+  let summary : RunSummary = {
+    id: "rabbita-todo",
+    output: "demo/out/rabbita-todo",
+    schema_version: 2,
+    seed: 29,
+    states: 1,
+    transitions: 2,
+    failures: 1,
+    diagnostics: 0,
+    expected_failure: true,
+    expected_failure_property: "stored todo titles are not blank",
+    expected_failure_trace: ["TitleChanged(\" \")", "Add"],
+    first_failure: Some(observed),
+  }
+  assert_true(!expectation_met(summary))
 }

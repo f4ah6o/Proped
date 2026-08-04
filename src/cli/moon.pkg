@@ -2,8 +2,10 @@ import {
   "f4ah6o/proped-rabbita" @proped,
   "f4ah6o/proped-rabbita/examples/newsletter",
   "f4ah6o/proped-rabbita/vendor/rabbita_counter" @counter,
+  "f4ah6o/proped-rabbita/vendor/rabbita_todo" @todo,
   "moonbitlang/async",
   "moonbitlang/async/fs",
+  "moonbitlang/core/env",
   "moonbitlang/core/env",
   "moonbitlang/x/sys",
 }

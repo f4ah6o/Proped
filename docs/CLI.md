@@ -16,7 +16,7 @@ After `moon build --target native`, the generated native executable accepts the 
 moon run src/cli -- schema --json
 ```
 
-`schema` returns the command grammar, supported demo IDs, generated artifact names, and exit-code meanings. Agents should use it before constructing commands instead of scraping human help text.
+`schema` returns the command grammar, supported demo IDs, summary fields, generated artifact names, and exit-code meanings. Agents should use it before constructing commands instead of scraping human help text.
 
 ## Commands
 
@@ -34,28 +34,30 @@ Returns the CLI version.
 moon run src/cli -- demo list --json
 ```
 
-Returns all runnable demo IDs, their origin, description, and upstream revision when applicable.
+Returns all runnable demo IDs, their origin, declared expected outcome, description, and upstream revision when applicable.
 
 ### `demo describe <id>`
 
 ```bash
-moon run src/cli -- demo describe rabbita-counter --json
+moon run src/cli -- demo describe rabbita-todo --json
 ```
 
-Returns the model, action IDs, deterministic exploration defaults, origin, and artifact names for one demo.
+Returns the model, action classes, properties, deterministic exploration defaults, origin, expected outcome, and artifact names for one demo.
 
 ### `demo run <id|all>`
 
 ```bash
-moon run src/cli -- demo run newsletter --json
+moon run src/cli -- demo run rabbita-todo --json
 moon run src/cli -- demo run all --output artifacts --json
 ```
 
 Runs one or all demos. Each run produces a compact summary in stdout and writes complete reports under `<output>/<demo-id>/`.
 
+A demo declares `expectedOutcome` as either `pass` or `failure`. Expected-failure demos also declare an exact `expectedFailure` property and minimized trace. The command succeeds only when the observed counterexample matches that signature. This allows a regression fixture to prove that failure discovery and shrinking still work without accepting an unrelated failure or making the complete demo suite permanently red.
+
 ## JSON envelope
 
-A successful run has this shape:
+A practical expected-failure run has this shape:
 
 ```json
 {
@@ -63,15 +65,38 @@ A successful run has this shape:
   "command": "demo run",
   "runs": [
     {
-      "id": "newsletter",
+      "id": "rabbita-todo",
       "ok": true,
-      "output": "demo/out/newsletter",
+      "expectedOutcome": "failure",
+      "expectationMet": true,
+      "expectedFailure": {
+        "property": "stored todo titles are not blank",
+        "trace": [
+          "TitleChanged(\" \")",
+          "Add"
+        ]
+      },
+      "output": "demo/out/rabbita-todo",
       "schemaVersion": 2,
-      "seed": 7,
-      "states": 5,
-      "transitions": 192,
-      "failures": 0,
+      "seed": 29,
+      "states": 169,
+      "transitions": 2251,
+      "failures": 1,
       "diagnostics": 0,
+      "firstFailure": {
+        "property": "stored todo titles are not blank",
+        "message": "todo 0 has a blank title",
+        "stateId": "rabbita-todo|...",
+        "traceLength": 2,
+        "trace": [
+          "TitleChanged(\" \")",
+          "Add"
+        ],
+        "actionIds": [
+          "title:1: ",
+          "add"
+        ]
+      },
       "artifacts": [
         "atlas.html",
         "atlas.svg",
@@ -83,6 +108,8 @@ A successful run has this shape:
   ]
 }
 ```
+
+For passing demos, `expectedOutcome` is `pass`, `failures` is `0`, and `firstFailure` is `null`.
 
 A usage error has this shape and exits with code `2`:
 
@@ -96,15 +123,19 @@ A usage error has this shape and exits with code `2`:
 }
 ```
 
-When a demo produces one or more property failures, its summary contains `"ok": false`, the process exits with code `3`, and the complete failure traces remain in `atlas.json` and `atlas.html`.
+## Failure retention
+
+Exploration may rediscover the same property violation in many generated cases. `RunReport.failures` retains the shortest counterexample for each property instead of appending repeated or longer failures. `firstFailure` is the first retained property failure copied into the compact summary.
+
+The full structured trace remains available in `atlas.json`, including `from`, `actionId`, human label, and `to` for every minimized transition.
 
 ## Artifacts
 
 | File | Contract |
 | --- | --- |
-| `summary.json` | Compact copy of the per-demo CLI summary |
-| `atlas.json` | Complete `RunReport`, including states, raw transitions, failures, structured traces, dependencies, and diagnostics |
-| `atlas.html` | Standalone human-readable state atlas |
+| `summary.json` | Compact copy of the per-demo CLI summary, including `firstFailure` |
+| `atlas.json` | Complete `RunReport`, including states, raw transitions, minimized failures, structured traces, dependencies, and diagnostics |
+| `atlas.html` | Standalone human-readable state atlas with minimized failure traces |
 | `atlas.svg` | Standalone deterministic Flow Canvas graph |
 | `atlas.dot` | Graphviz transition graph |
 
@@ -114,8 +145,8 @@ Generated files are deterministic for the same source, demo configuration, and s
 
 | Code | Meaning |
 | --- | --- |
-| `0` | Command completed and no property failed |
+| `0` | Every selected demo matched its declared expected outcome |
 | `2` | Invalid command, option, or demo ID |
-| `3` | Exploration completed but at least one property failed |
+| `3` | At least one selected demo did not match its declared expected outcome |
 
 Unexpected filesystem or runtime failures are not converted into a success envelope and retain the runtime's nonzero exit behavior.

@@ -2,7 +2,7 @@
 
 日本語 | [English](README.md)
 
-Proped Rabbita は、Rabbita UI の到達可能状態を探索し、モデルと遷移のプロパティを検証し、失敗トレースを縮約して、決定的な HTML・SVG・JSON・Graphviz Atlas を出力します。
+Proped Rabbita は、Rabbita UI の到達可能状態を探索し、モデルと遷移のプロパティを検証し、failure traceを縮約して、決定的なHTML・SVG・JSON・Graphviz Atlasを出力します。
 
 ## CLIを実行する
 
@@ -12,38 +12,42 @@ moon run src/cli -- demo list --json
 moon run src/cli -- demo run all --json
 ```
 
-最後のコマンドは各デモを `demo/out/<demo-id>/` に出力し、stdout に1つのJSON結果を返します。
-
-```json
-{"ok":true,"command":"demo run","runs":[{"id":"newsletter","states":5,"failures":0},{"id":"rabbita-counter","states":7,"failures":0}]}
-```
-
-エージェントやスクリプトは `schema` を安定した探索入口として利用できます。
+最後のcommandは各demoを `demo/out/<demo-id>/` に出力し、stdoutへ1つのJSON result envelopeを返します。エージェントやscriptは次のcommandから安定した契約を取得します。
 
 ```bash
 moon run src/cli -- schema --json
 ```
 
-終了コードは、成功が `0`、引数エラーが `2`、プロパティ失敗が `3` です。`--json` は引数列の任意の位置に指定できます。`--output <dir>` で成果物のルートを変更できます。
+終了コードは、各demoが宣言した期待結果と一致した場合が `0`、引数エラーが `2`、期待結果との不一致が `3` です。`--json` は引数列の任意の位置に指定でき、`--output <dir>` でartifact rootを変更できます。
 
-完全なコマンド契約と出力契約は [docs/CLI.ja.md](docs/CLI.ja.md) にあります。
+完全なcommand・output契約は [docs/CLI.ja.md](docs/CLI.ja.md) にあります。
 
-## 同梱デモ
+## 同梱demo
 
-| ID | 出所 | 検証内容 |
-| --- | --- | --- |
-| `newsletter` | プロジェクト内の例 | 入力検証、同意、送信、リセット、状態・遷移プロパティ |
-| `rabbita-counter` | Rabbita公式exampleのvendor | upstreamの`Inc`・`Dec` semanticsを有限状態で探索 |
+| ID | 出所 | 期待結果 | 検証内容 |
+| --- | --- | --- | --- |
+| `newsletter` | プロジェクト内の例 | pass | 入力検証、同意、送信、reset、状態・遷移property |
+| `rabbita-counter` | Rabbita公式exampleのvendor | pass | upstreamの`Inc`・`Dec` semanticsを有限状態で探索 |
+| `rabbita-todo` | Rabbita公式exampleのvendor | failure | add/delete/toggle/tabを含む実用規模探索と最小counterexample縮約 |
 
-counter は upstream source と license を `src/vendor/rabbita_counter/` に保存し、revision `67e8169efa1bb2e8bd17018b62b41211cbc4c357` に固定しています。adapter package は探索状態を `[-3, 3]` に制限し、決定的に終了させます。
+TODO demoは固定した決定的設定で169状態・2,251 transitionを探索します。upstream実装が空白だけのtitleを受け付けるbehaviorを検出し、failureを次の2 actionまで縮約します。
 
-各実行は次の成果物を生成します。
+```text
+TitleChanged(" ")
+Add
+```
 
-- `atlas.html` — 単独で開ける人間向け状態Atlas
-- `atlas.svg` — 単独のFlow Canvasグラフ
-- `atlas.json` — 完全な機械可読実行レポート
-- `atlas.dot` — Graphviz遷移グラフ
-- `summary.json` — 自動処理向けの簡潔なCLI結果
+CLIはこれを期待済みfailureとして扱い、`firstFailure` にproperty、message、state ID、trace長、人間向けtrace、stable action IDを出力します。
+
+vendorしたsource、revision、hash、license、adapter変更点は `src/vendor/`、[docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md)、[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記録しています。
+
+各実行は次のartifactを生成します。
+
+- `atlas.html` — 単独で開ける人間向けstate Atlas
+- `atlas.svg` — 単独のFlow Canvas graph
+- `atlas.json` — 完全なmachine-readable run report
+- `atlas.dot` — Graphviz transition graph
+- `summary.json` — 最初の最小failureを含む簡潔なCLI result
 
 ## ライブラリモデル
 
@@ -55,10 +59,10 @@ initial Model
   + Property<Model, Msg>
   + shrink(Msg) -> Array[Msg]
   + dependencies(Model) -> Array[String]
-  = 検証済みの到達可能UI状態グラフ
+  = 検証済みの到達可能UI状態graph
 ```
 
-`Machine::actions` は、そのモデルで有効なメッセージだけを返します。Proped Rabbita は型付き遷移を実行し、各モデルをブラウザなしでrenderし、状態・遷移プロパティを検証して、失敗した操作列を最小化します。
+`Machine::actions` は、そのmodelで有効なmessageだけを返します。Proped Rabbitaは型付きtransitionを実行し、各modelをbrowserなしでrenderし、状態・遷移propertyを検証して、失敗したaction列を最小化します。実用規模のrunでは、生成caseごとに同じfailureを繰り返さず、propertyごとに最短のcounterexampleだけを保持します。
 
 ```moonbit
 let machine = rabbita_machine_with_action_id(
@@ -80,7 +84,7 @@ let json = report_to_json(report)
 let dot = report_to_dot(report)
 ```
 
-`RunReport` は、実際に使用したseed、探索上限、状態、raw transition、構造化された失敗trace、依存関係、diagnosticを保持します。`affected_state_ids` は、指定された変更集合と依存識別子が交差する状態を選択します。
+`RunReport` は、実際に使用したseed、探索上限、state、raw transition、構造化された最小failure trace、dependency、diagnosticを保持します。`affected_state_ids` は、指定した変更集合とdependency識別子が交差するstateを選択します。
 
 ## Core API
 
@@ -88,23 +92,24 @@ let dot = report_to_dot(report)
 | --- | --- |
 | `Machine[Model, Msg]` | pure update、到達可能action、render、identity、shrink、dependency |
 | `state_property` | modelとrendered HTMLを検証 |
-| `transition_property` | before/message/after遷移を検証 |
+| `transition_property` | before/message/after transitionを検証 |
 | `run` | 検証済みdefaultによる決定的探索 |
 | `run_checked` | 型付き設定エラーを返す探索 |
 | `affected_state_ids` | 差分UI build対象を計画 |
-| `report_to_html` | 単独で開ける状態Atlas |
-| `report_to_flow_svg` | 単独グラフ |
-| `report_to_json` | CI・エージェント向けレポート |
-| `report_to_dot` | Graphvizレポート |
+| `report_to_html` | 単独で開けるstate Atlas |
+| `report_to_flow_svg` | 単独graph |
+| `report_to_json` | CI・agent向けreport |
+| `report_to_dot` | Graphviz report |
 
 ## リポジトリ構成
 
 ```text
 src/
-  cli/                         CLIと機械可読コマンド契約
-  examples/newsletter/         再利用可能なプロジェクトデモpackage
-  vendor/rabbita_counter/      固定したupstream sourceとadapter
-  core.mbt                     探索とshrink
+  cli/                         CLIとmachine-readable command契約
+  examples/newsletter/         再利用可能なproject demo package
+  vendor/rabbita_counter/      固定したcounter sourceとadapter
+  vendor/rabbita_todo/         固定した実用TODO sourceとadapter
+  core.mbt                     探索、shrink、最小failure保持
   rabbita_adapter.mbt          browserless Rabbita rendering
   atlas*.mbt                   report exporter
   flow*.mbt                    決定的graph layout

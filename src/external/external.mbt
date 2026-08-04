@@ -694,3 +694,68 @@ pub fn circular_state_handoff() -> @disclosure.FindingHandoff {
     visibility: @disclosure.PublicBug,
   }
 }
+
+///|
+pub fn isomorphic_suite_manifest() -> ExternalManifest {
+  {
+    id: "isomorphic-suite",
+    repository: "moonbit-community/isomorphic",
+    revision: "590ac1c4de71050419cc6643942e0d1f181301aa",
+    license: "Apache-2.0",
+    packages: [
+      "kanban/frontend/app", "todoapp/frontend/app", "noteapp/frontend/app",
+    ],
+    model_entry: "Model",
+    message_entry: "Msg",
+    update_entry: "Model::update",
+    view_entry: "view",
+    strategy: EffectModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "feb28cfc1d26aeecff44fdbe6b12335dbfe0ac0cc534a3b6018ca8686d1f8bed",
+    properties: [
+      "common CRUD entity identifiers remain unique", "kanban cards reference existing columns",
+      "stale kanban board responses preserve newer board intent", "stale todo list responses preserve newer todo mutations",
+      "selected note remains present", "pending request IDs remain unique", "rendered active app matches suite model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn isomorphic_suite_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "isomorphic-suite",
+    repository: "moonbit-community/isomorphic",
+    revision: "590ac1c4de71050419cc6643942e0d1f181301aa",
+    title: "Correlate list responses and validate Kanban move targets",
+    summary: "Kanban, Todo, and Note apply full-list responses without request or generation identity. Late responses can overwrite newer UI mutations, and Kanban's public MoveCardTo message also accepts a missing target column.",
+    impact: "A deleted Kanban card can reappear, a completed or deleted Todo can revert, a selected Note can disappear while its selected ID remains active, and direct Kanban dispatch can create a card that references no column.",
+    expected: "Only the latest load generation updates each application, selected entities remain present, and card moves target an existing column.",
+    actual: "The response branches replace collections by message type alone, and MoveCardTo updates column_id without validating the target column.",
+    property: "stale kanban board responses preserve newer board intent",
+    minimal_trace: [
+      "KanbanInit", "KanbanDeleteCard(1)", "KanbanBoardLoaded(request=101, fixture=0)",
+    ],
+    action_ids: ["kanban-init", "kanban-delete:1", "kanban-board:101:0"],
+    evidence: [
+      "Kanban referential-integrity trace: KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0).",
+      "Todo stale-load trace: SwitchApp(todo) -> TodoDelete(1) -> TodoInit -> TodoDeleted(request=2301, todo=1, success=true) -> TodoListLoaded(request=201, fixture=0).",
+      "Note dangling-selection trace: SwitchApp(note) -> NoteInit -> NoteSelect(1) -> NoteListLoaded(request=301, fixture=1).",
+      "The common harness explores 1,400 states and 2,288 transitions with four retained failures and zero diagnostics.",
+      "No upstream source is copied because the pinned repository has no standalone LICENSE file; each covered moon.mod.json declares Apache-2.0.",
+    ],
+    suggested_fix: [
+      "Carry a monotonically increasing request generation through GotBoard, GotTodos, and GotNotes, and ignore responses older than the latest request for that application.",
+      "When replacing Note data, clear or revalidate selected_note_id against the returned list.",
+      "Before MoveCardTo issues a command or updates optimistically, require target_column_id to exist.",
+      "Keep mutation and load generations independent per application so one request domain cannot invalidate another.",
+    ],
+    verification: [
+      "Start a Kanban board load, delete a card optimistically, deliver the older board response last, and confirm the card stays deleted.",
+      "Complete or delete a Todo, deliver an older list response last, and confirm the newer mutation remains visible.",
+      "Select a Note, load a list without it, and confirm selection clears or transitions to an explicit missing-note state.",
+      "Dispatch MoveCardTo with a missing column ID and confirm state and network effects remain unchanged.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}

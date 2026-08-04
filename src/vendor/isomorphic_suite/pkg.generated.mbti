@@ -1,0 +1,150 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/isomorphic_suite"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+// Errors
+
+// Types and methods
+pub(all) struct Card {
+  id : Int
+  column_id : Int
+  title : String
+  position : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Column {
+  id : Int
+  title : String
+  position : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct KanbanState {
+  columns : Array[Column]
+  cards : Array[Card]
+  moving_card : Int
+  generation : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Model {
+  active : SuiteApp
+  kanban : KanbanState
+  todo : TodoState
+  note : NoteState
+  pending : Array[PendingRequest]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  SwitchApp(SuiteApp)
+  KanbanInit
+  KanbanSelectCardToMove(Int)
+  KanbanCancelMove
+  KanbanMoveCardTo(Int, Int)
+  KanbanDeleteCard(Int)
+  KanbanBoardLoaded(Int, Int)
+  KanbanDeleteCompleted(Int, Int, Bool)
+  TodoInit
+  TodoInputChanged(String)
+  TodoAdd
+  TodoAdded(Int, TodoItem, Bool)
+  TodoToggle(Int)
+  TodoToggled(Int, TodoItem, Bool)
+  TodoDelete(Int)
+  TodoDeleted(Int, Int, Bool)
+  TodoListLoaded(Int, Int)
+  NoteInit
+  NoteSelect(Int)
+  NoteDeselect
+  NoteTogglePin(Int)
+  NotePinToggled(Int, NoteItem, Bool)
+  NoteDelete(Int)
+  NoteDeleted(Int, Int, Bool)
+  NoteListLoaded(Int, Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct NoteItem {
+  id : Int
+  title : String
+  pinned : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) struct NoteState {
+  notes : Array[NoteItem]
+  title_input : String
+  content_input : String
+  selected_note_id : Int
+  generation : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PendingRequest {
+  id : Int
+  domain : RequestDomain
+  generation : Int
+  entity_id : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum RequestDomain {
+  KanbanBoard
+  KanbanDeleteCard
+  TodoList
+  TodoAdd
+  TodoToggle
+  TodoDelete
+  NoteList
+  NotePin
+  NoteDelete
+} derive(Eq, @debug.Debug)
+pub fn RequestDomain::to_string(Self) -> String
+
+pub(all) enum SuiteApp {
+  Kanban
+  Todo
+  Note
+} derive(Eq, @debug.Debug)
+pub fn SuiteApp::to_string(Self) -> String
+
+pub(all) struct TodoItem {
+  id : Int
+  text : String
+  done : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TodoState {
+  todos : Array[TodoItem]
+  input : String
+  generation : Int
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

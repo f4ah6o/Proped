@@ -32,6 +32,10 @@ pub fn incr_typed_spreadsheet_manifest() -> ExternalManifest
 
 pub fn inspect_source(String) -> SourceInspection
 
+pub fn isomorphic_suite_handoff() -> @disclosure.FindingHandoff
+
+pub fn isomorphic_suite_manifest() -> ExternalManifest
+
 pub fn[Model, Msg] monotonic_int_property(String, (Model) -> Int, (Msg) -> Bool) -> @proped-rabbita.Property[Model, Msg]
 
 pub fn proton_todo_handoff() -> @disclosure.FindingHandoff

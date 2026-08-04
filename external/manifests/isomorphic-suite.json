@@ -1,0 +1,31 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "isomorphic-suite",
+  "repository": "moonbit-community/isomorphic",
+  "revision": "590ac1c4de71050419cc6643942e0d1f181301aa",
+  "license": "Apache-2.0",
+  "packages": [
+    "kanban/frontend/app",
+    "todoapp/frontend/app",
+    "noteapp/frontend/app"
+  ],
+  "entryPoints": {
+    "model": "Model",
+    "message": "Msg",
+    "update": "Model::update",
+    "view": "view"
+  },
+  "strategy": "effect-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "feb28cfc1d26aeecff44fdbe6b12335dbfe0ac0cc534a3b6018ca8686d1f8bed",
+  "properties": [
+    "common CRUD entity identifiers remain unique",
+    "kanban cards reference existing columns",
+    "stale kanban board responses preserve newer board intent",
+    "stale todo list responses preserve newer todo mutations",
+    "selected note remains present",
+    "pending request IDs remain unique",
+    "rendered active app matches suite model"
+  ],
+  "findingVisibility": "public-bug"
+}

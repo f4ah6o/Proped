@@ -19,6 +19,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `canopy-components` | `dowdiness/canopy` component modules | 471 lines | failure | resizable, menu, and tabs pure finite state |
 | `incr-typed-spreadsheet` | `dowdiness/incr` typed spreadsheet | 2,349 preserved lines | failure | isolated runtime replay, worksheet traces, Eq/no-backdate probe |
 | `circular-state` | `CAIMEOX/circular web/updater` | clean-room | failure | workspace replacement, modal and selection integrity |
+| `isomorphic-suite` | `moonbit-community/isomorphic` Kanban/Todo/Note | clean-room | failure | shared request matrix, CRUD and reference integrity |
 
 ## Counter
 
@@ -150,3 +151,16 @@ A pinned-source wbtest opened `TaskModal` for `TSK-1` and then called `sync_work
 2. `WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)`
 
 The run explores 580 states and 2,456 transitions with one retained failure and zero diagnostics. NoOp, route cleanup, task-menu integrity, effect identity, and rendered-state properties pass. The temporary upstream probe was removed after execution and no upstream write was performed.
+
+## Isomorphic suite
+
+The Kanban, Todo, and Note applications are pinned at revision `590ac1c4de71050419cc6643942e0d1f181301aa`. Each application declares Apache-2.0 in `moon.mod.json`, but the pinned repository has no standalone license file, so Proped Rabbita stores no upstream source and uses a clean-room finite adapter.
+
+One matrix harness preserves the three Elm/MVU response branches and replaces HTTP work with stable per-application request descriptors. The run reaches 1,400 states and 2,288 transitions with four retained failures and zero diagnostics:
+
+1. `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)` creates a card that references a missing column.
+2. `KanbanInit -> KanbanDeleteCard(1) -> KanbanBoardLoaded(request=101, fixture=0)` restores a newer optimistic deletion.
+3. `SwitchApp(todo) -> TodoDelete(1) -> TodoInit -> TodoDeleted(request=2301, todo=1, success=true) -> TodoListLoaded(request=201, fixture=0)` overwrites a newer Todo mutation.
+4. `SwitchApp(note) -> NoteInit -> NoteSelect(1) -> NoteListLoaded(request=301, fixture=1)` leaves a selected ID whose note is absent.
+
+Common entity-ID uniqueness, pending request identity, and rendered active-app properties pass. Remaining Isomorphic frontends are recorded in the closed issue checklist for later expansion.

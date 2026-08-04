@@ -143,3 +143,13 @@ The Apache License 2.0 text is included in each vendor package. The adapter limi
 - Adapter: `src/vendor/circular_state/circular_state.mbt`
 
 The pinned revision has no standalone LICENSE file. No upstream source is included in Proped Rabbita. The adapter is a clean-room finite behavioral model; exact source hashes, the temporary pinned-source verification, and the modeled boundary are recorded in `src/vendor/circular_state/UPSTREAM.md`.
+
+## Isomorphic suite behavioral reference
+
+- Project: `moonbit-community/isomorphic`
+- Revision: `590ac1c4de71050419cc6643942e0d1f181301aa`
+- Covered paths: `kanban/frontend/app`, `todoapp/frontend/app`, and `noteapp/frontend/app`
+- Module-declared license: Apache-2.0 in each application's `moon.mod.json`
+- Adapter: `src/vendor/isomorphic_suite/isomorphic_suite.mbt`
+
+The pinned repository has no standalone LICENSE file. No upstream source is included in Proped Rabbita. The adapter is a clean-room finite behavioral model; exact source and module-metadata hashes, modeled response boundaries, and the remaining application checklist are recorded in `src/vendor/isomorphic_suite/UPSTREAM.md` and the closed exploration issue.

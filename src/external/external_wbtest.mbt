@@ -168,3 +168,20 @@ test "Circular state manifest and handoff preserve dangling-modal evidence" {
   ])
   assert_eq(handoff.visibility, @disclosure.PublicBug)
 }
+
+///|
+test "Isomorphic suite manifest and handoff cover three applications" {
+  let manifest = isomorphic_suite_manifest()
+  assert_eq(validate_manifest(manifest), [])
+  assert_eq(manifest.strategy, EffectModel)
+  assert_eq(manifest.packages.length(), 3)
+  assert_true(manifest.properties.contains("selected note remains present"))
+  let handoff = isomorphic_suite_handoff()
+  assert_eq(handoff.minimal_trace, [
+    "KanbanInit", "KanbanDeleteCard(1)", "KanbanBoardLoaded(request=101, fixture=0)",
+  ])
+  assert_eq(handoff.action_ids, [
+    "kanban-init", "kanban-delete:1", "kanban-board:101:0",
+  ])
+  assert_eq(handoff.visibility, @disclosure.PublicBug)
+}

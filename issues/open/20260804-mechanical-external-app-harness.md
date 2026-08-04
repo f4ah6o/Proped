@@ -181,7 +181,7 @@ external/
 - `EffectDescriptor`、adapter classification、bounded response permutation、generic monotonic property、effect ID uniqueness propertyを共通package化した。
 - `justjavac/proton-demo` をdogfoodし、generic monotonic propertyで `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` を再発見・縮約した。
 - `shiguri-01/ensenzu` をeffect-modelとしてdogfoodし、全19 fieldの有限corpusから `Change(Frequency, "Infinity")` を1 actionへ縮約した。
-- `external run all` はpure、subscription-model、effect-modelの7 targetを同一CLI契約で実行する。
+- `external run all` はpure、subscription-model、effect-modelの8 targetを同一CLI契約で実行する。
 
 - `CAIMEOX/signal_reader` をclean-room effect-modelとしてdogfoodし、feed、search、savedの3種類のstale responseを再現した。
 - `moonbitlang/editor` file treeをeffect-modelとしてdogfoodし、named private model/method検出、2 fixture、resolve permutationから2種類のraceを再現した。

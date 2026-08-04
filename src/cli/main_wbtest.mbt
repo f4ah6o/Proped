@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.11.0"))
+  assert_true(schema.contains("0.12.0"))
 }
 
 ///|
@@ -196,7 +196,8 @@ test "external list exposes all pinned applications" {
   assert_true(json.contains("moonbit-editor-file-tree"))
   assert_true(json.contains("canopy-components"))
   assert_true(json.contains("incr-typed-spreadsheet"))
-  assert_true(json.contains("incr-typed-spreadsheet"))
+  assert_true(json.contains("circular-state"))
+  assert_true(json.contains("isomorphic-suite"))
 }
 
 ///|
@@ -269,6 +270,26 @@ test "Circular inspection and handoff expose dangling task modal" {
   let spec = handoff_spec("circular-state").unwrap()
   assert_eq(spec.action_ids, [
     "select-task:5:TSK-1", "workspace-mutated:TaskQuickMutation:1:1",
+  ])
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "Isomorphic suite inspection and handoff cover three apps" {
+  let json = isomorphic_suite_external_inspection_json()
+  assert_true(json.contains("moonbit-community/isomorphic"))
+  assert_true(json.contains("\"strategy\":\"effect-model\""))
+  assert_true(json.contains("kanban cards reference existing columns"))
+  assert_true(
+    json.contains("stale todo list responses preserve newer todo mutations"),
+  )
+  assert_true(json.contains("selected note remains present"))
+  let spec = handoff_spec("isomorphic-suite").unwrap()
+  assert_eq(spec.minimal_trace, [
+    "KanbanInit", "KanbanDeleteCard(1)", "KanbanBoardLoaded(request=101, fixture=0)",
+  ])
+  assert_eq(spec.action_ids, [
+    "kanban-init", "kanban-delete:1", "kanban-board:101:0",
   ])
   assert_eq(spec.visibility, @disclosure.PublicBug)
 }

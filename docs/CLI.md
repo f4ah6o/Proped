@@ -75,6 +75,7 @@ moon run src/cli -- external inspect moonbit-editor-file-tree --json
 moon run src/cli -- external inspect canopy-components --json
 moon run src/cli -- external inspect incr-typed-spreadsheet --json
 moon run src/cli -- external inspect circular-state --json
+moon run src/cli -- external inspect isomorphic-suite --json
 ```
 
 Returns manifest entry points, source SHA-256, effect policy, enabled properties, and the explicit `read-only` upstream write policy.
@@ -99,6 +100,7 @@ moon run src/cli -- external run moonbit-editor-file-tree --json
 moon run src/cli -- external run canopy-components --json
 moon run src/cli -- external run incr-typed-spreadsheet --json
 moon run src/cli -- external run circular-state --json
+moon run src/cli -- external run isomorphic-suite --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -113,8 +115,9 @@ Runs deterministic external adapters under `<output>/external/<id>/`. Native, ne
 | `canopy-components` | `positive resize nudges do not decrease width` | `ResizeNudge(dw=2147483647, dh=0)` |
 | `incr-typed-spreadsheet` | `positive formula addition does not wrap backward` | `UpdateDraft(A1, "2147483647") -> ApplySelected` |
 | `circular-state` | `task modals retain an existing selected task` | `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)` |
+| `isomorphic-suite` | `kanban cards reference existing columns` | `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)` |
 
-Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response. MoonBit Editor also retains a minimized late-success trace where a directory manually collapsed after auto-reveal started becomes expanded again. Canopy menu focus and tabs selection properties pass; the disabled-entry property is not applicable because those pinned APIs do not model disabled entries. The incr target also records formula recomputation/changed/unchanged traces and confirms Eq versus no-backdate downstream counts. Circular verifies task-modal and selection referential integrity after workspace synchronization.
+Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response. MoonBit Editor also retains a minimized late-success trace where a directory manually collapsed after auto-reveal started becomes expanded again. Canopy menu focus and tabs selection properties pass; the disabled-entry property is not applicable because those pinned APIs do not model disabled entries. The incr target also records formula recomputation/changed/unchanged traces and confirms Eq versus no-backdate downstream counts. Circular verifies task-modal and selection referential integrity after workspace synchronization. Isomorphic suite retains a missing-column Kanban move, stale Kanban/Todo list responses, and a dangling Note selection.
 
 ### `external handoff <id|all>`
 
@@ -124,6 +127,7 @@ moon run src/cli -- external handoff moonbit-editor-file-tree --output artifacts
 moon run src/cli -- external handoff canopy-components --output artifacts --json
 moon run src/cli -- external handoff incr-typed-spreadsheet --output artifacts --json
 moon run src/cli -- external handoff circular-state --output artifacts --json
+moon run src/cli -- external handoff isomorphic-suite --output artifacts --json
 ```
 
 Writes local `issue.md`, `reproduction.md`, `fix-plan.md`, `pr-body.md`, and `machine.json` drafts under `<output>/handoff/<id>/`. The metadata fixes `upstreamWritePerformed` to `false`; the command never calls GitHub or an upstream API.

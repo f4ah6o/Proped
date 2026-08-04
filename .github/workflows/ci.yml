@@ -56,6 +56,7 @@ jobs:
           moon run src/cli -- external inspect canopy-components --json > /tmp/proped-rabbita-canopy-inspection.json
           moon run src/cli -- external inspect incr-typed-spreadsheet --json > /tmp/proped-rabbita-incr-inspection.json
           moon run src/cli -- external inspect circular-state --json > /tmp/proped-rabbita-circular-inspection.json
+          moon run src/cli -- external inspect isomorphic-suite --json > /tmp/proped-rabbita-isomorphic-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -72,6 +73,7 @@ jobs:
           canopy_inspection = json.loads(Path('/tmp/proped-rabbita-canopy-inspection.json').read_text())
           incr_inspection = json.loads(Path('/tmp/proped-rabbita-incr-inspection.json').read_text())
           circular_inspection = json.loads(Path('/tmp/proped-rabbita-circular-inspection.json').read_text())
+          isomorphic_inspection = json.loads(Path('/tmp/proped-rabbita-isomorphic-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -90,9 +92,10 @@ jobs:
               'canopy-components',
               'incr-typed-spreadsheet',
               'circular-state',
+              'isomorphic-suite',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.11.0'
+          assert schema['version'] == '0.12.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -186,6 +189,16 @@ jobs:
               'WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)'
           )
           assert circular_app['upstreamWritePolicy'] == 'read-only'
+          isomorphic_app = isomorphic_inspection['application']
+          assert isomorphic_app['id'] == 'isomorphic-suite'
+          assert isomorphic_app['strategy'] == 'effect-model'
+          assert isomorphic_app['effectPolicy'] == 'record-and-inject'
+          assert isomorphic_app['findingVisibility'] == 'public-bug'
+          assert isomorphic_app['expectedFailure'] == (
+              'KanbanSelectCardToMove(1) -> '
+              'KanbanMoveCardTo(column=99, index=0)'
+          )
+          assert isomorphic_app['upstreamWritePolicy'] == 'read-only'
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -338,6 +351,55 @@ jobs:
               'workspace-mutated:TaskQuickMutation:1:1',
           ]
 
+          isomorphic = external_runs['isomorphic-suite']
+          assert isomorphic['expectationMet'] is True
+          assert isomorphic['states'] == 1400
+          assert isomorphic['transitions'] == 2288
+          assert isomorphic['failures'] == 4
+          assert isomorphic['diagnostics'] == 0
+          assert isomorphic['firstFailure']['property'] == (
+              'kanban cards reference existing columns'
+          )
+          assert isomorphic['firstFailure']['trace'] == [
+              'KanbanSelectCardToMove(1)',
+              'KanbanMoveCardTo(column=99, index=0)',
+          ]
+          assert isomorphic['firstFailure']['actionIds'] == [
+              'kanban-select-move:1',
+              'kanban-move:99:0',
+          ]
+          isomorphic_atlas = json.loads(
+              (Path(isomorphic['output']) / 'atlas.json').read_text()
+          )
+          isomorphic_failures = {
+              failure['property']: failure['trace']
+              for failure in isomorphic_atlas['failures']
+          }
+          assert isomorphic_failures == {
+              'kanban cards reference existing columns': [
+                  'KanbanSelectCardToMove(1)',
+                  'KanbanMoveCardTo(column=99, index=0)',
+              ],
+              'stale kanban board responses preserve newer board intent': [
+                  'KanbanInit',
+                  'KanbanDeleteCard(1)',
+                  'KanbanBoardLoaded(request=101, fixture=0)',
+              ],
+              'selected note remains present': [
+                  'SwitchApp(note)',
+                  'NoteInit',
+                  'NoteSelect(1)',
+                  'NoteListLoaded(request=301, fixture=1)',
+              ],
+              'stale todo list responses preserve newer todo mutations': [
+                  'SwitchApp(todo)',
+                  'TodoDelete(1)',
+                  'TodoInit',
+                  'TodoDeleted(request=2301, todo=1, success=true)',
+                  'TodoListLoaded(request=201, fixture=0)',
+              ],
+          }
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -408,4 +470,11 @@ jobs:
               'dafc8ae49184ffa6793d6a301d62429a8d4446f5bb7669c323e32165bce01e35'
           )
           assert not Path('src/vendor/circular_state/upstream').exists()
+          isomorphic_manifest = json.loads(
+              Path('external/manifests/isomorphic-suite.json').read_text()
+          )
+          assert isomorphic_manifest['sourceSha256'] == (
+              'feb28cfc1d26aeecff44fdbe6b12335dbfe0ac0cc534a3b6018ca8686d1f8bed'
+          )
+          assert not Path('src/vendor/isomorphic_suite/upstream').exists()
           PY

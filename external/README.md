@@ -21,6 +21,7 @@ responses.
 | `canopy-components` | `pure` | positive maximum resize nudge wraps to minimum width |
 | `incr-typed-spreadsheet` | `pure` | typed formula addition wraps across Int32 boundary |
 | `circular-state` | `effect-model` | task modal survives removal of its selected task |
+| `isomorphic-suite` | `effect-model` | missing Kanban column plus stale Kanban/Todo/Note list state |
 
 All tracked manifests are `public-bug`. Security-sensitive manifests and evidence must stay below `.private/disclosures/` and are rejected by `scripts/check_public_disclosure.py` if tracked.
 

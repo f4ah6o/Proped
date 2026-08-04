@@ -35,7 +35,7 @@ moon run src/cli -- external list --json
 moon run src/cli -- external run all --json
 ```
 
-The campaign includes seven targets. `circular-state` explores 580 states and 2,456 transitions and minimizes a dangling task modal to `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)`. Outputs are written under `demo/out/external/<id>/`.
+The campaign includes eight targets. `isomorphic-suite` explores Kanban, Todo, and Note in one matrix, reaches 1,400 states and 2,288 transitions, and retains four failures. Its primary trace is `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)`. Outputs are written under `demo/out/external/<id>/`.
 
 Generate local issue and PR drafts without contacting upstream:
 
@@ -45,4 +45,5 @@ moon run src/cli -- external handoff moonbit-editor-file-tree --json
 moon run src/cli -- external handoff canopy-components --json
 moon run src/cli -- external handoff incr-typed-spreadsheet --json
 moon run src/cli -- external handoff circular-state --json
+moon run src/cli -- external handoff isomorphic-suite --json
 ```

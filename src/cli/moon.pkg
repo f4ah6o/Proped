@@ -15,6 +15,7 @@ import {
   "f4ah6o/proped-rabbita/vendor/canopy_components",
   "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet" @incr_sheet,
   "f4ah6o/proped-rabbita/vendor/circular_state",
+  "f4ah6o/proped-rabbita/vendor/isomorphic_suite",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/env",

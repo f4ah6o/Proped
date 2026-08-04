@@ -1,5 +1,23 @@
 # Changes
 
+## 0.12.0 - 2026-08-05
+
+### Added
+
+- Added `isomorphic-suite` as the eighth external target, running the Kanban, Todo, and Note frontends through one shared finite matrix harness.
+- Added stable per-application request identities, common CRUD properties, and app-specific stale-load and referential-integrity properties.
+- Added a clean-room behavioral adapter with SHA-256 provenance for the three Apache-2.0-declared applications at revision `590ac1c4de71050419cc6643942e0d1f181301aa`.
+
+### Fixed
+
+- Found that Kanban direct dispatch can move a card to a nonexistent column; minimized to `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)`.
+- Found that late Kanban and Todo list responses can overwrite newer mutations, and that Note list replacement can leave a missing selected note ID.
+
+### Changed
+
+- Expanded the external campaign to eight deterministic targets and bumped the package and CLI version to `0.12.0`.
+- Recorded the remaining Isomorphic frontends as a follow-on checklist instead of approximating all twelve applications in the initial adapter.
+
 ## 0.11.0 - 2026-08-05
 
 ### Added

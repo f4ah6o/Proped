@@ -44,7 +44,7 @@ Vendored source, revision, hashes, license, adapter changes, and failure rationa
 
 External targets are pinned by manifests under `external/manifests/`. `external inspect-source` mechanically detects common `Model`, `Msg`, `update`, `view`, command, and subscription boundaries in a local source file. Effects are recorded as deterministic descriptors rather than executing upstream network or native operations.
 
-The external campaign currently includes seven targets, adding `circular-state` to the existing six. Circular explores 580 states and 2,456 transitions and minimizes a task-modal referential-integrity failure to `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)`. Its adapter is clean-room because the pinned module declares Apache-2.0 but has no standalone license file.
+The external campaign currently includes eight targets. `isomorphic-suite` runs Kanban, Todo, and Note through one shared harness, explores 1,400 states and 2,288 transitions, and retains four failures. Its primary trace is `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)`; the same run also captures stale Kanban/Todo list replacement and a dangling Note selection. The adapter is clean-room because each application declares Apache-2.0 but the pinned repository has no standalone license file.
 
 Upstream repositories are read-only inputs: this project does not create issues, pull requests, comments, or commits in them. `external handoff <id>` generates local issue, reproduction, fix-plan, and PR-body drafts only. Security-sensitive findings are blocked from public export and isolated below ignored `.private/disclosures/`; see [docs/DISCLOSURE.md](docs/DISCLOSURE.md).
 
@@ -121,6 +121,7 @@ src/
   vendor/canopy_components/         resizable, menu, and tabs finite adapter
   vendor/incr_typed_spreadsheet/     worksheet UI and backdating adapter
   vendor/incr_typed_spreadsheet_core/ pinned worksheet implementation
+  vendor/isomorphic_suite/           Kanban, Todo, and Note matrix adapter
   vendor/circular_state/              clean-room workspace/modal adapter
   core.mbt                          exploration, shrinking, minimal failure retention
   rabbita_adapter.mbt               browserless Rabbita rendering

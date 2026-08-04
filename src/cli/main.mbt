@@ -70,7 +70,7 @@ fn parse_args(raw : Array[String]) -> CliArgs {
 
 ///|
 fn print_help() -> Unit {
-  println("Proped Rabbita CLI 0.11.0")
+  println("Proped Rabbita CLI 0.12.0")
   println("")
   println("Usage:")
   println("  moon run src/cli -- <command> [arguments] [--json] [--output DIR]")
@@ -121,6 +121,9 @@ fn print_help() -> Unit {
   println("  canopy-components         Canopy resizable overflow failure")
   println("  incr-typed-spreadsheet    incr formula overflow and backdating")
   println("  circular-state            Circular dangling task modal failure")
+  println(
+    "  isomorphic-suite          Kanban, Todo, and Note stale-load failures",
+  )
   println("")
   println(
     "Exit codes: 0 expectation met, 2 usage error, 3 expectation mismatch",
@@ -130,7 +133,7 @@ fn print_help() -> Unit {
 ///|
 fn schema_json() -> String {
   (
-    #|{"name":"proped-rabbita","version":"0.11.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","handoff","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["issue.md","reproduction.md","fix-plan.md","pr-body.md","machine.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo","ensenzu-app","signal-reader","moonbit-editor-file-tree","canopy-components","incr-typed-spreadsheet","circular-state"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
+    #|{"name":"proped-rabbita","version":"0.12.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","handoff","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["issue.md","reproduction.md","fix-plan.md","pr-body.md","machine.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo","ensenzu-app","signal-reader","moonbit-editor-file-tree","canopy-components","incr-typed-spreadsheet","circular-state","isomorphic-suite"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
   )
 }
 
@@ -144,7 +147,7 @@ fn demo_list_json() -> String {
 ///|
 fn external_list_json() -> String {
   (
-    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"},{"id":"ensenzu-app","repository":"shiguri-01/ensenzu","revision":"f1fbec776a393e7023c8fa8324ea26c0774752e5","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Ensenzu numeric forms, SVG calculation, reset, and non-finite input exploration"},{"id":"signal-reader","repository":"CAIMEOX/signal_reader","revision":"e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a","license":"MIT","strategy":"effect-model","expectedOutcome":"failure","description":"Signal Reader stale feed, search, and saved-state response exploration"},{"id":"moonbit-editor-file-tree","repository":"moonbitlang/editor","revision":"001c9db52bcdc543c2bec8689b70e97941cecc18","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"MoonBit Editor overlapping file-tree resolve and auto-reveal exploration"},{"id":"canopy-components","repository":"dowdiness/canopy","revision":"cb41945b04801084e8abe1d8edc27eb0cdce4a1c","license":"Apache-2.0","strategy":"pure","expectedOutcome":"failure","description":"Canopy resizable, menu, and tabs direct-dispatch exploration"},{"id":"incr-typed-spreadsheet","repository":"dowdiness/incr","revision":"afc715b261d99f35245f1a14a2390ae8ad86d7d0","license":"Apache-2.0","strategy":"pure","expectedOutcome":"failure","description":"Typed spreadsheet formula overflow, trace, and Eq/no-backdate exploration"},{"id":"circular-state","repository":"CAIMEOX/circular","revision":"bf8549a9c13505f3dc5632347acfffbba864c406","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Circular workspace synchronization and task-modal referential-integrity exploration"}]}
+    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"},{"id":"ensenzu-app","repository":"shiguri-01/ensenzu","revision":"f1fbec776a393e7023c8fa8324ea26c0774752e5","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Ensenzu numeric forms, SVG calculation, reset, and non-finite input exploration"},{"id":"signal-reader","repository":"CAIMEOX/signal_reader","revision":"e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a","license":"MIT","strategy":"effect-model","expectedOutcome":"failure","description":"Signal Reader stale feed, search, and saved-state response exploration"},{"id":"moonbit-editor-file-tree","repository":"moonbitlang/editor","revision":"001c9db52bcdc543c2bec8689b70e97941cecc18","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"MoonBit Editor overlapping file-tree resolve and auto-reveal exploration"},{"id":"canopy-components","repository":"dowdiness/canopy","revision":"cb41945b04801084e8abe1d8edc27eb0cdce4a1c","license":"Apache-2.0","strategy":"pure","expectedOutcome":"failure","description":"Canopy resizable, menu, and tabs direct-dispatch exploration"},{"id":"incr-typed-spreadsheet","repository":"dowdiness/incr","revision":"afc715b261d99f35245f1a14a2390ae8ad86d7d0","license":"Apache-2.0","strategy":"pure","expectedOutcome":"failure","description":"Typed spreadsheet formula overflow, trace, and Eq/no-backdate exploration"},{"id":"circular-state","repository":"CAIMEOX/circular","revision":"bf8549a9c13505f3dc5632347acfffbba864c406","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Circular workspace synchronization and task-modal referential-integrity exploration"},{"id":"isomorphic-suite","repository":"moonbit-community/isomorphic","revision":"590ac1c4de71050419cc6643942e0d1f181301aa","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Kanban, Todo, and Note shared stale-load and referential-integrity exploration"}]}
   )
 }
 
@@ -266,6 +269,16 @@ fn circular_state_external_inspection_json() -> String {
 }
 
 ///|
+fn isomorphic_suite_external_inspection_json() -> String {
+  external_inspection_json(
+    @external.isomorphic_suite_manifest(),
+    ["http-request"],
+    "bounded per-application response permutations",
+    "KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)",
+  )
+}
+
+///|
 fn print_external_inspection(
   manifest : @external.ExternalManifest,
   expected_failure : String,
@@ -334,6 +347,14 @@ fn print_circular_state_external_inspection() -> Unit {
   print_external_inspection(
     @external.circular_state_manifest(),
     "SelectTask(\"TSK-1\") -> WorkspaceMutated(TaskQuickMutation, tasks without TSK-1)",
+  )
+}
+
+///|
+fn print_isomorphic_suite_external_inspection() -> Unit {
+  print_external_inspection(
+    @external.isomorphic_suite_manifest(),
+    "KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)",
   )
 }
 
@@ -976,6 +997,22 @@ async fn run_circular_state(output_root : String) -> RunSummary {
 }
 
 ///|
+async fn run_isomorphic_suite(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @isomorphic_suite.machine(),
+    @isomorphic_suite.properties(),
+    @isomorphic_suite.default_config(),
+  )
+  finish_external_run(
+    @external.isomorphic_suite_manifest(),
+    output_root,
+    "kanban cards reference existing columns",
+    ["KanbanSelectCardToMove(1)", "KanbanMoveCardTo(column=99, index=0)"],
+    report,
+  )
+}
+
+///|
 fn summaries_json_for(
   command : String,
   summaries : Array[RunSummary],
@@ -1041,6 +1078,8 @@ fn handoff_spec(id : String) -> @disclosure.FindingHandoff? {
     Some(@external.incr_typed_spreadsheet_handoff())
   } else if id == "circular-state" {
     Some(@external.circular_state_handoff())
+  } else if id == "isomorphic-suite" {
+    Some(@external.isomorphic_suite_handoff())
   } else {
     None
   }
@@ -1127,9 +1166,9 @@ async fn main {
       return
     }
     if parsed.json {
-      println("{\"ok\":true,\"version\":\"0.11.0\"}")
+      println("{\"ok\":true,\"version\":\"0.12.0\"}")
     } else {
-      println("proped-rabbita 0.11.0")
+      println("proped-rabbita 0.12.0")
     }
     return
   }
@@ -1181,6 +1220,9 @@ async fn main {
         println(
           "circular-state\tCAIMEOX/circular\teffect-model\tfailure\tDangling task modal after workspace synchronization",
         )
+        println(
+          "isomorphic-suite\tmoonbit-community/isomorphic\teffect-model\tfailure\tKanban, Todo, and Note suite exploration",
+        )
       }
       return
     }
@@ -1219,6 +1261,9 @@ async fn main {
         )
         statuses.push(
           generate_handoff(parsed.output, @external.circular_state_handoff()),
+        )
+        statuses.push(
+          generate_handoff(parsed.output, @external.isomorphic_suite_handoff()),
         )
       } else {
         match handoff_spec(requested) {
@@ -1311,6 +1356,12 @@ async fn main {
         } else {
           print_circular_state_external_inspection()
         }
+      } else if inspect_id == "isomorphic-suite" {
+        if parsed.json {
+          println(isomorphic_suite_external_inspection_json())
+        } else {
+          print_isomorphic_suite_external_inspection()
+        }
       } else {
         usage_error("unknown external id: \{inspect_id}", parsed.json)
         return
@@ -1341,6 +1392,8 @@ async fn main {
       external_summaries.push(run_incr_typed_spreadsheet(external_root))
     } else if external_id == "circular-state" {
       external_summaries.push(run_circular_state(external_root))
+    } else if external_id == "isomorphic-suite" {
+      external_summaries.push(run_isomorphic_suite(external_root))
     } else if external_id == "all" {
       external_summaries.push(run_proton_todo(external_root))
       external_summaries.push(run_ensenzu(external_root))
@@ -1349,6 +1402,7 @@ async fn main {
       external_summaries.push(run_canopy_components(external_root))
       external_summaries.push(run_incr_typed_spreadsheet(external_root))
       external_summaries.push(run_circular_state(external_root))
+      external_summaries.push(run_isomorphic_suite(external_root))
     } else {
       usage_error("unknown external id: \{external_id}", parsed.json)
       return

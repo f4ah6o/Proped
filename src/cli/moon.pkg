@@ -14,7 +14,7 @@ import {
   "f4ah6o/proped-rabbita/vendor/moonbit_editor_file_tree" @editor_file_tree,
   "f4ah6o/proped-rabbita/vendor/canopy_components",
   "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet" @incr_sheet,
-  "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet" @incr_sheet,
+  "f4ah6o/proped-rabbita/vendor/circular_state",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/env",

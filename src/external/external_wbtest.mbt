@@ -149,3 +149,22 @@ test "incr typed spreadsheet manifest and handoff preserve overflow evidence" {
   assert_eq(handoff.action_ids, ["draft:A1:10:2147483647", "apply-selected"])
   assert_eq(handoff.visibility, @disclosure.PublicBug)
 }
+
+///|
+test "Circular state manifest and handoff preserve dangling-modal evidence" {
+  let manifest = circular_state_manifest()
+  assert_eq(validate_manifest(manifest), [])
+  assert_eq(manifest.strategy, EffectModel)
+  assert_eq(manifest.effect_policy, "record-and-inject")
+  assert_true(
+    manifest.properties.contains("task modals retain an existing selected task"),
+  )
+  let handoff = circular_state_handoff()
+  assert_eq(handoff.minimal_trace, [
+    "SelectTask(\"TSK-1\")", "WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)",
+  ])
+  assert_eq(handoff.action_ids, [
+    "select-task:5:TSK-1", "workspace-mutated:TaskQuickMutation:1:1",
+  ])
+  assert_eq(handoff.visibility, @disclosure.PublicBug)
+}

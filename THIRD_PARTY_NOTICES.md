@@ -133,3 +133,13 @@ The upstream Apache License 2.0 text is included at `src/vendor/canopy_component
 - Adapted source: `src/vendor/incr_typed_spreadsheet/incr_typed_spreadsheet.mbt`
 
 The Apache License 2.0 text is included in each vendor package. The adapter limits the UI to three cells, reconstructs isolated runtimes for deterministic branch exploration, and preserves the published incr equality/backdating behavior. Exact source hashes and adaptation boundaries are recorded in each `UPSTREAM.md`.
+
+## Circular behavioral reference
+
+- Project: `CAIMEOX/circular`
+- Revision: `bf8549a9c13505f3dc5632347acfffbba864c406`
+- Module-declared license: Apache-2.0
+- Relevant paths: `web/state/`, `web/updater/`, and `web/task/`
+- Adapter: `src/vendor/circular_state/circular_state.mbt`
+
+The pinned revision has no standalone LICENSE file. No upstream source is included in Proped Rabbita. The adapter is a clean-room finite behavioral model; exact source hashes, the temporary pinned-source verification, and the modeled boundary are recorded in `src/vendor/circular_state/UPSTREAM.md`.

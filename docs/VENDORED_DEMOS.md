@@ -18,6 +18,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `moonbit-editor-file-tree` | `moonbitlang/editor internal/shell` | 708 lines | failure | two finite workspaces and injected directory-resolve responses |
 | `canopy-components` | `dowdiness/canopy` component modules | 471 lines | failure | resizable, menu, and tabs pure finite state |
 | `incr-typed-spreadsheet` | `dowdiness/incr` typed spreadsheet | 2,349 preserved lines | failure | isolated runtime replay, worksheet traces, Eq/no-backdate probe |
+| `circular-state` | `CAIMEOX/circular web/updater` | clean-room | failure | workspace replacement, modal and selection integrity |
 
 ## Counter
 
@@ -138,3 +139,14 @@ With seeded formula `B1=A1+1`, setting A1 to the largest Int wraps B1 to a negat
 The run explores 900 states and 1,347 transitions with one retained failure and zero diagnostics. Parse failure preservation, delete propagation, changed-formula trace classification, stale inline blur, and rendered-state checks pass.
 
 A real runtime probe also fixes the intended backdating distinction for input 4→6, where parity remains even: Eq-backed middle/downstream counts are 2/1, while `derived_no_backdate` counts are 2/2. The no-backdate always-false comparator is intentional propagation semantics, not an invalid equality implementation.
+
+## Circular clean-room state adapter
+
+Circular is pinned at revision `bf8549a9c13505f3dc5632347acfffbba864c406`. Its `moon.mod` declares Apache-2.0, but the revision has no standalone LICENSE file, so Proped Rabbita does not copy upstream source. The adapter preserves the public state/message shape and selected private updater semantics in a finite clean-room model.
+
+A pinned-source wbtest opened `TaskModal` for `TSK-1` and then called `sync_workspace` with a task-free workspace. The updater cleared `selection.task_id` but preserved `TaskModal`. The external target minimizes the equivalent behavior to:
+
+1. `SelectTask("TSK-1")`
+2. `WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)`
+
+The run explores 580 states and 2,456 transitions with one retained failure and zero diagnostics. NoOp, route cleanup, task-menu integrity, effect identity, and rendered-state properties pass. The temporary upstream probe was removed after execution and no upstream write was performed.

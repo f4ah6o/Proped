@@ -1,0 +1,30 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "circular-state",
+  "repository": "CAIMEOX/circular",
+  "revision": "bf8549a9c13505f3dc5632347acfffbba864c406",
+  "license": "Apache-2.0",
+  "packages": [
+    "web/state",
+    "web/updater",
+    "web/task"
+  ],
+  "entryPoints": {
+    "model": "Model",
+    "message": "Msg",
+    "update": "update",
+    "view": "view"
+  },
+  "strategy": "effect-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "dafc8ae49184ffa6793d6a301d62429a8d4446f5bb7669c323e32165bce01e35",
+  "properties": [
+    "task modals retain an existing selected task",
+    "task menu references an existing task",
+    "NoOp preserves state",
+    "route changes close task surfaces",
+    "pending effect IDs remain unique",
+    "rendered modal and selection match model"
+  ],
+  "findingVisibility": "public-bug"
+}

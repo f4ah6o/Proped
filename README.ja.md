@@ -44,7 +44,7 @@ vendor source、revision、hash、license、adapter変更、failureの根拠は 
 
 外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。
 
-external campaignには6 target、`proton-demo-todo`、`ensenzu-app`、`signal-reader`、`moonbit-editor-file-tree`、`canopy-components`、`incr-typed-spreadsheet` が含まれます。incr targetは900 state・1,347 transitionを探索し、typed formula overflowを `UpdateDraft(A1, "2147483647") -> ApplySelected` へ縮約します。Eq-backedの同値出力はdownstream recomputeを省略し、`derived_no_backdate`は意図どおり伝播することも検証します。
+external campaignは7 targetになり、既存6件に`circular-state`を追加しました。Circularは580 state・2,456 transitionを探索し、task modalの参照整合性failureを `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)` へ縮約します。pinned moduleはApache-2.0を宣言しますがstandalone LICENSEがないため、adapterはclean-roomです。
 
 外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。`external handoff <id>`はissue、再現、fix plan、PR本文のローカル下書きだけを生成します。security-sensitive findingはpublic exportを拒否し、Gitでignoreされる `.private/disclosures/`へ隔離します。詳細は [docs/DISCLOSURE.ja.md](docs/DISCLOSURE.ja.md) を参照してください。
 
@@ -121,6 +121,7 @@ src/
   vendor/canopy_components/         resizable・menu・tabs finite adapter
   vendor/incr_typed_spreadsheet/     worksheet UI・backdating adapter
   vendor/incr_typed_spreadsheet_core/ pinned worksheet実装
+  vendor/circular_state/              clean-room workspace・modal adapter
   core.mbt                          探索、shrink、最小failure保持
   rabbita_adapter.mbt               browserless Rabbita rendering
   atlas*.mbt                        report exporter

@@ -631,3 +631,66 @@ pub fn incr_typed_spreadsheet_handoff() -> @disclosure.FindingHandoff {
     visibility: @disclosure.PublicBug,
   }
 }
+
+///|
+pub fn circular_state_manifest() -> ExternalManifest {
+  {
+    id: "circular-state",
+    repository: "CAIMEOX/circular",
+    revision: "bf8549a9c13505f3dc5632347acfffbba864c406",
+    license: "Apache-2.0",
+    packages: ["web/state", "web/updater", "web/task"],
+    model_entry: "Model",
+    message_entry: "Msg",
+    update_entry: "update",
+    view_entry: "view",
+    strategy: EffectModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "dafc8ae49184ffa6793d6a301d62429a8d4446f5bb7669c323e32165bce01e35",
+    properties: [
+      "task modals retain an existing selected task", "task menu references an existing task",
+      "NoOp preserves state", "route changes close task surfaces", "pending effect IDs remain unique",
+      "rendered modal and selection match model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn circular_state_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "circular-state",
+    repository: "CAIMEOX/circular",
+    revision: "bf8549a9c13505f3dc5632347acfffbba864c406",
+    title: "Close task modals when workspace synchronization removes the selected task",
+    summary: "Workspace synchronization filters selection.task_id against the returned task list but preserves the current modal before TaskQuickMutation cleanup. A task editor or completion modal can therefore remain open with no selected task.",
+    impact: "The modal UI remains active after its backing task disappears, while task-detail selectors and submit handlers no longer have a task ID. This creates an internally inconsistent surface and can expose blank controls or no-op submissions until the user closes it.",
+    expected: "When synchronization removes the task referenced by TaskModal or TaskCompleteModal, the modal closes or transitions to an explicit missing-task state.",
+    actual: "After SelectTask(\"TSK-1\"), a successful TaskQuickMutation workspace response without TSK-1 clears selection.task_id but leaves TaskModal open.",
+    property: "task modals retain an existing selected task",
+    minimal_trace: [
+      "SelectTask(\"TSK-1\")", "WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)",
+    ],
+    action_ids: [
+      "select-task:5:TSK-1", "workspace-mutated:TaskQuickMutation:1:1",
+    ],
+    evidence: [
+      "A temporary test executed the pinned private open_task_editor and sync_workspace functions and observed modal=TaskModal with selection.task_id=None.",
+      "The clean-room adapter explores 580 states and 2,456 transitions with one retained failure and zero diagnostics.",
+      "NoOp preservation, route cleanup, task-menu referential integrity, effect identity, and rendered-state properties pass.",
+      "No upstream source is copied because the revision declares Apache-2.0 in moon.mod but has no standalone LICENSE file.",
+    ],
+    suggested_fix: [
+      "After sync_workspace filters task selection, close TaskModal and TaskCompleteModal when selection.task_id becomes None.",
+      "Alternatively preserve the removed task as explicit modal data and render a missing/deleted state that cannot submit mutations.",
+      "Keep modal cleanup centralized with referential-integrity cleanup for task, inbox, project, and plan selections.",
+    ],
+    verification: [
+      "Open TaskModal for a task, synchronize a workspace without that task, and confirm the modal closes.",
+      "Repeat with TaskCompleteModal and with TaskQuickMutation and unrelated mutation kinds.",
+      "Confirm synchronization that still contains the selected task preserves the modal and draft.",
+      "Confirm route changes, Escape, explicit CloseModal, and task-menu cleanup remain unchanged.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}

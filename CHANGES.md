@@ -1,5 +1,22 @@
 # Changes
 
+## 0.11.0 - 2026-08-05
+
+### Added
+
+- Added `circular-state` as the seventh external target with a clean-room finite adapter for task selection, task modals, task menus, routes, workspace synchronization, and deterministic mutation descriptors.
+- Added pinned-source behavioral verification for Circular's private `open_task_editor` and `sync_workspace` functions without copying upstream source or writing to the upstream repository.
+
+### Fixed
+
+- Found that workspace synchronization can clear `selection.task_id` while leaving `TaskModal` open; minimized to `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)`.
+- Removed duplicate incr CLI import/help/list entries left by the previous target integration.
+
+### Changed
+
+- Expanded the external campaign to seven deterministic targets and bumped the package and CLI version to `0.11.0`.
+- Documented Circular as a clean-room adapter because the pinned module declares Apache-2.0 but has no standalone LICENSE file.
+
 ## 0.10.0 - 2026-08-05
 
 ### Added

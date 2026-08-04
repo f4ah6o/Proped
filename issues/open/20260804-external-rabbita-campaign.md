@@ -22,7 +22,7 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 - [x] `shiguri-01/ensenzu`
 - [x] `CAIMEOX/signal_reader`
 - [x] `moonbitlang/editor` file tree
-- [ ] `CAIMEOX/circular`
+- [x] `CAIMEOX/circular`
 - [ ] `moonbit-community/isomorphic` application suite
 
 ### Tier 2: command/subscription/browser boundaryをmockすれば探索可能
@@ -105,10 +105,11 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 ## 2026-08-05 進捗
 
-- Proton Todo、Ensenzu、Signal Reader、MoonBit Editor file tree、Canopy components、incr typed spreadsheetの6 targetを`external run all`へ登録した。
+- Proton Todo、Ensenzu、Signal Reader、MoonBit Editor file tree、Canopy components、incr typed spreadsheet、Circular stateの7 targetを`external run all`へ登録した。
 - MoonBit Editorでは1,600 state・2,646 transitionを探索し、unrelated resolve failureによるauto-reveal中断と、late successによるmanual collapseの再展開を最小3 actionへ縮約した。
 - Canopyではresizable、menu、tabsをpure adapterへ統合し、720 state・2,618 transitionからInt32 overflowによる正方向nudge反転を`ResizeNudge(dw=2147483647, dh=0)`へ縮約した。
 - incr typed spreadsheetでは900 state・1,347 transitionを探索し、`A1=2147483647`と`B1=A1+1`のoverflowを2 actionへ縮約した。Eq-backedとno-backdateのdownstream recompute差も実runtimeで固定した。
+- Circularでは580 state・2,456 transitionを探索し、workspace同期でselected taskが消えた後も`TaskModal`が残るreferential-integrity failureを2 actionへ縮約した。
 - named private modelと`Type::update` / `Type::view`を`inspect-source`で認識できるようdetectorを拡張した。
 - 全external repositoryはread-only inputとして扱い、相手側へ書き込みを行っていない。
 

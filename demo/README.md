@@ -35,7 +35,7 @@ moon run src/cli -- external list --json
 moon run src/cli -- external run all --json
 ```
 
-The campaign includes six targets. `incr-typed-spreadsheet` uses the pinned worksheet and incr runtime, explores 900 states and 1,347 transitions, and minimizes formula overflow to `UpdateDraft(A1, "2147483647") -> ApplySelected`. Outputs are written under `demo/out/external/<id>/`.
+The campaign includes seven targets. `circular-state` explores 580 states and 2,456 transitions and minimizes a dangling task modal to `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)`. Outputs are written under `demo/out/external/<id>/`.
 
 Generate local issue and PR drafts without contacting upstream:
 
@@ -44,4 +44,5 @@ moon run src/cli -- external handoff signal-reader --json
 moon run src/cli -- external handoff moonbit-editor-file-tree --json
 moon run src/cli -- external handoff canopy-components --json
 moon run src/cli -- external handoff incr-typed-spreadsheet --json
+moon run src/cli -- external handoff circular-state --json
 ```

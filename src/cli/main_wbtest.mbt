@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.10.0"))
+  assert_true(schema.contains("0.11.0"))
 }
 
 ///|
@@ -256,5 +256,19 @@ test "incr spreadsheet inspection and handoff expose overflow evidence" {
   assert_true(json.contains("expectedFailure"))
   let spec = handoff_spec("incr-typed-spreadsheet").unwrap()
   assert_eq(spec.action_ids, ["draft:A1:10:2147483647", "apply-selected"])
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "Circular inspection and handoff expose dangling task modal" {
+  let json = circular_state_external_inspection_json()
+  assert_true(json.contains("CAIMEOX/circular"))
+  assert_true(json.contains("\"strategy\":\"effect-model\""))
+  assert_true(json.contains("task modals retain an existing selected task"))
+  assert_true(json.contains("WorkspaceMutated(kind=TaskQuickMutation"))
+  let spec = handoff_spec("circular-state").unwrap()
+  assert_eq(spec.action_ids, [
+    "select-task:5:TSK-1", "workspace-mutated:TaskQuickMutation:1:1",
+  ])
   assert_eq(spec.visibility, @disclosure.PublicBug)
 }

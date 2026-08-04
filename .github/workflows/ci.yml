@@ -55,6 +55,7 @@ jobs:
           moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json > /tmp/proped-rabbita-editor-inspection.json
           moon run src/cli -- external inspect canopy-components --json > /tmp/proped-rabbita-canopy-inspection.json
           moon run src/cli -- external inspect incr-typed-spreadsheet --json > /tmp/proped-rabbita-incr-inspection.json
+          moon run src/cli -- external inspect circular-state --json > /tmp/proped-rabbita-circular-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -70,6 +71,7 @@ jobs:
           editor_inspection = json.loads(Path('/tmp/proped-rabbita-editor-inspection.json').read_text())
           canopy_inspection = json.loads(Path('/tmp/proped-rabbita-canopy-inspection.json').read_text())
           incr_inspection = json.loads(Path('/tmp/proped-rabbita-incr-inspection.json').read_text())
+          circular_inspection = json.loads(Path('/tmp/proped-rabbita-circular-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -87,9 +89,10 @@ jobs:
               'moonbit-editor-file-tree',
               'canopy-components',
               'incr-typed-spreadsheet',
+              'circular-state',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.10.0'
+          assert schema['version'] == '0.11.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -173,6 +176,16 @@ jobs:
           assert 'Eq and no-backdate probes preserve declared semantics' in (
               incr_app['properties']
           )
+          circular_app = circular_inspection['application']
+          assert circular_app['id'] == 'circular-state'
+          assert circular_app['strategy'] == 'effect-model'
+          assert circular_app['effectPolicy'] == 'record-and-inject'
+          assert circular_app['findingVisibility'] == 'public-bug'
+          assert circular_app['expectedFailure'] == (
+              'SelectTask(\"TSK-1\") -> '
+              'WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)'
+          )
+          assert circular_app['upstreamWritePolicy'] == 'read-only'
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -307,6 +320,24 @@ jobs:
           )
           assert len(incr_atlas['failures']) == 1
 
+          circular = external_runs['circular-state']
+          assert circular['expectationMet'] is True
+          assert circular['states'] == 580
+          assert circular['transitions'] == 2456
+          assert circular['failures'] == 1
+          assert circular['diagnostics'] == 0
+          assert circular['firstFailure']['property'] == (
+              'task modals retain an existing selected task'
+          )
+          assert circular['firstFailure']['trace'] == [
+              'SelectTask(\"TSK-1\")',
+              'WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)',
+          ]
+          assert circular['firstFailure']['actionIds'] == [
+              'select-task:5:TSK-1',
+              'workspace-mutated:TaskQuickMutation:1:1',
+          ]
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -370,4 +401,11 @@ jobs:
           assert hashlib.sha256(incr_formula).hexdigest() == (
               '6b4c85f453e8bd0622e10f5c5b41025e0d4f9c8d9a246eb93f661365e3182391'
           )
+          circular_manifest = json.loads(
+              Path('external/manifests/circular-state.json').read_text()
+          )
+          assert circular_manifest['sourceSha256'] == (
+              'dafc8ae49184ffa6793d6a301d62429a8d4446f5bb7669c323e32165bce01e35'
+          )
+          assert not Path('src/vendor/circular_state/upstream').exists()
           PY

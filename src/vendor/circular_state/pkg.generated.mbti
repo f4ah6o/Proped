@@ -1,0 +1,96 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/circular_state"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "f4ah6o/proped-rabbita/external",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+// Errors
+
+// Types and methods
+pub(all) enum ActiveModal {
+  NoModal
+  TaskModal
+  TaskCompleteModal
+  ComposerModal
+  FocusModal
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Model {
+  workspace_revision : Int
+  tasks : Array[Task]
+  selection_task_id : String?
+  task_menu_task_id : String?
+  modal : ActiveModal
+  route : String
+  composer_title : String
+  evidence_text : String
+  pending_effects : Array[@external.EffectDescriptor]
+  next_effect_id : Int
+  error : String?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  NoOp
+  SelectTask(String)
+  OpenTaskCompletion(String)
+  ToggleTaskMenu(String)
+  CloseModal
+  EscapePressed
+  RouteChanged(String)
+  DraftChanged(String)
+  RequestTaskState(String, String)
+  WorkspaceMutated(MutationKind, WorkspaceSnapshot)
+  WorkspaceMutationFailed(MutationKind, String)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum MutationKind {
+  TaskQuickMutation
+  TaskDetailsMutation
+  CompleteMutation
+  ComposerMutation
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Task {
+  id : String
+  title : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct WorkspaceSnapshot {
+  revision : Int
+  tasks : Array[Task]
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

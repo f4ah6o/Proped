@@ -1,6 +1,6 @@
 # Vendored demo policy
 
-Proped Rabbita vendors upstream applications when preserving their source materially improves adapter testing, reproducibility, and demonstration value. Every vendor directory records the pinned revision, Apache-2.0 license, unmodified source, SHA-256 hashes, adaptation boundary, finite exploration constraints, and expected outcome.
+Proped Rabbita vendors upstream applications when preserving their source materially improves adapter testing, reproducibility, and demonstration value. Every vendor directory records the pinned revision, upstream license, unmodified source, SHA-256 hashes, adaptation boundary, finite exploration constraints, and expected outcome.
 
 All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b41211cbc4c357`.
 
@@ -13,6 +13,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `rabbita-sokoban` | `examples/sokoban` | 259 lines | failure | typed directions, array history, bounded branching |
 | `rabbita-subscriptions` | `examples/subscriptions` | 420 lines | failure | typed deterministic browser events plus one queued timer callback |
 | `rabbita-websocket` | `examples/websocket` | 956 lines | failure | deterministic command-client lifecycle and outcomes |
+| `proton-demo-todo` | `justjavac/proton-demo frontend/main` | 176 lines | failure | Proton effects recorded and snapshot responses injected |
 
 ## Counter
 
@@ -58,3 +59,12 @@ The pinned run reaches 800 states and 4,428 transitions across connection, send,
 ## Remaining examples
 
 `shiki_editor`, animation, SSR, and the full website remain browser/build-system candidates. Their useful properties depend on DOM selection, focus, scrolling, animation timing, asset generation, or server boundaries and should use explicit deterministic adapters rather than pretending those effects are pure state transitions.
+
+## Proton Todo
+
+The MIT-licensed Proton Todo frontend is pinned separately from the official Rabbita examples. Native invokes and subscription delivery are recorded as deterministic effect descriptors. The upstream `SnapshotReceived(snapshot)` update does not correlate a response or reject an older version, so property `snapshot version never decreases` shrinks to:
+
+1. `SnapshotReceived(version=1)`
+2. `SnapshotReceived(version=0)`
+
+The pinned run explores 320 states and 618 transitions with zero runner diagnostics. This proves acceptance by the update function under the modeled response ordering; it does not claim every transport delivers responses in that order.

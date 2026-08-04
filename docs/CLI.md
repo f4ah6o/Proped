@@ -55,6 +55,47 @@ Runs one or all demos. Each run produces a compact summary in stdout and writes 
 
 A demo declares `expectedOutcome` as either `pass` or `failure`. Expected-failure demos also declare an exact `expectedFailure` property and minimized trace. The command succeeds only when the observed counterexample matches that signature. This allows a regression fixture to prove that failure discovery and shrinking still work without accepting an unrelated failure or making the complete demo suite permanently red.
 
+## External application commands
+
+### `external list`
+
+```bash
+moon run src/cli -- external list --json
+```
+
+Lists reviewed external targets, their pinned repository and revision, adapter strategy, license, and expected outcome.
+
+### `external inspect <id>`
+
+```bash
+moon run src/cli -- external inspect proton-demo-todo --json
+```
+
+Returns manifest entry points, source SHA-256, effect policy, enabled properties, and the explicit `read-only` upstream write policy.
+
+### `external inspect-source <file>`
+
+```bash
+moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
+```
+
+Mechanically scans one local MoonBit source file for Rabbita imports, state constructors, `Model`, `Msg`, `update`, `view`, command, and subscription boundaries. The scanner classifies the file as `pure`, `effect-model`, `subscription-model`, `browser-replay`, or `unsupported`; reviewed manifest entries remain authoritative.
+
+### `external run <id|all>`
+
+```bash
+moon run src/cli -- external run proton-demo-todo --json
+moon run src/cli -- external run all --output artifacts --json
+```
+
+Runs deterministic external adapters under `<output>/external/<id>/`. Native, network, timer, and subscription effects are not executed by the adapter; they are recorded as descriptors so success, failure, stale, duplicate, and reordered responses can be injected.
+
+| External target | Property | Exact minimized trace |
+| --- | --- | --- |
+| `proton-demo-todo` | `snapshot version never decreases` | `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` |
+
+External repositories are read-only inputs. These commands do not create upstream issues, pull requests, comments, or commits.
+
 ## Expected-failure fixtures
 
 | Demo | Property | Exact minimized trace |

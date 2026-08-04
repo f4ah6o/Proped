@@ -62,3 +62,15 @@ The upstream license is included at `src/vendor/rabbita_subscriptions/LICENSE`.
 - Adapted source: `src/vendor/rabbita_websocket/websocket.mbt`
 
 The upstream license is included at `src/vendor/rabbita_websocket/LICENSE`.
+
+## Proton Todo frontend
+
+- Project: `justjavac/proton-demo`
+- Source path: `frontend/main/main.mbt` and `frontend/public/styles.css`
+- Revision: `5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d`
+- License: MIT
+- Preserved source: `src/vendor/proton_todo/upstream/main.mbt.txt`
+- Preserved stylesheet: `src/vendor/proton_todo/upstream/styles.css`
+- Adapted source: `src/vendor/proton_todo/proton_todo.mbt`
+
+The full MIT license is included at `src/vendor/proton_todo/LICENSE`. The adapter replaces Proton bridge execution with deterministic effect descriptors and preserves the uncorrelated snapshot update behavior for bounded response-order exploration.

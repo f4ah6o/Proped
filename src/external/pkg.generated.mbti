@@ -1,0 +1,96 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/external"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn effect_ids_unique(Array[EffectDescriptor]) -> Bool
+
+pub fn inspect_source(String) -> SourceInspection
+
+pub fn[Model, Msg] monotonic_int_property(String, (Model) -> Int, (Msg) -> Bool) -> @proped-rabbita.Property[Model, Msg]
+
+pub fn proton_todo_manifest() -> ExternalManifest
+
+pub fn response_orders(Array[EffectDescriptor]) -> Array[Array[Int]]
+
+pub fn[Model, Msg] unique_effect_ids_property(String, (Model) -> Array[EffectDescriptor]) -> @proped-rabbita.Property[Model, Msg]
+
+pub fn validate_manifest(ExternalManifest) -> Array[ManifestError]
+
+// Errors
+
+// Types and methods
+pub(all) enum AdapterStrategy {
+  Pure
+  EffectModel
+  SubscriptionModel
+  BrowserReplay
+  Unsupported
+} derive(Eq, @debug.Debug)
+pub fn AdapterStrategy::to_string(Self) -> String
+
+pub(all) struct EffectDescriptor {
+  id : Int
+  kind : EffectKind
+  operation : String
+  payload : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum EffectKind {
+  HttpRequest
+  TimerScheduled
+  SubscriptionInstalled
+  NativeInvoke
+  WebSocketCommand
+  DomCommand
+} derive(Eq, @debug.Debug)
+pub fn EffectKind::to_string(Self) -> String
+
+pub(all) struct ExternalManifest {
+  id : String
+  repository : String
+  revision : String
+  license : String
+  packages : Array[String]
+  model_entry : String
+  message_entry : String
+  update_entry : String
+  view_entry : String
+  strategy : AdapterStrategy
+  effect_policy : String
+  source_sha256 : String
+  properties : Array[String]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ManifestError {
+  MissingId
+  InvalidRepository(String)
+  InvalidRevision(String)
+  MissingLicense
+  MissingPackage
+  MissingSourceHash
+  MissingProperty
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SourceInspection {
+  has_rabbita_import : Bool
+  has_create_state : Bool
+  has_create_state_with_init : Bool
+  has_cell_with_dispatch : Bool
+  has_model : Bool
+  has_message : Bool
+  has_update : Bool
+  has_view : Bool
+  has_subscription : Bool
+  has_command : Bool
+  strategy : AdapterStrategy
+}
+
+// Type aliases
+
+// Traits
+

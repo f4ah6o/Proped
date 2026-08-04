@@ -25,3 +25,14 @@ Use another artifact root with:
 ```bash
 moon run src/cli -- demo run all --output artifacts --json
 ```
+
+## External application campaign
+
+External applications use a separate namespace and output root:
+
+```bash
+moon run src/cli -- external list --json
+moon run src/cli -- external run all --json
+```
+
+The first target is `proton-demo-todo`, with expected failure `snapshot version never decreases` and minimized trace `SnapshotReceived(version=1) -> SnapshotReceived(version=0)`. Outputs are written under `demo/out/external/<id>/`.

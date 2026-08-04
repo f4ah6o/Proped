@@ -70,7 +70,7 @@ fn parse_args(raw : Array[String]) -> CliArgs {
 
 ///|
 fn print_help() -> Unit {
-  println("Proped Rabbita CLI 0.4.0")
+  println("Proped Rabbita CLI 0.5.0")
   println("")
   println("Usage:")
   println("  moon run src/cli -- <command> [arguments] [--json] [--output DIR]")
@@ -87,6 +87,14 @@ fn print_help() -> Unit {
   println(
     "  demo run <id|all>          Generate HTML, SVG, JSON, DOT, and summary artifacts",
   )
+  println("  external list              List pinned external applications")
+  println(
+    "  external inspect <id>      Show manifest and adapter classification",
+  )
+  println(
+    "  external inspect-source <file>  Detect Rabbita boundaries in a local source file",
+  )
+  println("  external run <id|all>      Explore pinned external applications")
   println("")
   println("Demo IDs:")
   println("  newsletter                 Passing newsletter form example")
@@ -100,6 +108,9 @@ fn print_help() -> Unit {
   println("  rabbita-subscriptions      Vendored stale timer failure")
   println("  rabbita-websocket          Vendored duplicate disconnect failure")
   println("")
+  println("External IDs:")
+  println("  proton-demo-todo           Proton snapshot-order failure")
+  println("")
   println(
     "Exit codes: 0 expectation met, 2 usage error, 3 expectation mismatch",
   )
@@ -108,7 +119,7 @@ fn print_help() -> Unit {
 ///|
 fn schema_json() -> String {
   (
-    #|{"name":"proped-rabbita","version":"0.4.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
+    #|{"name":"proped-rabbita","version":"0.5.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
   )
 }
 
@@ -117,6 +128,119 @@ fn demo_list_json() -> String {
   (
     #|{"ok":true,"command":"demo list","demos":[{"id":"newsletter","origin":"project","expectedOutcome":"pass","description":"Newsletter form with validation, consent, submit, and reset states"},{"id":"rabbita-counter","origin":"vendored","expectedOutcome":"pass","description":"Rabbita official counter adapted for finite deterministic exploration","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"},{"id":"rabbita-todo","origin":"vendored","expectedOutcome":"failure","description":"Rabbita official TODO blank-title failure and minimal shrinking","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"},{"id":"rabbita-sokoban","origin":"vendored","expectedOutcome":"failure","description":"Rabbita Sokoban malformed timeline input failure","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"},{"id":"rabbita-subscriptions","origin":"vendored","expectedOutcome":"failure","description":"Rabbita subscriptions stale timer callback failure","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"},{"id":"rabbita-websocket","origin":"vendored","expectedOutcome":"failure","description":"Rabbita WebSocket duplicate disconnect failure","upstreamRevision":"67e8169efa1bb2e8bd17018b62b41211cbc4c357"}]}
   )
+}
+
+///|
+fn external_list_json() -> String {
+  (
+    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"}]}
+  )
+}
+
+///|
+fn proton_external_inspection_json() -> String {
+  let manifest = @external.proton_todo_manifest()
+  let output = StringBuilder::new()
+  output.write_string(
+    "{\"ok\":true,\"command\":\"external inspect\",\"application\":{",
+  )
+  output.write_string("\"id\":")
+  output.write_string(json_string(manifest.id))
+  output.write_string(",\"repository\":")
+  output.write_string(json_string(manifest.repository))
+  output.write_string(",\"revision\":")
+  output.write_string(json_string(manifest.revision))
+  output.write_string(",\"license\":")
+  output.write_string(json_string(manifest.license))
+  output.write_string(",\"strategy\":")
+  output.write_string(json_string(manifest.strategy.to_string()))
+  output.write_string(",\"effectPolicy\":")
+  output.write_string(json_string(manifest.effect_policy))
+  output.write_string(",\"sourceSha256\":")
+  output.write_string(json_string(manifest.source_sha256))
+  output.write_string(",\"entryPoints\":{\"model\":")
+  output.write_string(json_string(manifest.model_entry))
+  output.write_string(",\"message\":")
+  output.write_string(json_string(manifest.message_entry))
+  output.write_string(",\"update\":")
+  output.write_string(json_string(manifest.update_entry))
+  output.write_string(",\"view\":")
+  output.write_string(json_string(manifest.view_entry))
+  output.write_string("},\"properties\":")
+  write_json_string_array(output, manifest.properties)
+  output.write_string(
+    ",\"effectKinds\":[\"native-invoke\",\"subscription-installed\"],\"responseOrdering\":\"all bounded permutations\",\"upstreamWritePolicy\":\"read-only\"}}",
+  )
+  output.to_string()
+}
+
+///|
+fn print_proton_external_inspection() -> Unit {
+  let manifest = @external.proton_todo_manifest()
+  println("id: \{manifest.id}")
+  println("repository: \{manifest.repository}")
+  println("revision: \{manifest.revision}")
+  println("license: \{manifest.license}")
+  println("strategy: \{manifest.strategy.to_string()}")
+  println("effect-policy: \{manifest.effect_policy}")
+  println("source-sha256: \{manifest.source_sha256}")
+  println(
+    "expected-failure: SnapshotReceived(version=1) -> SnapshotReceived(version=0)",
+  )
+  println("upstream-write-policy: read-only")
+}
+
+///|
+fn source_inspection_json(
+  path : String,
+  inspection : @external.SourceInspection,
+) -> String {
+  let output = StringBuilder::new()
+  output.write_string(
+    "{\"ok\":true,\"command\":\"external inspect-source\",\"path\":",
+  )
+  output.write_string(json_string(path))
+  output.write_string(",\"strategy\":")
+  output.write_string(json_string(inspection.strategy.to_string()))
+  output.write_string(",\"detected\":{")
+  output.write_string("\"rabbitaImport\":")
+  output.write_object(inspection.has_rabbita_import)
+  output.write_string(",\"createState\":")
+  output.write_object(inspection.has_create_state)
+  output.write_string(",\"createStateWithInit\":")
+  output.write_object(inspection.has_create_state_with_init)
+  output.write_string(",\"cellWithDispatch\":")
+  output.write_object(inspection.has_cell_with_dispatch)
+  output.write_string(",\"model\":")
+  output.write_object(inspection.has_model)
+  output.write_string(",\"message\":")
+  output.write_object(inspection.has_message)
+  output.write_string(",\"update\":")
+  output.write_object(inspection.has_update)
+  output.write_string(",\"view\":")
+  output.write_object(inspection.has_view)
+  output.write_string(",\"subscription\":")
+  output.write_object(inspection.has_subscription)
+  output.write_string(",\"command\":")
+  output.write_object(inspection.has_command)
+  output.write_string("}}")
+  output.to_string()
+}
+
+///|
+fn print_source_inspection(
+  path : String,
+  inspection : @external.SourceInspection,
+) -> Unit {
+  println("path: \{path}")
+  println("strategy: \{inspection.strategy.to_string()}")
+  println("rabbita-import: \{inspection.has_rabbita_import}")
+  println("model: \{inspection.has_model}")
+  println("message: \{inspection.has_message}")
+  println("update: \{inspection.has_update}")
+  println("view: \{inspection.has_view}")
+  println("subscription: \{inspection.has_subscription}")
+  println("command: \{inspection.has_command}")
 }
 
 ///|
@@ -515,7 +639,27 @@ async fn run_websocket(output_root : String) -> RunSummary {
 }
 
 ///|
-fn summaries_json(summaries : Array[RunSummary]) -> String {
+async fn run_proton_todo(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @proton_todo.machine(),
+    @proton_todo.properties(),
+    @proton_todo.default_config(),
+  )
+  finish_run(
+    "proton-demo-todo",
+    "\{output_root}/proton-demo-todo",
+    true,
+    "snapshot version never decreases",
+    ["SnapshotReceived(version=1)", "SnapshotReceived(version=0)"],
+    report,
+  )
+}
+
+///|
+fn summaries_json_for(
+  command : String,
+  summaries : Array[RunSummary],
+) -> String {
   let output = StringBuilder::new()
   output.write_string("{\"ok\":")
   let mut ok = true
@@ -525,7 +669,9 @@ fn summaries_json(summaries : Array[RunSummary]) -> String {
     }
   }
   output.write_object(ok)
-  output.write_string(",\"command\":\"demo run\",\"runs\":[")
+  output.write_string(",\"command\":")
+  output.write_string(json_string(command))
+  output.write_string(",\"runs\":[")
   for index, summary in summaries {
     if index > 0 {
       output.write_char(',')
@@ -534,6 +680,11 @@ fn summaries_json(summaries : Array[RunSummary]) -> String {
   }
   output.write_string("]}")
   output.to_string()
+}
+
+///|
+fn summaries_json(summaries : Array[RunSummary]) -> String {
+  summaries_json_for("demo run", summaries)
 }
 
 ///|
@@ -589,9 +740,9 @@ async fn main {
       return
     }
     if parsed.json {
-      println("{\"ok\":true,\"version\":\"0.4.0\"}")
+      println("{\"ok\":true,\"version\":\"0.5.0\"}")
     } else {
-      println("proped-rabbita 0.4.0")
+      println("proped-rabbita 0.5.0")
     }
     return
   }
@@ -601,6 +752,100 @@ async fn main {
       return
     }
     println(schema_json())
+    return
+  }
+  if args[0] == "external" {
+    if args.length() < 2 {
+      usage_error(
+        "use external list, external inspect <id>, or external run <id|all>",
+        parsed.json,
+      )
+      return
+    }
+    if args[1] == "list" {
+      if args.length() != 2 {
+        usage_error(
+          "external list does not accept positional arguments",
+          parsed.json,
+        )
+        return
+      }
+      if parsed.json {
+        println(external_list_json())
+      } else {
+        println(
+          "proton-demo-todo\tjustjavac/proton-demo\tsubscription-model\tfailure\tSnapshot-order exploration",
+        )
+      }
+      return
+    }
+    if args[1] == "inspect-source" {
+      if args.length() != 3 {
+        usage_error(
+          "external inspect-source requires exactly one file",
+          parsed.json,
+        )
+        return
+      }
+      let path = args[2]
+      let source = try @fs.read_file(path).text() catch {
+        _ => {
+          usage_error("cannot read source file: \{path}", parsed.json)
+          return
+        }
+      } noraise {
+        text => text
+      }
+      let inspection = @external.inspect_source(source)
+      if parsed.json {
+        println(source_inspection_json(path, inspection))
+      } else {
+        print_source_inspection(path, inspection)
+      }
+      return
+    }
+    if args[1] == "inspect" {
+      if args.length() != 3 {
+        usage_error("external inspect requires exactly one id", parsed.json)
+        return
+      }
+      if args[2] != "proton-demo-todo" {
+        usage_error("unknown external id: \{args[2]}", parsed.json)
+        return
+      }
+      if parsed.json {
+        println(proton_external_inspection_json())
+      } else {
+        print_proton_external_inspection()
+      }
+      return
+    }
+    if args[1] != "run" || args.length() != 3 {
+      usage_error(
+        "use external list, external inspect <id>, or external run <id|all>",
+        parsed.json,
+      )
+      return
+    }
+    let external_id = args[2]
+    let external_summaries : Array[RunSummary] = []
+    let external_root = "\{parsed.output}/external"
+    if external_id == "proton-demo-todo" || external_id == "all" {
+      external_summaries.push(run_proton_todo(external_root))
+    } else {
+      usage_error("unknown external id: \{external_id}", parsed.json)
+      return
+    }
+    if parsed.json {
+      println(summaries_json_for("external run", external_summaries))
+    } else {
+      print_summaries(external_summaries)
+    }
+    for summary in external_summaries {
+      if !expectation_met(summary) {
+        @sys.exit(3)
+      }
+    }
     return
   }
   if args[0] != "demo" || args.length() < 2 {

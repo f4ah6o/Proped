@@ -1,5 +1,22 @@
 # Changes
 
+## 0.5.0 - 2026-08-04
+
+### Added
+
+- Added a manifest-driven external Rabbita exploration foundation with reviewed metadata, adapter classification, source boundary inspection, deterministic effect descriptors, bounded response-order permutations, and reusable generic properties.
+- Added `external list`, `external inspect`, `external inspect-source`, and `external run` CLI commands. External repositories are explicitly treated as read-only inputs.
+- Vendored the pinned MIT-licensed `justjavac/proton-demo` Todo frontend source and added a native adapter that records Proton bridge effects without executing them.
+- Added the `proton-demo-todo` expected-failure target and deterministic HTML, SVG, JSON, DOT, and summary artifacts.
+
+### Fixed
+
+- Found that the pinned Proton Todo update accepts an older uncorrelated snapshot after a newer snapshot; minimized to `SnapshotReceived(version=1) -> SnapshotReceived(version=0)`.
+
+### Changed
+
+- Bumped the package and CLI version to `0.5.0`.
+
 ## 0.4.0 - 2026-08-04
 
 ### Added

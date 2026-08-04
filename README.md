@@ -10,6 +10,8 @@ Proped Rabbita explores reachable Rabbita UI states, checks model and transition
 moon run src/cli -- help
 moon run src/cli -- demo list --json
 moon run src/cli -- demo run all --json
+moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
+moon run src/cli -- external run all --json
 ```
 
 The last command writes each demo to `demo/out/<demo-id>/` and prints one JSON result envelope to stdout. Agents and scripts should discover the stable command contract with:
@@ -36,6 +38,12 @@ See [docs/CLI.md](docs/CLI.md) for the complete command and output contract.
 The added practical runs cover 255 Sokoban states and 1,163 transitions, 640 subscription states and 1,718 transitions, and 800 WebSocket states and 4,428 transitions. Each expected failure is accepted only when both its property name and minimized trace match the declared signature.
 
 Vendored source, revision, hashes, license, adapter changes, and failure rationale are recorded under `src/vendor/`, [docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## External Rabbita applications
+
+External targets are pinned by manifests under `external/manifests/`. `external inspect-source` mechanically detects common `Model`, `Msg`, `update`, `view`, command, and subscription boundaries in a local source file. Effects are recorded as deterministic descriptors rather than executing upstream network or native operations.
+
+The first dogfood target, `proton-demo-todo`, explores 320 states and 618 transitions and minimizes snapshot rollback to `SnapshotReceived(version=1) -> SnapshotReceived(version=0)`. Upstream repositories are read-only inputs: this project does not create issues, pull requests, comments, or commits in them.
 
 Each run writes `atlas.html`, `atlas.svg`, `atlas.json`, `atlas.dot`, and `summary.json`.
 
@@ -96,12 +104,15 @@ let dot = report_to_dot(report)
 ```text
 src/
   cli/                              CLI and machine-readable command contract
+  external/                         manifest validation, detection, effect modeling
   examples/newsletter/              reusable project demo package
   vendor/rabbita_counter/           passing counter baseline
   vendor/rabbita_todo/              blank-title failure
   vendor/rabbita_sokoban/           malformed timeline failure
   vendor/rabbita_subscriptions/     stale timer failure
   vendor/rabbita_websocket/         duplicate disconnect failure
+  vendor/proton_todo/                stale snapshot ordering failure
+external/                            pinned external manifests and schema
   core.mbt                          exploration, shrinking, minimal failure retention
   rabbita_adapter.mbt               browserless Rabbita rendering
   atlas*.mbt                        report exporters
@@ -116,6 +127,7 @@ moon fmt --check
 moon check --target native
 moon test --target native
 moon run src/cli -- demo run all --json
+moon run src/cli -- external run all --json
 ```
 
 The server-side Rabbita renderer is marked experimental upstream, so `moon check` emits warning `0014` from `rabbita_adapter.mbt`.

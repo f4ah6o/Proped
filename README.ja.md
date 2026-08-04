@@ -10,6 +10,8 @@ Proped Rabbita は、Rabbita UI の到達可能状態を探索し、モデルと
 moon run src/cli -- help
 moon run src/cli -- demo list --json
 moon run src/cli -- demo run all --json
+moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
+moon run src/cli -- external run all --json
 ```
 
 最後のcommandは各demoを `demo/out/<demo-id>/` に出力し、stdoutへ1つのJSON result envelopeを返します。エージェントやscriptは次のcommandから安定した契約を取得します。
@@ -36,6 +38,12 @@ moon run src/cli -- schema --json
 追加した実用runは、Sokoban 255 state・1,163 transition、subscriptions 640 state・1,718 transition、WebSocket 800 state・4,428 transitionを探索します。expected failureはproperty名と最小traceが宣言済みsignatureに一致した場合だけ成功扱いになります。
 
 vendor source、revision、hash、license、adapter変更、failureの根拠は `src/vendor/`、[docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md)、[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記録しています。
+
+## 外部Rabbitaアプリケーション
+
+外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。
+
+最初のdogfoodである `proton-demo-todo` は320 state・618 transitionを探索し、snapshot rollbackを `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` へ縮約します。外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。
 
 各runは `atlas.html`、`atlas.svg`、`atlas.json`、`atlas.dot`、`summary.json` を生成します。
 
@@ -96,12 +104,15 @@ let dot = report_to_dot(report)
 ```text
 src/
   cli/                              CLIとmachine-readable command契約
+  external/                         manifest検証、source検出、effect model
   examples/newsletter/              再利用可能なproject demo package
   vendor/rabbita_counter/           passするcounter baseline
   vendor/rabbita_todo/              blank title failure
   vendor/rabbita_sokoban/           malformed timeline failure
   vendor/rabbita_subscriptions/     stale timer failure
   vendor/rabbita_websocket/         duplicate disconnect failure
+  vendor/proton_todo/                stale snapshot ordering failure
+external/                            pinned external manifestとschema
   core.mbt                          探索、shrink、最小failure保持
   rabbita_adapter.mbt               browserless Rabbita rendering
   atlas*.mbt                        report exporter
@@ -116,6 +127,7 @@ moon fmt --check
 moon check --target native
 moon test --target native
 moon run src/cli -- demo run all --json
+moon run src/cli -- external run all --json
 ```
 
 Rabbita upstreamではserver-side rendererがexperimental扱いのため、`moon check` は `rabbita_adapter.mbt` から warning `0014` を出します。

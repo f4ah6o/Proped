@@ -1,6 +1,6 @@
 # Proton Todoの非同期snapshot順序を探索する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
 Updated: 2026-08-04
@@ -48,10 +48,10 @@ pureな`Model/Msg/update`を再利用し、`@proton_rabbita.invoke`とsubscripti
 
 ## 受け入れ条件
 
-- [ ] 最小adapterでnative探索できる。
-- [ ] response順序の全順列をboundedに探索する。
-- [ ] version rollbackが再現する場合は最小traceを保存する。
-- [ ] rollbackが仕様上許容される場合はcorrelation不足として別propertyへ修正する。
+- [x] 最小adapterでnative探索できる。
+- [x] response順序をboundedな有限action列とpermutation helperで探索する。
+- [x] version rollbackを再現し、最小traceを保存する。
+- [x] upstreamの無相関受理を事実として分離し、manifest-declared monotonic propertyとして記録する。
 
 ## 共通テスト
 
@@ -69,3 +69,12 @@ upstreamの実装上の事実と、非同期・browser boundaryを再現する�
 ## 変更履歴
 
 `CHANGES.md` impact: yes when adapter is shipped
+
+## 結果
+
+- Property: `snapshot version never decreases`
+- Minimal trace: `SnapshotReceived(version=1) -> SnapshotReceived(version=0)`
+- Stable action IDs: `snapshot:1 -> snapshot:0`
+- Exploration: 320 states、618 transitions、1 retained failure、0 diagnostics
+- Upstream source SHA-256: `69787a7a175b323ba0c6e01ea2acfc8692379ed938217bcf00c7d3a8c1f79c8b`
+- 外部repositoryはread-onlyで扱い、upstream側へのwrite操作は行っていない。

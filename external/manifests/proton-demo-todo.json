@@ -1,0 +1,21 @@
+{
+  "id": "proton-demo-todo",
+  "repository": "justjavac/proton-demo",
+  "revision": "5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d",
+  "license": "MIT",
+  "packages": ["frontend/main"],
+  "entryPoints": {
+    "model": "Model",
+    "message": "Msg",
+    "update": "update",
+    "view": "view"
+  },
+  "strategy": "subscription-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "69787a7a175b323ba0c6e01ea2acfc8692379ed938217bcf00c7d3a8c1f79c8b",
+  "properties": [
+    "snapshot version never decreases",
+    "pending effect IDs remain unique",
+    "rendered revision matches snapshot"
+  ]
+}

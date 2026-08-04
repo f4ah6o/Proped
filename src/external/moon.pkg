@@ -1,0 +1,5 @@
+import {
+  "f4ah6o/proped-rabbita" @proped,
+}
+
+supported_targets = "+native+js"

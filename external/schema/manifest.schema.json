@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/f4ah6o/Proped-Rabbita/external/schema/manifest.schema.json",
+  "title": "Proped Rabbita external application manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "repository",
+    "revision",
+    "license",
+    "packages",
+    "entryPoints",
+    "strategy",
+    "effectPolicy",
+    "sourceSha256",
+    "properties"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1, "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "repository": { "type": "string", "pattern": "^[^/]+/[^/]+$" },
+    "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "license": { "type": "string", "minLength": 1 },
+    "packages": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "entryPoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "message", "update", "view"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "update": { "type": "string", "minLength": 1 },
+        "view": { "type": "string", "minLength": 1 }
+      }
+    },
+    "strategy": {
+      "enum": ["pure", "effect-model", "subscription-model", "browser-replay", "unsupported"]
+    },
+    "effectPolicy": { "enum": ["none", "record-and-inject", "browser-replay"] },
+    "sourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "properties": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+  }
+}

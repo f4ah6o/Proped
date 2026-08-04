@@ -55,6 +55,47 @@ moon run src/cli -- demo run all --output artifacts --json
 
 demoは `expectedOutcome` として `pass` または `failure` を宣言します。expected-failure demoは、正確な`expectedFailure` propertyと最小traceも宣言します。観測したcounterexampleがそのsignatureと一致した場合だけcommandは成功します。これにより、無関係なfailureを成功扱いせず、failure discoveryとshrinkが機能し続けることを回帰fixtureで検証できます。
 
+## 外部アプリケーションcommand
+
+### `external list`
+
+```bash
+moon run src/cli -- external list --json
+```
+
+review済みexternal targetのrepository、固定revision、adapter strategy、license、期待結果を返します。
+
+### `external inspect <id>`
+
+```bash
+moon run src/cli -- external inspect proton-demo-todo --json
+```
+
+manifestのentry point、source SHA-256、effect policy、有効property、upstreamへの明示的な`read-only` policyを返します。
+
+### `external inspect-source <file>`
+
+```bash
+moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json
+```
+
+local MoonBit source fileからRabbita import、state constructor、`Model`、`Msg`、`update`、`view`、command、subscription境界を機械検出します。scannerは `pure`、`effect-model`、`subscription-model`、`browser-replay`、`unsupported` に分類しますが、review済みmanifestを最終的な根拠とします。
+
+### `external run <id|all>`
+
+```bash
+moon run src/cli -- external run proton-demo-todo --json
+moon run src/cli -- external run all --output artifacts --json
+```
+
+決定的なexternal adapterを `<output>/external/<id>/` で実行します。native、network、timer、subscription effectは実行せずdescriptorとして記録し、success、failure、stale、duplicate、順序逆転responseを注入できるようにします。
+
+| External target | Property | Exact minimized trace |
+| --- | --- | --- |
+| `proton-demo-todo` | `snapshot version never decreases` | `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` |
+
+外部repositoryはread-only inputです。相手側にissue、PR、comment、commitを作成しません。
+
 ## Expected-failure fixtures
 
 | Demo | Property | Exact minimized trace |

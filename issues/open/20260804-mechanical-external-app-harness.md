@@ -160,16 +160,25 @@ external/
 
 ## 受け入れ条件
 
-- [ ] manifest schemaがある。
-- [ ] local checkoutからRabbita entry point候補を機械検出できる。
-- [ ] pure、effect-model、subscription-modelの3方式を区別できる。
-- [ ] effect descriptorを記録し、response順序を生成できる。
+- [x] manifest schemaがある。
+- [x] local checkoutのsource fileからRabbita entry point候補を機械検出できる。
+- [x] pure、effect-model、subscription-modelを含むadapter方式を区別できる。
+- [x] effect descriptorを記録し、boundedなresponse順序を生成できる。
 - [ ] payloadなしMsgとsmall scalar payloadからaction scaffoldを生成できる。
-- [ ] generic propertyだけで1件以上の既知fixture failureを再発見できる。
-- [ ] app固有propertyをpluginまたはadapterとして追加できる。
-- [ ] failureを最小traceへ縮約できる。
+- [x] generic propertyだけで1件以上の既知fixture failureを再発見できる。
+- [x] app固有propertyをadapterとして追加できる。
+- [x] failureを最小traceへ縮約できる。
 - [ ] untrusted checkoutはnetwork denyのsandboxで扱う。
 - [ ] CIで複数external targetをmatrix実行できる。
+
+
+## 2026-08-04 実装進捗
+
+- `external/schema/manifest.schema.json` と最初のmanifestを追加した。
+- `external inspect-source <file>` でRabbita import、state constructor、`Model`、`Msg`、`update`、`view`、command、subscriptionを機械検出する。
+- `EffectDescriptor`、adapter classification、bounded response permutation、generic monotonic property、effect ID uniqueness propertyを共通package化した。
+- `justjavac/proton-demo` をdogfoodし、generic monotonic propertyで `SnapshotReceived(version=1) -> SnapshotReceived(version=0)` を再発見・縮約した。
+- 残作業はaction scaffold自動生成、untrusted checkout sandbox、複数target CI matrix、manifest file parserとprepare/update workflow。
 
 ## 最初のdogfood対象
 

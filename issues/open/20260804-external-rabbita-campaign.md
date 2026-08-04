@@ -17,7 +17,8 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 ### Tier 1: pureなModel/Msg/updateへ切り出しやすい
 
-- [ ] `justjavac/proton-demo` / `moonbit-community/proton`
+- [x] `justjavac/proton-demo`
+- [ ] `moonbit-community/proton` framework internals
 - [ ] `shiguri-01/ensenzu`
 - [ ] `CAIMEOX/signal_reader`
 - [ ] `moonbitlang/editor` file tree

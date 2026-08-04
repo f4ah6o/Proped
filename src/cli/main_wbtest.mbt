@@ -137,3 +137,40 @@ test "new practical demos describe exact failure signatures" {
     websocket_description_json().contains("ClientDisconnectRequested"),
   )
 }
+
+///|
+test "command schema exposes external application commands" {
+  let schema = schema_json()
+  assert_true(schema.contains("external"))
+  assert_true(schema.contains("inspect-source"))
+  assert_true(schema.contains("proton-demo-todo"))
+  assert_true(schema.contains("0.5.0"))
+}
+
+///|
+test "external inspection reports read-only provenance" {
+  let json = proton_external_inspection_json()
+  assert_true(json.contains("justjavac/proton-demo"))
+  assert_true(
+    json.contains(
+      "69787a7a175b323ba0c6e01ea2acfc8692379ed938217bcf00c7d3a8c1f79c8b",
+    ),
+  )
+  assert_true(json.contains("read-only"))
+}
+
+///|
+test "source inspection envelope exposes detected boundaries" {
+  let source =
+    #|import { "moonbit-community/rabbita" }
+    #|struct Model { value : Int }
+    #|enum Msg { Load }
+    #|fn update(model : Model, msg : Msg) { model }
+    #|fn view(model : Model) { model }
+    #|fn subscriptions(model : Model) { model }
+  let inspection = @external.inspect_source(source)
+  let json = source_inspection_json("fixture.mbt", inspection)
+  assert_true(json.contains("subscription-model"))
+  assert_true(json.contains("\"model\":true"))
+  assert_true(json.contains("\"subscription\":true"))
+}

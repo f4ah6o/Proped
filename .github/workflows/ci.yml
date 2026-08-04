@@ -43,12 +43,16 @@ jobs:
         run: |
           moon run src/cli -- schema --json > /tmp/proped-rabbita-schema.json
           moon run src/cli -- demo run all --json > /tmp/proped-rabbita-run.json
+          moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json > /tmp/proped-rabbita-inspection.json
+          moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           python3 - <<'PY'
           import json
           from pathlib import Path
 
           schema = json.loads(Path('/tmp/proped-rabbita-schema.json').read_text())
           result = json.loads(Path('/tmp/proped-rabbita-run.json').read_text())
+          inspection = json.loads(Path('/tmp/proped-rabbita-inspection.json').read_text())
+          external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           expected_ids = [
               'newsletter',
               'rabbita-counter',
@@ -58,8 +62,9 @@ jobs:
               'rabbita-websocket',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.4.0'
+          assert schema['version'] == '0.5.0'
           assert schema['demoIds'] == expected_ids
+          assert schema['externalIds'] == ['proton-demo-todo']
           assert result['ok'] is True
           runs = {run['id']: run for run in result['runs']}
           assert list(runs) == expected_ids
@@ -113,4 +118,33 @@ jobs:
               output = Path(run['output'])
               for artifact in run['artifacts']:
                   assert (output / artifact).is_file(), output / artifact
+
+          assert inspection['ok'] is True
+          assert inspection['strategy'] == 'subscription-model'
+          assert inspection['detected']['model'] is True
+          assert inspection['detected']['message'] is True
+          assert inspection['detected']['update'] is True
+          assert inspection['detected']['subscription'] is True
+
+          assert external['ok'] is True
+          assert external['command'] == 'external run'
+          assert len(external['runs']) == 1
+          proton = external['runs'][0]
+          assert proton['id'] == 'proton-demo-todo'
+          assert proton['expectationMet'] is True
+          assert proton['diagnostics'] == 0
+          assert proton['states'] == 320
+          assert proton['firstFailure']['property'] == 'snapshot version never decreases'
+          assert proton['firstFailure']['trace'] == [
+              'SnapshotReceived(version=1)',
+              'SnapshotReceived(version=0)',
+          ]
+          for artifact in proton['artifacts']:
+              assert (Path(proton['output']) / artifact).is_file()
+
+          import hashlib
+          source = Path('src/vendor/proton_todo/upstream/main.mbt.txt').read_bytes()
+          assert hashlib.sha256(source).hexdigest() == (
+              '69787a7a175b323ba0c6e01ea2acfc8692379ed938217bcf00c7d3a8c1f79c8b'
+          )
           PY

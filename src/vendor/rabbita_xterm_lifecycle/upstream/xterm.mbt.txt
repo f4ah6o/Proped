@@ -1,0 +1,466 @@
+///|
+/// Logical terminal size measured in character cells.
+///
+/// `cols` is the number of columns and `rows` is the number of rows passed to
+/// xterm.js. The managed API updates this value after explicit `resize`
+/// actions and terminal resize events.
+pub(all) struct Size {
+  cols : Int
+  rows : Int
+} derive(Eq)
+
+///|
+let host_id_count : Ref[Int] = Ref(0)
+
+///|
+fn next_host_id() -> String {
+  host_id_count.val += 1
+  "rabbita_xterm-\{host_id_count.val}"
+}
+
+///|
+/// Loading state for a managed terminal.
+pub enum Status {
+  /// The lifecycle subscription has not finished loading xterm.js yet.
+  Loading
+  /// xterm.js has been loaded, the terminal has been opened in the DOM, and
+  /// commands such as `write` and `resize` can take effect.
+  Ready
+  /// Loading failed. The string is a user-displayable diagnostic.
+  Failed(String)
+} derive(Eq)
+
+///|
+/// Events emitted by the managed terminal.
+///
+/// Feed these back into your application message type from the `on_event`
+/// dispatch passed to `update`.
+pub enum Event {
+  /// The terminal is mounted and ready to receive commands.
+  Ready
+  /// User input from xterm.js `onData`; this is input typed or pasted into the
+  /// terminal, not output written with `write`.
+  Data(String)
+  /// The terminal cell size changed.
+  Resized(Size)
+  /// The running terminal application requested a title change via OSC 0/2.
+  TitleChanged(String)
+  /// xterm.js failed to load.
+  LoadFailed(String)
+  /// The fit addon failed to load.
+  FitFailed(String)
+}
+
+///|
+/// Opaque action handled by `update`.
+///
+/// Construct values with helpers such as `write`, `resize`, and `fit`, or pass
+/// actions received from `subscriptions` back to `update`.
+enum Action {
+  XtermLoaded(Result[@js.Xterm, Error])
+  FitLoaded(Result[@fit.FitAddon, Error])
+  Data(String)
+  Resized(Size)
+  TitleChanged(String)
+  Write(Bytes)
+  Writeln(Bytes)
+  Clear
+  Reset
+  Resize(Int, Int)
+  SetTheme(String, String)
+  Fit
+}
+
+///|
+/// Managed Rabbita state for one xterm.js instance.
+///
+/// Store this in your application model, render it with `State::view`, handle
+/// `Action` values with `update`, and install `subscriptions` from your app's
+/// subscription function. The lifecycle subscription owns loading and disposal
+/// of the underlying terminal.
+struct State {
+  host_id : String
+  use_fit : Bool
+  background : String
+  foreground : String
+  cursor_blink : Bool
+  font_size : Int
+  cols : Int
+  rows : Int
+  mac_option_is_meta : Bool
+  scrollback : Int
+  status : Status
+  title : String
+  terminal : @js.Terminal?
+  fit_addon : @fit.FitAddon?
+}
+
+///|
+/// Create a managed terminal state.
+///
+/// The terminal is not loaded immediately. It starts in `Loading`, and the
+/// first call to `subscriptions` schedules loading xterm.js and, when
+/// `use_fit` is true, the fit addon. `cols` and `rows` are the initial logical
+/// cell size; if fit is enabled, the addon may resize the terminal after it is
+/// attached to the DOM.
+pub fn new(
+  use_fit? : Bool = true,
+  background? : String = "#101418",
+  foreground? : String = "#dce4ea",
+  cursor_blink? : Bool = true,
+  font_size? : Int = 14,
+  cols? : Int = 80,
+  rows? : Int = 24,
+  mac_option_is_meta? : Bool = true,
+  scrollback? : Int = 1000,
+  title? : String = "terminal",
+) -> State {
+  let host_id = next_host_id()
+  {
+    host_id,
+    use_fit,
+    background,
+    foreground,
+    cursor_blink,
+    font_size,
+    cols,
+    rows,
+    mac_option_is_meta,
+    scrollback,
+    status: Loading,
+    title,
+    terminal: None,
+    fit_addon: None,
+  }
+}
+
+///|
+/// Write output bytes to the terminal.
+///
+/// This corresponds to xterm.js `term.write`. It is intended for program
+/// output such as an asciicast stream. User keyboard input arrives separately
+/// as `Event::Data`.
+///
+/// If the action is handled before the terminal reaches `Ready`, it is a no-op.
+pub fn write(data : Bytes) -> Action {
+  Write(data)
+}
+
+///|
+/// Write output bytes followed by a newline.
+///
+/// This corresponds to xterm.js `term.writeln`. If the action is handled before
+/// the terminal reaches `Ready`, it is a no-op.
+pub fn writeln(data : Bytes) -> Action {
+  Writeln(data)
+}
+
+///|
+/// Clear the visible terminal buffer.
+///
+/// This corresponds to xterm.js `term.clear`. If the action is handled before
+/// the terminal reaches `Ready`, it is a no-op.
+pub fn clear() -> Action {
+  Clear
+}
+
+///|
+/// Reset terminal state, modes, cursor, and buffers.
+///
+/// This corresponds to xterm.js `term.reset`. It is stronger than `clear`.
+/// If the action is handled before the terminal reaches `Ready`, it is a no-op.
+pub fn reset() -> Action {
+  Reset
+}
+
+///|
+/// Resize the terminal to an explicit logical cell size.
+///
+/// The managed state is updated immediately. xterm.js receives the resize when
+/// the terminal is ready; before `Ready`, only the stored initial size changes.
+pub fn resize(cols~ : Int, rows~ : Int) -> Action {
+  Resize(cols, rows)
+}
+
+///|
+/// Update the terminal foreground and background colors.
+///
+/// The managed state is updated immediately. xterm.js receives the theme change
+/// when the terminal is ready; before `Ready`, these colors become the initial
+/// theme used at construction time.
+pub fn set_theme(background~ : String, foreground~ : String) -> Action {
+  SetTheme(background, foreground)
+}
+
+///|
+/// Ask the fit addon to resize the terminal to its DOM container.
+///
+/// This only has an effect when `new(use_fit=true)` was used and the fit addon
+/// has loaded. The managed subscription also triggers this on window resize.
+pub fn fit() -> Action {
+  Fit
+}
+
+///|
+/// Current loading status.
+pub fn State::status(self : State) -> Status {
+  self.status
+}
+
+///|
+/// Human-readable status text suitable for a small loading/error label.
+pub fn State::status_text(self : State) -> String {
+  match self.status {
+    Loading => "loading xterm.js"
+    Ready => "ready"
+    Failed(message) => message
+  }
+}
+
+///|
+/// Last known terminal title.
+///
+/// This starts from the `title` argument passed to `new` and is updated when
+/// the terminal emits `TitleChanged`.
+pub fn State::title(self : State) -> String {
+  self.title
+}
+
+///|
+/// Last known column count.
+pub fn State::cols(self : State) -> Int {
+  self.cols
+}
+
+///|
+/// Last known row count.
+pub fn State::rows(self : State) -> Int {
+  self.rows
+}
+
+///|
+/// Last known terminal size.
+pub fn State::size(self : State) -> Size {
+  { cols: self.cols, rows: self.rows }
+}
+
+///|
+/// Whether the terminal has loaded and been opened in the DOM.
+pub fn State::is_ready(self : State) -> Bool {
+  self.status == Ready
+}
+
+///|
+/// Render the DOM host element for this terminal.
+///
+/// Include this exactly once in your view while the state is alive. The managed
+/// lifecycle opens xterm.js into this element after render, so the `id` is
+/// generated internally and does not need to be supplied by the application.
+pub fn State::view(
+  self : State,
+  class? : String = "terminal-host",
+) -> @html.Html {
+  @html.div(id=self.host_id, class~, "")
+}
+
+///|
+fn effect(f : () -> Unit) -> @cmd.Cmd {
+  @cmd.custom_cmd(_ => f())
+}
+
+///|
+fn terminal_cmd(state : State, f : (@js.Terminal) -> Unit) -> @cmd.Cmd {
+  match state.terminal {
+    Some(terminal) => effect(() => f(terminal))
+    None => @cmd.none
+  }
+}
+
+///|
+fn fit_cmd(state : State) -> @cmd.Cmd {
+  match state.fit_addon {
+    Some(addon) => @fit.fit(addon)
+    None => @cmd.none
+  }
+}
+
+///|
+fn attach_fit(terminal : @js.Terminal, addon : @fit.FitAddon) -> @cmd.Cmd {
+  @cmd.batch([@fit.attach(terminal, addon), @fit.fit(addon)])
+}
+
+///|
+fn setup_terminal(
+  state : State,
+  terminal : @js.Terminal,
+  on_event : @cmd.Dispatch[Event],
+) -> @cmd.Cmd {
+  @cmd.custom_cmd(
+    scheduler => {
+      let host = @dom.document().get_element_by_id(state.host_id).unwrap()
+      scheduler.add(effect(() => terminal.open(host)))
+      if state.fit_addon is Some(addon) {
+        scheduler.add(attach_fit(terminal, addon))
+      }
+      scheduler.add(on_event(Ready))
+    },
+    kind=@cmd.after_render,
+  )
+}
+
+///|
+/// Update managed terminal state.
+///
+/// Call this from your application update branch for `Action` values. The
+/// returned command performs the xterm.js side effect, and `on_event` maps
+/// terminal events back into your application messages.
+///
+/// A typical Rabbita app stores `State`, wraps `Action` in an app message, and
+/// passes terminal events through another app message:
+///
+/// ```mbt nocheck
+/// let (cmd, xterm) = @xterm.update(action, model.xterm, event => dispatch(XtermEvent(event)))
+/// ```
+pub fn update(
+  action : Action,
+  state : State,
+  on_event : @cmd.Dispatch[Event],
+) -> (@cmd.Cmd, State) {
+  match action {
+    XtermLoaded(Ok(xterm)) => {
+      let terminal = xterm.new_terminal(
+        background=state.background,
+        foreground=state.foreground,
+        cursor_blink=state.cursor_blink,
+        font_size=state.font_size,
+        cols=state.cols,
+        rows=state.rows,
+        mac_option_is_meta=state.mac_option_is_meta,
+        scrollback=state.scrollback,
+      )
+      let next = { ..state, status: Ready, terminal: Some(terminal) }
+      (setup_terminal(next, terminal, on_event), next)
+    }
+    XtermLoaded(Err(err)) => {
+      let message = "xterm.js failed: \{err.to_string()}"
+      (on_event(LoadFailed(message)), { ..state, status: Failed(message) })
+    }
+    FitLoaded(Ok(addon)) => {
+      let setup = match state.terminal {
+        Some(terminal) => attach_fit(terminal, addon)
+        None => @cmd.none
+      }
+      (setup, { ..state, fit_addon: Some(addon) })
+    }
+    FitLoaded(Err(err)) => {
+      let message = "fit addon failed: \{err.to_string()}"
+      (on_event(FitFailed(message)), state)
+    }
+    Data(data) => (on_event(Data(data)), state)
+    Resized(size) =>
+      (on_event(Resized(size)), { ..state, cols: size.cols, rows: size.rows })
+    TitleChanged(title) => (on_event(TitleChanged(title)), { ..state, title, })
+    Write(data) =>
+      (terminal_cmd(state, terminal => terminal.write(data)), state)
+    Writeln(data) =>
+      (terminal_cmd(state, terminal => terminal.writeln(data)), state)
+    Clear => (terminal_cmd(state, terminal => terminal.clear()), state)
+    Reset => (terminal_cmd(state, terminal => terminal.reset()), state)
+    Resize(cols, rows) =>
+      (
+        terminal_cmd(state, terminal => terminal.resize(cols~, rows~)),
+        { ..state, cols, rows },
+      )
+    SetTheme(background, foreground) =>
+      (
+        terminal_cmd(state, terminal => {
+          terminal.set_theme(background~, foreground~)
+        }),
+        { ..state, background, foreground },
+      )
+    Fit => (fit_cmd(state), state)
+  }
+}
+
+///|
+priv suberror ManagedSub {
+  Lifecycle(State, @cmd.Dispatch[Action])
+}
+
+///|
+fn lifecycle_loader(
+  payload : Error,
+  scheduler : &@cmd.Scheduler,
+) -> @sub.RunningSub? {
+  match payload {
+    Lifecycle(state, dispatch) => {
+      let mut current = state
+      let mut tagger = dispatch
+      if current.status is Loading {
+        scheduler.add(
+          @cmd.attempt(result => tagger(XtermLoaded(result)), async fn() {
+            @js.load()
+          }),
+        )
+        if current.use_fit {
+          scheduler.add(@fit.load(result => tagger(FitLoaded(result))))
+        }
+      }
+      Some({
+        unload: scheduler => {
+          if current.terminal is Some(terminal) {
+            scheduler.add(effect(() => terminal.dispose()))
+          }
+          if current.fit_addon is Some(addon) {
+            scheduler.add(@fit.dispose(addon))
+          }
+        },
+        update_tagger: payload => {
+          guard payload is Lifecycle(next, next_dispatch) else { return }
+          current = next
+          tagger = next_dispatch
+        },
+      })
+    }
+    _ => None
+  }
+}
+
+///|
+fn lifecycle(state : State, dispatch : @cmd.Dispatch[Action]) -> @sub.Sub {
+  @sub.custom_sub(
+    "xterm.lifecycle(\{state.host_id})",
+    @sub.Local,
+    Lifecycle(state, dispatch),
+    lifecycle_loader,
+  )
+}
+
+///|
+/// Install subscriptions for the managed terminal.
+///
+/// This loads xterm.js while the state is `Loading`, forwards user input,
+/// resize, and title-change events, and disposes the underlying JS resources
+/// when the subscription is removed. Applications using the managed API should
+/// not call low-level `dispose` directly.
+pub fn subscriptions(
+  state : State,
+  dispatch : @cmd.Dispatch[Action],
+) -> @sub.Sub {
+  let subs : Array[@sub.Sub] = [lifecycle(state, dispatch)]
+  if state.terminal is Some(terminal) {
+    subs.push(@js.on_data(terminal, data => dispatch(Data(data))))
+    subs.push(
+      @js.on_resize(terminal, size => {
+        dispatch(Resized({ cols: size.cols, rows: size.rows }))
+      }),
+    )
+    subs.push(
+      @js.on_title_change(terminal, title => dispatch(TitleChanged(title))),
+    )
+  }
+  if state.fit_addon is Some(_) {
+    subs.push(@sub.on_resize(_ => dispatch(Fit)))
+  }
+  @sub.batch(subs)
+}

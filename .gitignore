@@ -10,3 +10,6 @@ demo/out/
 .tmp/
 
 .private/
+
+__pycache__/
+*.py[cod]

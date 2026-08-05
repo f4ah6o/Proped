@@ -33,6 +33,12 @@ jobs:
       - name: Public disclosure check
         run: python3 scripts/check_public_disclosure.py
 
+      - name: External harness unit tests
+        run: python3 -m unittest scripts/test_external_harness.py
+
+      - name: External manifest validation
+        run: python3 scripts/external_harness.py validate
+
       - name: Format check
         run: moon fmt --check
 
@@ -57,6 +63,7 @@ jobs:
           moon run src/cli -- external inspect incr-typed-spreadsheet --json > /tmp/proped-rabbita-incr-inspection.json
           moon run src/cli -- external inspect circular-state --json > /tmp/proped-rabbita-circular-inspection.json
           moon run src/cli -- external inspect isomorphic-suite --json > /tmp/proped-rabbita-isomorphic-inspection.json
+          moon run src/cli -- external inspect rabbita-xterm-lifecycle --json > /tmp/proped-rabbita-xterm-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -74,6 +81,7 @@ jobs:
           incr_inspection = json.loads(Path('/tmp/proped-rabbita-incr-inspection.json').read_text())
           circular_inspection = json.loads(Path('/tmp/proped-rabbita-circular-inspection.json').read_text())
           isomorphic_inspection = json.loads(Path('/tmp/proped-rabbita-isomorphic-inspection.json').read_text())
+          xterm_inspection = json.loads(Path('/tmp/proped-rabbita-xterm-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -93,9 +101,10 @@ jobs:
               'incr-typed-spreadsheet',
               'circular-state',
               'isomorphic-suite',
+              'rabbita-xterm-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.12.0'
+          assert schema['version'] == '0.14.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -199,6 +208,13 @@ jobs:
               'KanbanMoveCardTo(column=99, index=0)'
           )
           assert isomorphic_app['upstreamWritePolicy'] == 'read-only'
+          xterm_app = xterm_inspection['application']
+          assert xterm_app['id'] == 'rabbita-xterm-lifecycle'
+          assert xterm_app['strategy'] == 'subscription-model'
+          assert xterm_app['effectPolicy'] == 'record-and-inject'
+          assert xterm_app['findingVisibility'] == 'public-bug'
+          assert xterm_app['expectedFailure'] == 'Resize(cols=0, rows=24)'
+          assert xterm_app['upstreamWritePolicy'] == 'read-only'
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -400,6 +416,16 @@ jobs:
               ],
           }
 
+          xterm = external_runs['rabbita-xterm-lifecycle']
+          assert xterm['expectationMet'] is True
+          assert xterm['states'] == 133
+          assert xterm['transitions'] == 2295
+          assert xterm['failures'] == 1
+          assert xterm['diagnostics'] == 0
+          assert xterm['firstFailure']['property'] == 'terminal dimensions remain positive'
+          assert xterm['firstFailure']['trace'] == ['Resize(cols=0, rows=24)']
+          assert xterm['firstFailure']['actionIds'] == ['resize:0:24']
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -477,4 +503,72 @@ jobs:
               'feb28cfc1d26aeecff44fdbe6b12335dbfe0ac0cc534a3b6018ca8686d1f8bed'
           )
           assert not Path('src/vendor/isomorphic_suite/upstream').exists()
+          xterm_source = Path(
+              'src/vendor/rabbita_xterm_lifecycle/upstream/xterm.mbt.txt'
+          ).read_bytes()
+          assert hashlib.sha256(xterm_source).hexdigest() == (
+              '4b1b32a105a5c7cb4b58b24684a546ba3a98d3acea75209ca9b26acc10068c02'
+          )
           PY
+  external-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - proton-demo-todo
+          - ensenzu-app
+          - signal-reader
+          - moonbit-editor-file-tree
+          - canopy-components
+          - incr-typed-spreadsheet
+          - circular-state
+          - isomorphic-suite
+          - rabbita-xterm-lifecycle
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MoonBit
+        uses: hustcer/setup-moonbit@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update package registry
+        run: moon update
+
+      - name: Validate manifests
+        run: python3 scripts/external_harness.py validate
+
+      - name: Run external target
+        run: |
+          moon run src/cli -- external run "${{ matrix.target }}" --output /tmp/proped-rabbita-matrix --json > /tmp/external-run.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          result = json.loads(Path('/tmp/external-run.json').read_text())
+          assert result['ok'] is True
+          assert result['command'] == 'external run'
+          assert len(result['runs']) == 1
+          run = result['runs'][0]
+          assert run['id'] == '${{ matrix.target }}'
+          assert run['expectationMet'] is True
+          assert run['diagnostics'] == 0
+          for artifact in run['artifacts']:
+              assert (Path(run['output']) / artifact).is_file()
+          PY
+
+  sandbox-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install network-deny backend
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes bubblewrap
+
+      - name: Verify network denial
+        run: sudo python3 scripts/external_harness.py sandbox-check --cwd "$GITHUB_WORKSPACE"

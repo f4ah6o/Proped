@@ -759,3 +759,60 @@ pub fn isomorphic_suite_handoff() -> @disclosure.FindingHandoff {
     visibility: @disclosure.PublicBug,
   }
 }
+
+///|
+pub fn rabbita_xterm_lifecycle_manifest() -> ExternalManifest {
+  {
+    id: "rabbita-xterm-lifecycle",
+    repository: "moonbit-community/rabbita_xterm",
+    revision: "9734f6a39ce3899dbf6738fa3a100c2cebaefc23",
+    license: "Apache-2.0",
+    packages: ["tonyfettes/rabbita_xterm", "examples/web"],
+    model_entry: "State",
+    message_entry: "Action",
+    update_entry: "update",
+    view_entry: "State::view",
+    strategy: SubscriptionModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "4b1b32a105a5c7cb4b58b24684a546ba3a98d3acea75209ca9b26acc10068c02",
+    properties: [
+      "terminal dimensions remain positive", "terminal mounts at most once", "dispose is idempotent",
+      "stale callbacks after dispose are ignored", "UTF-8 write chunks remain intact",
+      "rendered terminal state matches model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn rabbita_xterm_lifecycle_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "rabbita-xterm-lifecycle",
+    repository: "moonbit-community/rabbita_xterm",
+    revision: "9734f6a39ce3899dbf6738fa3a100c2cebaefc23",
+    title: "Reject non-positive terminal dimensions before updating managed state",
+    summary: "The managed Resize and Resized branches store columns and rows without checking that both values are positive, and explicit resize also forwards those values to xterm.js when ready.",
+    impact: "A direct action or malformed asciicast resize event can move the managed terminal into a zero or negative logical size and may pass invalid dimensions to the browser terminal implementation.",
+    expected: "Managed terminal dimensions remain strictly positive; invalid resize commands and events are rejected, clamped, or surfaced as validation errors.",
+    actual: "Resize(cols=0, rows=24) changes State.cols from 80 to 0 in one action.",
+    property: "terminal dimensions remain positive",
+    minimal_trace: ["Resize(cols=0, rows=24)"],
+    action_ids: ["resize:0:24"],
+    evidence: [
+      "The pinned managed update assigns both Resize and Resized dimensions directly with no positive-dimension guard.",
+      "The native lifecycle adapter covers load, mount, listener events, writes, themes, disposal, and stale generation callbacks without loading xterm.js.",
+      "UTF-8 chunks, single mount, dispose idempotency, stale callback rejection, and rendered-state properties pass.",
+    ],
+    suggested_fix: [
+      "Validate cols > 0 and rows > 0 in both Resize and Resized before changing State.",
+      "Apply the same validation when parsing asciicast resize payloads so malformed files cannot dispatch invalid terminal sizes.",
+      "Define whether invalid values are ignored, clamped to one cell, or reported through a managed error event.",
+    ],
+    verification: [
+      "Dispatch Resize with zero and negative columns or rows before and after Ready and confirm state stays valid.",
+      "Inject Resized events with zero and negative dimensions and confirm they are ignored or normalized.",
+      "Retain exact UTF-8 write chunk, lifecycle disposal, listener cleanup, and duplicate load-completion tests.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}

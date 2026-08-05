@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.12.0"))
+  assert_true(schema.contains("0.14.0"))
 }
 
 ///|
@@ -198,6 +198,7 @@ test "external list exposes all pinned applications" {
   assert_true(json.contains("incr-typed-spreadsheet"))
   assert_true(json.contains("circular-state"))
   assert_true(json.contains("isomorphic-suite"))
+  assert_true(json.contains("rabbita-xterm-lifecycle"))
 }
 
 ///|
@@ -291,5 +292,18 @@ test "Isomorphic suite inspection and handoff cover three apps" {
   assert_eq(spec.action_ids, [
     "kanban-init", "kanban-delete:1", "kanban-board:101:0",
   ])
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "Rabbita xterm inspection and handoff expose invalid dimensions" {
+  let json = rabbita_xterm_lifecycle_external_inspection_json()
+  assert_true(json.contains("moonbit-community/rabbita_xterm"))
+  assert_true(json.contains("\"strategy\":\"subscription-model\""))
+  assert_true(json.contains("terminal dimensions remain positive"))
+  assert_true(json.contains("Resize(cols=0, rows=24)"))
+  let spec = handoff_spec("rabbita-xterm-lifecycle").unwrap()
+  assert_eq(spec.minimal_trace, ["Resize(cols=0, rows=24)"])
+  assert_eq(spec.action_ids, ["resize:0:24"])
   assert_eq(spec.visibility, @disclosure.PublicBug)
 }

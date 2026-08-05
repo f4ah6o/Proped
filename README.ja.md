@@ -42,9 +42,9 @@ vendor source、revision、hash、license、adapter変更、failureの根拠は 
 
 ## 外部Rabbitaアプリケーション
 
-外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。
+外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。`scripts/external_harness.py` はmanifest validation、単純な`Msg` payloadの有限action scaffold生成、決定的なsource hash report、明示的revision更新のpreview、network deny環境でのinspection command実行を提供します。
 
-external campaignは8 targetになりました。`isomorphic-suite`はKanban・Todo・Noteを同一harnessで実行し、1,400 state・2,288 transitionから4 failureを保持します。primary traceは `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)` で、同じrunがKanban・Todoのstale list replacementとNoteのdangling selectionも検出します。各applicationはApache-2.0を宣言しますがpinned repositoryにstandalone LICENSEがないため、adapterはclean-roomです。
+external campaignは9 targetです。`rabbita-xterm-lifecycle`はmanaged xtermのload・mount・subscription・UTF-8 write・disposeをnative model化し、133 state・2,295 transitionから `Resize(cols=0, rows=24)` を1 actionへ縮約します。`isomorphic-suite`はKanban・Todo・Noteを同一harnessで実行し、1,400 state・2,288 transitionから4 failureを保持します。
 
 外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。`external handoff <id>`はissue、再現、fix plan、PR本文のローカル下書きだけを生成します。security-sensitive findingはpublic exportを拒否し、Gitでignoreされる `.private/disclosures/`へ隔離します。詳細は [docs/DISCLOSURE.ja.md](docs/DISCLOSURE.ja.md) を参照してください。
 

@@ -1,5 +1,33 @@
 # Changes
 
+## 0.14.0 - 2026-08-05
+
+### Added
+
+- Added `rabbita-xterm-lifecycle` as the ninth external target with a native lifecycle adapter for loading, mounting, subscriptions, UTF-8 writes, themes, resize events, disposal, and stale callbacks.
+- Preserved the Apache-2.0 managed xterm source at revision `9734f6a39ce3899dbf6738fa3a100c2cebaefc23` with SHA-256 provenance.
+
+### Fixed
+
+- Found that managed `Resize` and `Resized` actions accept non-positive terminal dimensions; minimized to `Resize(cols=0, rows=24)`.
+
+### Changed
+
+- Expanded the external CI matrix to nine targets and bumped the package and CLI version to `0.14.0`.
+
+## 0.13.0 - 2026-08-05
+
+### Added
+
+- Added `scripts/external_harness.py` for duplicate-safe manifest parsing, schema validation, deterministic source hashing, bounded `Msg` action scaffold generation, explicit prepare/update reports, and fail-closed network-denied inspection commands.
+- Added finite action corpora for payloadless variants plus `Bool`, `Int`, `String`, `Option`, and small payloadless enum fields.
+- Added Python unit tests, all-manifest validation, an eight-target external CI matrix, and a Linux network-denial policy check.
+
+### Changed
+
+- Added `$schema` as an allowed manifest metadata field and bumped the package and CLI version to `0.13.0`.
+- Documented the preparation workflow and kept manifest updates preview-only unless an explicit output or `--write` is supplied.
+
 ## 0.12.0 - 2026-08-05
 
 ### Added

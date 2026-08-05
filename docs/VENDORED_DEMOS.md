@@ -20,6 +20,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `incr-typed-spreadsheet` | `dowdiness/incr` typed spreadsheet | 2,349 preserved lines | failure | isolated runtime replay, worksheet traces, Eq/no-backdate probe |
 | `circular-state` | `CAIMEOX/circular web/updater` | clean-room | failure | workspace replacement, modal and selection integrity |
 | `isomorphic-suite` | `moonbit-community/isomorphic` Kanban/Todo/Note | clean-room | failure | shared request matrix, CRUD and reference integrity |
+| `rabbita-xterm-lifecycle` | `moonbit-community/rabbita_xterm` managed state | native lifecycle adapter | failure | loading, subscriptions, UTF-8 writes, disposal, dimensions |
 
 ## Counter
 

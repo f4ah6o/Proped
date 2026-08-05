@@ -1,0 +1,29 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "rabbita-xterm-lifecycle",
+  "repository": "moonbit-community/rabbita_xterm",
+  "revision": "9734f6a39ce3899dbf6738fa3a100c2cebaefc23",
+  "license": "Apache-2.0",
+  "packages": [
+    "tonyfettes/rabbita_xterm",
+    "examples/web"
+  ],
+  "entryPoints": {
+    "model": "State",
+    "message": "Action",
+    "update": "update",
+    "view": "State::view"
+  },
+  "strategy": "subscription-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "4b1b32a105a5c7cb4b58b24684a546ba3a98d3acea75209ca9b26acc10068c02",
+  "properties": [
+    "terminal dimensions remain positive",
+    "terminal mounts at most once",
+    "dispose is idempotent",
+    "stale callbacks after dispose are ignored",
+    "UTF-8 write chunks remain intact",
+    "rendered terminal state matches model"
+  ],
+  "findingVisibility": "public-bug"
+}

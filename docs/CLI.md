@@ -76,6 +76,7 @@ moon run src/cli -- external inspect canopy-components --json
 moon run src/cli -- external inspect incr-typed-spreadsheet --json
 moon run src/cli -- external inspect circular-state --json
 moon run src/cli -- external inspect isomorphic-suite --json
+moon run src/cli -- external inspect rabbita-xterm-lifecycle --json
 ```
 
 Returns manifest entry points, source SHA-256, effect policy, enabled properties, and the explicit `read-only` upstream write policy.
@@ -90,6 +91,24 @@ moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/
 
 Mechanically scans one local MoonBit source file for Rabbita imports, state constructors, `Model`, `Msg`, `update`, `view`, command, and subscription boundaries. The scanner classifies the file as `pure`, `effect-model`, `subscription-model`, `browser-replay`, or `unsupported`; reviewed manifest entries remain authoritative.
 
+### External preparation helper
+
+```bash
+python3 scripts/external_harness.py validate
+python3 scripts/external_harness.py scaffold --source app.mbt --message Msg
+python3 scripts/external_harness.py prepare \
+  --manifest external/manifests/proton-demo-todo.json \
+  --source src/vendor/proton_todo/upstream/main.mbt.txt \
+  --message Msg
+python3 scripts/external_harness.py update \
+  --manifest external/manifests/proton-demo-todo.json \
+  --revision <40-character-sha> \
+  --source <reviewed-source-file>
+python3 scripts/external_harness.py sandbox -- <inspection-command>
+```
+
+The helper parses manifest files with duplicate-key rejection, validates the tracked schema, computes deterministic source hashes, and generates bounded actions for payloadless messages plus `Bool`, `Int`, `String`, `Option`, and small payloadless enum fields. `update` is preview-only unless `--write` or an explicit `--output` path is supplied. It never fetches or writes an upstream repository. Commands that must inspect an untrusted checkout run through a fail-closed network-denied sandbox (`bubblewrap` on Linux or `sandbox-exec` on macOS). CI validates every manifest, verifies the sandbox policy, and runs each external target as an independent matrix entry.
+
 ### `external run <id|all>`
 
 ```bash
@@ -101,6 +120,7 @@ moon run src/cli -- external run canopy-components --json
 moon run src/cli -- external run incr-typed-spreadsheet --json
 moon run src/cli -- external run circular-state --json
 moon run src/cli -- external run isomorphic-suite --json
+moon run src/cli -- external run rabbita-xterm-lifecycle --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -116,8 +136,9 @@ Runs deterministic external adapters under `<output>/external/<id>/`. Native, ne
 | `incr-typed-spreadsheet` | `positive formula addition does not wrap backward` | `UpdateDraft(A1, "2147483647") -> ApplySelected` |
 | `circular-state` | `task modals retain an existing selected task` | `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)` |
 | `isomorphic-suite` | `kanban cards reference existing columns` | `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)` |
+| `rabbita-xterm-lifecycle` | `terminal dimensions remain positive` | `Resize(cols=0, rows=24)` |
 
-Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response. MoonBit Editor also retains a minimized late-success trace where a directory manually collapsed after auto-reveal started becomes expanded again. Canopy menu focus and tabs selection properties pass; the disabled-entry property is not applicable because those pinned APIs do not model disabled entries. The incr target also records formula recomputation/changed/unchanged traces and confirms Eq versus no-backdate downstream counts. Circular verifies task-modal and selection referential integrity after workspace synchronization. Isomorphic suite retains a missing-column Kanban move, stale Kanban/Todo list responses, and a dangling Note selection.
+Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response. MoonBit Editor also retains a minimized late-success trace where a directory manually collapsed after auto-reveal started becomes expanded again. Canopy menu focus and tabs selection properties pass; the disabled-entry property is not applicable because those pinned APIs do not model disabled entries. The incr target also records formula recomputation/changed/unchanged traces and confirms Eq versus no-backdate downstream counts. Circular verifies task-modal and selection referential integrity after workspace synchronization. Isomorphic suite retains a missing-column Kanban move, stale Kanban/Todo list responses, and a dangling Note selection. Rabbita xterm verifies loading, mounting, listeners, exact UTF-8 write chunks, and idempotent disposal in a native lifecycle model while retaining non-positive dimensions as the expected failure.
 
 ### `external handoff <id|all>`
 
@@ -128,6 +149,7 @@ moon run src/cli -- external handoff canopy-components --output artifacts --json
 moon run src/cli -- external handoff incr-typed-spreadsheet --output artifacts --json
 moon run src/cli -- external handoff circular-state --output artifacts --json
 moon run src/cli -- external handoff isomorphic-suite --output artifacts --json
+moon run src/cli -- external handoff rabbita-xterm-lifecycle --output artifacts --json
 ```
 
 Writes local `issue.md`, `reproduction.md`, `fix-plan.md`, `pr-body.md`, and `machine.json` drafts under `<output>/handoff/<id>/`. The metadata fixes `upstreamWritePerformed` to `false`; the command never calls GitHub or an upstream API.

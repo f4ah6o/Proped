@@ -153,3 +153,14 @@ The pinned revision has no standalone LICENSE file. No upstream source is includ
 - Adapter: `src/vendor/isomorphic_suite/isomorphic_suite.mbt`
 
 The pinned repository has no standalone LICENSE file. No upstream source is included in Proped Rabbita. The adapter is a clean-room finite behavioral model; exact source and module-metadata hashes, modeled response boundaries, and the remaining application checklist are recorded in `src/vendor/isomorphic_suite/UPSTREAM.md` and the closed exploration issue.
+
+## Rabbita xterm managed state
+
+- Project: `moonbit-community/rabbita_xterm`
+- Source path: `xterm.mbt`
+- Revision: `9734f6a39ce3899dbf6738fa3a100c2cebaefc23`
+- License: Apache License 2.0
+- Preserved source: `src/vendor/rabbita_xterm_lifecycle/upstream/xterm.mbt.txt`
+- Adapted source: `src/vendor/rabbita_xterm_lifecycle/rabbita_xterm_lifecycle.mbt`
+
+The upstream Apache License 2.0 text is included at `src/vendor/rabbita_xterm_lifecycle/LICENSE`. The native adapter replaces browser objects, DOM mounting, dynamic imports, and listener handles with deterministic generation-tagged lifecycle messages while preserving managed resize semantics.

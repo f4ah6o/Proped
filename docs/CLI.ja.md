@@ -76,6 +76,7 @@ moon run src/cli -- external inspect canopy-components --json
 moon run src/cli -- external inspect incr-typed-spreadsheet --json
 moon run src/cli -- external inspect circular-state --json
 moon run src/cli -- external inspect isomorphic-suite --json
+moon run src/cli -- external inspect rabbita-xterm-lifecycle --json
 ```
 
 manifestのentry point、source SHA-256、effect policy、有効property、upstreamへの明示的な`read-only` policyを返します。
@@ -90,6 +91,24 @@ moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/
 
 local MoonBit source fileからRabbita import、state constructor、`Model`、`Msg`、`update`、`view`、command、subscription境界を機械検出します。scannerは `pure`、`effect-model`、`subscription-model`、`browser-replay`、`unsupported` に分類しますが、review済みmanifestを最終的な根拠とします。
 
+### External preparation helper
+
+```bash
+python3 scripts/external_harness.py validate
+python3 scripts/external_harness.py scaffold --source app.mbt --message Msg
+python3 scripts/external_harness.py prepare \
+  --manifest external/manifests/proton-demo-todo.json \
+  --source src/vendor/proton_todo/upstream/main.mbt.txt \
+  --message Msg
+python3 scripts/external_harness.py update \
+  --manifest external/manifests/proton-demo-todo.json \
+  --revision <40-character-sha> \
+  --source <review済みsource-file>
+python3 scripts/external_harness.py sandbox -- <inspection-command>
+```
+
+helperはduplicate keyを拒否してmanifest fileをparseし、tracked schemaのvalidation、決定的なsource hash計算、payloadなしMsgと`Bool`、`Int`、`String`、`Option`、payloadなしsmall enumの有限action scaffold生成を行います。`update`は`--write`または明示的な`--output`がない限りpreviewのみです。upstream repositoryの取得・書き込みは行いません。untrusted checkoutをinspection commandで扱う場合はfail-closedなnetwork-denied sandboxを使用します（Linuxは`bubblewrap`、macOSは`sandbox-exec`）。CIは全manifestを検証し、sandbox policyを確認し、external targetを独立matrix jobで実行します。
+
 ### `external run <id|all>`
 
 ```bash
@@ -101,6 +120,7 @@ moon run src/cli -- external run canopy-components --json
 moon run src/cli -- external run incr-typed-spreadsheet --json
 moon run src/cli -- external run circular-state --json
 moon run src/cli -- external run isomorphic-suite --json
+moon run src/cli -- external run rabbita-xterm-lifecycle --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -116,8 +136,9 @@ moon run src/cli -- external run all --output artifacts --json
 | `incr-typed-spreadsheet` | `positive formula addition does not wrap backward` | `UpdateDraft(A1, "2147483647") -> ApplySelected` |
 | `circular-state` | `task modals retain an existing selected task` | `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)` |
 | `isomorphic-suite` | `kanban cards reference existing columns` | `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)` |
+| `rabbita-xterm-lifecycle` | `terminal dimensions remain positive` | `Resize(cols=0, rows=24)` |
 
-Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。MoonBit Editorはauto-reveal開始後に手動collapseしたdirectoryがlate successで再展開される最小traceも保持します。Canopyのmenu focus・tabs selection propertyはpassし、pinned APIにdisabled entry modelがないためdisabled selection propertyは非適用です。 incr targetはformulaのrecomputed・changed・unchanged traceを保存し、Eqとno-backdateのdownstream count差も確認します。Circularはworkspace同期後のtask modalとselectionの参照整合性を検証します。 Isomorphic suiteはKanbanのmissing-column参照、Kanban・Todoのstale list response、Noteのdangling selectionを保持します。
+Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。MoonBit Editorはauto-reveal開始後に手動collapseしたdirectoryがlate successで再展開される最小traceも保持します。Canopyのmenu focus・tabs selection propertyはpassし、pinned APIにdisabled entry modelがないためdisabled selection propertyは非適用です。 incr targetはformulaのrecomputed・changed・unchanged traceを保存し、Eqとno-backdateのdownstream count差も確認します。Circularはworkspace同期後のtask modalとselectionの参照整合性を検証します。 Isomorphic suiteはKanbanのmissing-column参照、Kanban・Todoのstale list response、Noteのdangling selectionを保持します。 Rabbita xtermはload・mount・listener・UTF-8 write・disposeをnative lifecycleとして検証し、非正値dimensionだけをexpected failureとして保持します。
 
 ### `external handoff <id|all>`
 
@@ -128,6 +149,7 @@ moon run src/cli -- external handoff canopy-components --output artifacts --json
 moon run src/cli -- external handoff incr-typed-spreadsheet --output artifacts --json
 moon run src/cli -- external handoff circular-state --output artifacts --json
 moon run src/cli -- external handoff isomorphic-suite --output artifacts --json
+moon run src/cli -- external handoff rabbita-xterm-lifecycle --output artifacts --json
 ```
 
 `<output>/handoff/<id>/`へ`issue.md`、`reproduction.md`、`fix-plan.md`、`pr-body.md`、`machine.json`をローカル生成します。metadataの`upstreamWritePerformed`は常に`false`で、GitHubやupstream APIを呼びません。

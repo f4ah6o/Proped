@@ -1,6 +1,6 @@
 # 外部Rabbitaアプリを機械的に探索するtest harnessを実装する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
 Updated: 2026-08-05
@@ -164,12 +164,12 @@ external/
 - [x] local checkoutのsource fileからRabbita entry point候補を機械検出できる。
 - [x] pure、effect-model、subscription-modelを含むadapter方式を区別できる。
 - [x] effect descriptorを記録し、boundedなresponse順序を生成できる。
-- [ ] payloadなしMsgとsmall scalar payloadからaction scaffoldを生成できる。
+- [x] payloadなしMsgとsmall scalar payloadからaction scaffoldを生成できる。
 - [x] generic propertyだけで1件以上の既知fixture failureを再発見できる。
 - [x] app固有propertyをadapterとして追加できる。
 - [x] failureを最小traceへ縮約できる。
-- [ ] untrusted checkoutはnetwork denyのsandboxで扱う。
-- [ ] CIで複数external targetをmatrix実行できる。
+- [x] untrusted checkoutはnetwork denyのsandboxで扱う。
+- [x] CIで複数external targetをmatrix実行できる。
 - [x] security findingをpublic artifactから隔離できる。
 - [x] issue・再現・fix plan・PR本文のlocal handoffを生成できる。
 
@@ -190,7 +190,10 @@ external/
 - `CAIMEOX/circular`をclean-room effect-modelとしてdogfoodし、workspace sync後のtask modal referential-integrity failureを再現した。
 - `FindingVisibility`、private run root、public export block、tracked manifest checkを追加した。
 - `external handoff <id|all>` はissue、reproduction、fix-plan、PR body、machine metadataをローカル生成する。
-- 残作業はaction scaffold自動生成、untrusted checkout sandbox、複数target CI matrixのjob分離、manifest file parserとprepare/update workflow。
+- `scripts/external_harness.py` にduplicate-safe manifest parser、validate、prepare、update、action scaffold、network-denied sandboxを実装した。
+- payloadなしMsg、Bool、Int、String、Option、payloadなしsmall enumからbounded action corpusを生成する。
+- CIを8 external targetのmatrix jobへ分離し、Linux上でnetwork deny policyを機械確認する。
+- `update` は明示的な `--write` または `--output` がない限りpreview-onlyで、upstream fetch/writeを行わない。
 
 ## 最初のdogfood対象
 
@@ -219,3 +222,8 @@ external/
 ## 変更履歴
 
 `CHANGES.md` impact: yes
+
+## 完了確認
+
+- 2026-08-05: Python unit tests 7件、tracked manifest 8件のvalidation、MoonBit JS tests 98件、native check、CLI prepare実行を確認した。
+- 2026-08-05: native testsはCodex sandbox内のmacOS `/tmp` 制限を避け、host権限で最終確認する。

@@ -1,5 +1,16 @@
 # Changes
 
+## 0.33.0 - 2026-08-06
+
+### Added
+
+- Added an actual Nuxt 4.4 production fixture covering SSR, Vue hydration comparison, `useAsyncData`, global route middleware, Nitro GET/POST routes, explicit hydration settling, and fresh Browser Context reset.
+- Added a deterministic Nuxt hydration-warning failure, descriptor-only server-route diagnostics, loopback-only browser routing, generated Atlas artifacts, and an audited dependency lockfile.
+
+### Changed
+
+- Bumped the package and CLI version to `0.33.0`.
+
 ## 0.32.0 - 2026-08-06
 
 ### Added

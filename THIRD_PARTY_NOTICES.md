@@ -269,3 +269,11 @@ These packages are pinned by `web/playwright-browser/package-lock.json` and are 
 - Playwright 1.62.0 and Playwright Core 1.62.0, Microsoft Corporation, Apache License 2.0.
 
 These packages are pinned by `web/next-ssr-hydration/package-lock.json` and are used only by the isolated App Router and Pages Router SSR/hydration fixture. The matching Chromium binary is managed by Playwright and is not included in this repository.
+
+## Nuxt SSR and hydration test runtime
+
+- Nuxt 4.4.8 and its Nuxt runtime packages, Nuxt contributors, MIT License.
+- Vue 3.5.41, Evan You and Vue contributors, MIT License.
+- Playwright 1.62.0 and Playwright Core 1.62.0, Microsoft Corporation, Apache License 2.0.
+
+These packages are pinned by `web/nuxt-ssr-hydration/package-lock.json` and are used only by the isolated Nuxt SSR/hydration fixture. The matching Chromium binary is managed by Playwright and is not included in this repository. The fixture runs a generated loopback-only Nitro server and does not include third-party application source.

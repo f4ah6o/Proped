@@ -26,3 +26,7 @@ web/playwright-browser/out/
 
 web/next-ssr-hydration/.next/
 web/next-ssr-hydration/out/
+
+web/nuxt-ssr-hydration/.nuxt/
+web/nuxt-ssr-hydration/.output/
+web/nuxt-ssr-hydration/out/

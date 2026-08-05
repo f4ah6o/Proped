@@ -1,0 +1,133 @@
+{
+  "ok": true,
+  "runtime": "nuxt-ssr-hydration",
+  "versions": {
+    "nuxt": "4.4.8",
+    "vue": "3.5.41",
+    "playwright": "1.62.0"
+  },
+  "casePolicy": {
+    "freshBrowserContext": true,
+    "serviceWorkers": "block",
+    "network": "loopback-fixture-only",
+    "externalEffects": "deny-or-descriptor",
+    "readiness": "explicit-main-data-ready-and-async-data"
+  },
+  "cases": [
+    {
+      "caseName": "stable",
+      "serverLabel": "stable-nuxt",
+      "hydratedLabel": "stable-nuxt",
+      "hydrationMismatch": false,
+      "hydrationWarningCount": 0,
+      "hydrationMessages": [],
+      "asyncData": {
+        "kind": "nitro-server-route",
+        "method": "GET",
+        "caseName": "stable",
+        "asyncValue": "async-stable",
+        "externalMutation": false
+      },
+      "middleware": {
+        "entered": true,
+        "route": "/fixture",
+        "externalMutation": false
+      },
+      "serverRouteResult": {
+        "status": "idle",
+        "sequence": 0,
+        "title": "",
+        "effect": null
+      },
+      "storage": {
+        "local": {},
+        "session": {}
+      },
+      "fingerprint": "88069564180c03fda66d043fdc221083e590b698794bc6f04f175d4482cacc3a",
+      "serverSemanticHash": "4d4a9d564cc85220d158c06f7403c8df6e7d75136e9aaf143a5e9a4caa764a1f",
+      "routePolicy": "loopback-fixture-only"
+    },
+    {
+      "caseName": "mismatch",
+      "serverLabel": "server-nuxt",
+      "hydratedLabel": "client-nuxt",
+      "hydrationMismatch": true,
+      "hydrationWarningCount": 1,
+      "hydrationMessages": [
+        "Hydration completed but contains mismatches."
+      ],
+      "asyncData": {
+        "kind": "nitro-server-route",
+        "method": "GET",
+        "caseName": "mismatch",
+        "asyncValue": "async-mismatch",
+        "externalMutation": false
+      },
+      "middleware": {
+        "entered": true,
+        "route": "/fixture",
+        "externalMutation": false
+      },
+      "serverRouteResult": {
+        "status": "idle",
+        "sequence": 0,
+        "title": "",
+        "effect": null
+      },
+      "storage": {
+        "local": {},
+        "session": {}
+      },
+      "fingerprint": "03ba3b197ae438c6d9768448cd4b7f63fd8dcf0f742526b5d8a000090789a3d8",
+      "serverSemanticHash": "a0011e9754608243f83fdbba4ba378502146e8a23f1ff163c4c30d15de4312cc",
+      "routePolicy": "loopback-fixture-only"
+    }
+  ],
+  "failures": [
+    {
+      "property": "hydration_warning",
+      "failureClass": "hydration_warning",
+      "caseName": "mismatch",
+      "evidence": {
+        "serverLabel": "server-nuxt",
+        "hydratedLabel": "client-nuxt",
+        "warningCount": 1,
+        "messages": [
+          "Hydration completed but contains mismatches."
+        ]
+      },
+      "signature": "da97ccdf4eec71f643c612afadc5cdf6dc60901189baa48aeb5db8a7951227e0",
+      "snapshotHash": "03ba3b197ae438c6d9768448cd4b7f63fd8dcf0f742526b5d8a000090789a3d8",
+      "replayCount": 2,
+      "browserVersion": "151.0.7922.34"
+    }
+  ],
+  "diagnostics": [
+    {
+      "kind": "async_data_boundary",
+      "source": "nitro-server-route",
+      "externalMutation": false
+    },
+    {
+      "kind": "middleware_boundary",
+      "route": "/fixture",
+      "externalMutation": false
+    },
+    {
+      "kind": "server_route_boundary",
+      "method": "POST",
+      "policy": "descriptor-only",
+      "externalMutation": false
+    },
+    {
+      "kind": "network_boundary",
+      "policy": "loopback-fixture-only",
+      "blockedRoutes": 1
+    }
+  ],
+  "resets": {
+    "dirtyContext": 4,
+    "cleanContext": 5
+  },
+  "semanticHash": "5543b06e0cd395637b48fd794f94de9775dc1a79ee8fdab5fa1c188426b6b9f9"
+}

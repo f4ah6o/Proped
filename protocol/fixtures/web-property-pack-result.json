@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "violationCount": 8,
+  "codes": [
+    "deterministic_replay",
+    "duplicate_submit",
+    "entity_consistency",
+    "focus_integrity",
+    "hydration_warning",
+    "pending_effect_leak",
+    "stale_response",
+    "unhandled_exception"
+  ],
+  "failure": {
+    "property": "duplicate_submit",
+    "message": "submit created a duplicate pending effect",
+    "severity": "error",
+    "evidence": {
+      "before": [
+        {
+          "kind": "submit",
+          "id": 1
+        }
+      ],
+      "after": [
+        {
+          "kind": "submit",
+          "id": 1
+        },
+        {
+          "kind": "submit",
+          "id": 2
+        }
+      ]
+    },
+    "signature": {
+      "protocolVersion": "1.0",
+      "fixture": "generic-web",
+      "property": "duplicate_submit",
+      "failureClass": "duplicate_submit",
+      "trace": [
+        "submit|form|Profile"
+      ],
+      "snapshotHash": "after",
+      "seed": 7,
+      "normalizerVersion": "1",
+      "semanticHash": "c8674703f93be7d0958aead99d0515a65abb23c4ce30a171a2d51f1f1007f3c9"
+    }
+  },
+  "semanticHash": "14904ca1d89d34112533a5d53aedaf985abf645e5d0356a58d0b12648758b8c5"
+}

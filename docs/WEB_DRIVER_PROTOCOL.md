@@ -61,3 +61,8 @@ When two observations claim the same fingerprint but differ in semantic DOM, for
 ## Accessible action discovery
 
 Drivers provide semantic element records rather than CSS selectors. The v1 discovery layer supports button/link clicks, checkbox state changes, radio/combobox/listbox selection, textbox/searchbox/spinbutton clear and bounded typing, form submit, and dialog confirm/cancel/close. Stable action IDs combine kind, role, accessible name, ancestor scope, optional stable test identity, and normalized input. Hidden or disabled elements are excluded. Duplicate identities are not executed and are emitted as `ambiguous_action` diagnostics.
+
+
+## Generic Web property pack
+
+`protocol/web-property-pack.mjs` evaluates stale responses, duplicate submits, pending-effect leaks, focus integrity, entity consistency, hydration warnings, unhandled runtime failures, and deterministic replay. Each property has an error/warning/off policy and produces a replayable failure signature. Framework adapters supply normalized snapshots; the pack does not read React Fiber, Vue VNodes, or other private runtime state.

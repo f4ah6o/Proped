@@ -1,5 +1,15 @@
 # Changes
 
+## 0.26.0 - 2026-08-06
+
+### Added
+
+- Added the framework-neutral generic Web property pack with severity policy, bounded fixtures, machine-readable diagnostics, and replayable failure signatures.
+
+### Changed
+
+- Bumped the package and CLI version to `0.26.0`.
+
 ## 0.25.0 - 2026-08-05
 
 ### Added

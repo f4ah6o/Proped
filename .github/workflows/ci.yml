@@ -54,6 +54,9 @@ jobs:
           python3 -m json.tool spikes/web-driver/react-spike.json > /dev/null
           node spikes/web-driver/parity.mjs
 
+      - name: Generic Web property pack
+        run: node scripts/test_web_property_pack.mjs
+
       - name: Format check
         run: moon fmt --check
 
@@ -138,7 +141,7 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.25.0'
+          assert schema['version'] == '0.26.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(

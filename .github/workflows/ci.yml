@@ -57,6 +57,9 @@ jobs:
       - name: Generic Web property pack
         run: node scripts/test_web_property_pack.mjs
 
+      - name: Network and timer schedule exploration
+        run: node scripts/test_network_timer_schedule.mjs
+
       - name: React Component Mode
         run: |
           npm ci --prefix web/react-component --ignore-scripts
@@ -151,7 +154,7 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.28.0'
+          assert schema['version'] == '0.29.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(

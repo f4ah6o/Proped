@@ -1,5 +1,18 @@
 # Changes
 
+## 0.29.0 - 2026-08-06
+
+### Added
+
+- Added a deterministic virtual network and fake-timer schedule runtime with stable issue, abort, reject, deliver, clock-advance, and timer-fire actions.
+- Added bounded schedule exploration, fresh-fixture replay, deletion shrinking, replay signatures, and generated Atlas artifacts.
+- Added machine-readable detection for stale responses, commits after abort, retry-budget overflow, and duplicate callback invocation.
+
+### Changed
+
+- Real network and real timers are explicitly denied at the scheduling boundary; external effects must be deterministic descriptors.
+- Bumped the package and CLI version to `0.29.0`.
+
 ## 0.28.0 - 2026-08-06
 
 ### Added

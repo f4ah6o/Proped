@@ -19,3 +19,5 @@ node_modules/
 web/react-component/out/
 
 web/vue-component/out/
+
+protocol/out/

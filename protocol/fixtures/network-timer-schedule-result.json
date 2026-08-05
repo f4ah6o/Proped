@@ -1,0 +1,152 @@
+{
+  "ok": true,
+  "runtime": "virtual-network-timer",
+  "fixture": "network-timer-faults",
+  "seed": 41,
+  "policy": {
+    "realNetwork": "deny",
+    "realTimers": "deny",
+    "retryBudget": 1,
+    "retryDelayMs": 100
+  },
+  "bounds": {
+    "inputCorpus": [
+      "a",
+      "ab"
+    ],
+    "maxGenerations": 2,
+    "maxDepth": 6,
+    "maxTransitions": 2000
+  },
+  "exploration": {
+    "transitions": 580,
+    "states": 377,
+    "truncated": true,
+    "depthBoundReached": true,
+    "transitionLimitReached": false
+  },
+  "failures": [
+    {
+      "property": "aborted_response_commit",
+      "message": "aborted response committed application state",
+      "severity": "error",
+      "evidence": {
+        "requestId": "req-1",
+        "result": "result:a:attempt:1"
+      },
+      "trace": [
+        "issue|network|search|query=\"a\"",
+        "abort|network|req-1",
+        "deliver|network|req-1"
+      ],
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "network-timer-faults",
+        "property": "aborted_response_commit",
+        "failureClass": "aborted_response_commit",
+        "trace": [
+          "issue|network|search|query=\"a\"",
+          "abort|network|req-1",
+          "deliver|network|req-1"
+        ],
+        "snapshotHash": "39642c69527ef6d3e7218ad83ded1b8257ff2ab347b7ecee79f14bea1e446c0d",
+        "seed": 41,
+        "normalizerVersion": "network-timer-1",
+        "semanticHash": "5e1b4843eca22e9d7b5117c7f2c7523c07a6d08890b1b232a8b72b139d676a4f"
+      }
+    },
+    {
+      "property": "callback_count_exceeded",
+      "message": "a network completion callback ran more than once",
+      "severity": "error",
+      "evidence": {
+        "requestId": "req-1",
+        "count": 2
+      },
+      "trace": [
+        "issue|network|search|query=\"a\"",
+        "deliver|network|req-1"
+      ],
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "network-timer-faults",
+        "property": "callback_count_exceeded",
+        "failureClass": "callback_count_exceeded",
+        "trace": [
+          "issue|network|search|query=\"a\"",
+          "deliver|network|req-1"
+        ],
+        "snapshotHash": "39642c69527ef6d3e7218ad83ded1b8257ff2ab347b7ecee79f14bea1e446c0d",
+        "seed": 41,
+        "normalizerVersion": "network-timer-1",
+        "semanticHash": "4cbb68eeb06e9fc83ac95145df81bcd9a19f8a02024317c667a62a303b435761"
+      }
+    },
+    {
+      "property": "retry_budget_exceeded",
+      "message": "retry schedule exceeded the request budget",
+      "severity": "error",
+      "evidence": {
+        "logicalKey": "search:1",
+        "count": 2,
+        "retryBudget": 1
+      },
+      "trace": [
+        "issue|network|search|query=\"a\"",
+        "fail|network|req-1",
+        "advance|timer|to=100",
+        "fire|timer|timer-1",
+        "fire|timer|timer-2"
+      ],
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "network-timer-faults",
+        "property": "retry_budget_exceeded",
+        "failureClass": "retry_budget_exceeded",
+        "trace": [
+          "issue|network|search|query=\"a\"",
+          "fail|network|req-1",
+          "advance|timer|to=100",
+          "fire|timer|timer-1",
+          "fire|timer|timer-2"
+        ],
+        "snapshotHash": "8bff2f828f99739e96b6117db37b32f7e0e09170a552663ccbb16281b7de4e51",
+        "seed": 41,
+        "normalizerVersion": "network-timer-1",
+        "semanticHash": "07229d911a3110a153cc341c64d0d44dd9634812623d250cc9b77d5aa6403c65"
+      }
+    },
+    {
+      "property": "stale_response",
+      "message": "stale response changed the current result",
+      "severity": "error",
+      "evidence": {
+        "requestId": "req-1",
+        "requestGeneration": 1,
+        "currentGeneration": 2
+      },
+      "trace": [
+        "issue|network|search|query=\"a\"",
+        "issue|network|search|query=\"ab\"",
+        "deliver|network|req-1"
+      ],
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "network-timer-faults",
+        "property": "stale_response",
+        "failureClass": "stale_response",
+        "trace": [
+          "issue|network|search|query=\"a\"",
+          "issue|network|search|query=\"ab\"",
+          "deliver|network|req-1"
+        ],
+        "snapshotHash": "5dd8d55fd3adae6e6873ab5b43f19bc34908aa7bc81518fc9005671c0f557031",
+        "seed": 41,
+        "normalizerVersion": "network-timer-1",
+        "semanticHash": "9986738fdb4ac3f09b4f778c1161a8522618159b199d4de65afeae5c50f1acb6"
+      }
+    }
+  ],
+  "diagnostics": [],
+  "semanticHash": "bf3d6ed16aeb8e0c79d16068243792ce26bf3273ef8cdc725e6ebebdb64b27c3"
+}

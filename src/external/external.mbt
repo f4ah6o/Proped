@@ -816,3 +816,69 @@ pub fn rabbita_xterm_lifecycle_handoff() -> @disclosure.FindingHandoff {
     visibility: @disclosure.PublicBug,
   }
 }
+
+///|
+pub fn moonclaw_job_manifest() -> ExternalManifest {
+  {
+    id: "moonclaw-job",
+    repository: "vectie/moonclaw",
+    revision: "5fdc845f2a926cdd17260fb9720135a2c50eff38",
+    license: "Apache-2.0",
+    packages: ["ui/rabbita-job/main"],
+    model_entry: "Model",
+    message_entry: "Msg",
+    update_entry: "update",
+    view_entry: "view",
+    strategy: SubscriptionModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "15b8300dce13d0ce57d9c0b7f5076c38a8135fe7659a582cef597e230c27fb04",
+    properties: [
+      "older snapshot responses do not revive terminal runs", "selected snapshot matches selected run",
+      "timeline entries match selected run", "pending request IDs remain unique",
+      "rendered job state matches model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn moonclaw_job_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "moonclaw-job",
+    repository: "vectie/moonclaw",
+    revision: "5fdc845f2a926cdd17260fb9720135a2c50eff38",
+    title: "Correlate Moonclaw job snapshot responses by request generation",
+    summary: "The Jobs surface carries run_id through SnapshotLoaded but no request generation. Two in-flight snapshot fetches for the same run can therefore be applied in delivery order rather than request order.",
+    impact: "After a run is displayed as succeeded, failed, or cancelled, a late older Running or Pending snapshot can revive the visible run and restart polling for an operation that already finished.",
+    expected: "Only the newest snapshot request for the selected run updates the visible snapshot; terminal state is not replaced by an older live response.",
+    actual: "After request 2 reports Succeeded, request 1 can report Running and replace the terminal snapshot because both responses match the selected run ID.",
+    property: "older snapshot responses do not revive terminal runs",
+    minimal_trace: [
+      "StreamClosed(\"run-1\")", "StreamClosed(\"run-1\")", "SnapshotLoaded(request=2, run=\"run-1\", status=Succeeded)",
+      "SnapshotLoaded(request=1, run=\"run-1\", status=Running)",
+    ],
+    action_ids: [
+      "stream-closed:5:run-1", "stream-closed:5:run-1", "snapshot-loaded:2:5:run-1:Succeeded",
+      "snapshot-loaded:1:5:run-1:Running",
+    ],
+    evidence: [
+      "The pinned fetch_snapshot callback dispatches SnapshotLoaded(run_id, result) without a request or generation identifier.",
+      "The pinned update branch accepts every successful snapshot whose run_id equals selected_run_id and schedules another poll when the accepted status is live.",
+      "The adapter injects two same-run HTTP responses in reverse request order while keeping other-run responses, stream deduplication, pending effect identity, and rendering properties passing.",
+      "The pinned Jobs surface exposes no direct cancel or retry message; those controls belong to separate Cowork or ACP surfaces and are not invented by this adapter.",
+    ],
+    suggested_fix: [
+      "Assign a monotonically increasing snapshot generation when fetch_snapshot is issued and carry it through SnapshotLoaded.",
+      "Ignore a SnapshotLoaded result older than the latest generation for that run.",
+      "Alternatively cancel the prior request or compare a server-provided revision or updated_at value before replacing a terminal snapshot.",
+      "Apply the same freshness rule to SnapshotLoaded errors so an older failure cannot erase a newer accepted snapshot.",
+    ],
+    verification: [
+      "Start two snapshot requests for one run, deliver the newer terminal response first and the older live response last, and confirm the terminal snapshot remains visible.",
+      "Repeat for Succeeded, Failed, and Cancelled followed by Pending and Running.",
+      "Switch to another run and confirm late responses for the old run remain ignored.",
+      "Confirm stream closure still triggers one fresh snapshot request and terminal snapshots stop periodic polling.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}

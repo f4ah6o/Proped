@@ -17,6 +17,7 @@ import {
   "f4ah6o/proped-rabbita/vendor/circular_state",
   "f4ah6o/proped-rabbita/vendor/isomorphic_suite",
   "f4ah6o/proped-rabbita/vendor/rabbita_xterm_lifecycle" @xterm_lifecycle,
+  "f4ah6o/proped-rabbita/vendor/moonclaw_job",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/env",

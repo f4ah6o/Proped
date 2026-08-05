@@ -1,5 +1,21 @@
 # Changes
 
+## 0.15.0 - 2026-08-05
+
+### Added
+
+- Added `moonclaw-job` as the tenth external target with a finite Jobs-surface adapter for snapshot requests, stream closure, run selection, timeline deduplication, and reverse-order response injection.
+- Preserved Moonclaw's Apache-2.0 Rabbita job `update.mbt` and model types at revision `5fdc845f2a926cdd17260fb9720135a2c50eff38` with SHA-256 provenance.
+
+### Fixed
+
+- Found that an older same-run snapshot response can replace a newer terminal snapshot and revive the visible run; minimized to two stream-triggered requests followed by `Succeeded` then stale `Running` delivery.
+
+### Changed
+
+- Expanded the external CI matrix to ten targets and bumped the package and CLI version to `0.15.0`.
+- Documented that the pinned Jobs surface has no direct cancel/retry message; ACP and Cowork controls remain separate exploration scopes.
+
 ## 0.14.0 - 2026-08-05
 
 ### Added

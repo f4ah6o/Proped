@@ -77,6 +77,7 @@ moon run src/cli -- external inspect incr-typed-spreadsheet --json
 moon run src/cli -- external inspect circular-state --json
 moon run src/cli -- external inspect isomorphic-suite --json
 moon run src/cli -- external inspect rabbita-xterm-lifecycle --json
+moon run src/cli -- external inspect moonclaw-job --json
 ```
 
 Returns manifest entry points, source SHA-256, effect policy, enabled properties, and the explicit `read-only` upstream write policy.
@@ -121,6 +122,7 @@ moon run src/cli -- external run incr-typed-spreadsheet --json
 moon run src/cli -- external run circular-state --json
 moon run src/cli -- external run isomorphic-suite --json
 moon run src/cli -- external run rabbita-xterm-lifecycle --json
+moon run src/cli -- external run moonclaw-job --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -137,8 +139,9 @@ Runs deterministic external adapters under `<output>/external/<id>/`. Native, ne
 | `circular-state` | `task modals retain an existing selected task` | `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)` |
 | `isomorphic-suite` | `kanban cards reference existing columns` | `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)` |
 | `rabbita-xterm-lifecycle` | `terminal dimensions remain positive` | `Resize(cols=0, rows=24)` |
+| `moonclaw-job` | `older snapshot responses do not revive terminal runs` | `StreamClosed("run-1") -> StreamClosed("run-1") -> SnapshotLoaded(request=2, run="run-1", status=Succeeded) -> SnapshotLoaded(request=1, run="run-1", status=Running)` |
 
-Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response. MoonBit Editor also retains a minimized late-success trace where a directory manually collapsed after auto-reveal started becomes expanded again. Canopy menu focus and tabs selection properties pass; the disabled-entry property is not applicable because those pinned APIs do not model disabled entries. The incr target also records formula recomputation/changed/unchanged traces and confirms Eq versus no-backdate downstream counts. Circular verifies task-modal and selection referential integrity after workspace synchronization. Isomorphic suite retains a missing-column Kanban move, stale Kanban/Todo list responses, and a dangling Note selection. Rabbita xterm verifies loading, mounting, listeners, exact UTF-8 write chunks, and idempotent disposal in a native lifecycle model while retaining non-positive dimensions as the expected failure.
+Signal Reader also retains minimized failures for a stale saved-state callback and an older live-search response. MoonBit Editor also retains a minimized late-success trace where a directory manually collapsed after auto-reveal started becomes expanded again. Canopy menu focus and tabs selection properties pass; the disabled-entry property is not applicable because those pinned APIs do not model disabled entries. The incr target also records formula recomputation/changed/unchanged traces and confirms Eq versus no-backdate downstream counts. Circular verifies task-modal and selection referential integrity after workspace synchronization. Isomorphic suite retains a missing-column Kanban move, stale Kanban/Todo list responses, and a dangling Note selection. Rabbita xterm verifies loading, mounting, listeners, exact UTF-8 write chunks, and idempotent disposal in a native lifecycle model while retaining non-positive dimensions as the expected failure. Moonclaw verifies selected-run correlation, timeline deduplication, pending request identity, and rendering while retaining reverse-ordered same-run snapshot revival as the expected failure; the pinned Jobs surface has no direct cancel/retry action.
 
 ### `external handoff <id|all>`
 
@@ -150,6 +153,7 @@ moon run src/cli -- external handoff incr-typed-spreadsheet --output artifacts -
 moon run src/cli -- external handoff circular-state --output artifacts --json
 moon run src/cli -- external handoff isomorphic-suite --output artifacts --json
 moon run src/cli -- external handoff rabbita-xterm-lifecycle --output artifacts --json
+moon run src/cli -- external handoff moonclaw-job --output artifacts --json
 ```
 
 Writes local `issue.md`, `reproduction.md`, `fix-plan.md`, `pr-body.md`, and `machine.json` drafts under `<output>/handoff/<id>/`. The metadata fixes `upstreamWritePerformed` to `false`; the command never calls GitHub or an upstream API.

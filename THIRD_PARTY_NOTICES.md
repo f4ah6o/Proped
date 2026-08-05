@@ -164,3 +164,15 @@ The pinned repository has no standalone LICENSE file. No upstream source is incl
 - Adapted source: `src/vendor/rabbita_xterm_lifecycle/rabbita_xterm_lifecycle.mbt`
 
 The upstream Apache License 2.0 text is included at `src/vendor/rabbita_xterm_lifecycle/LICENSE`. The native adapter replaces browser objects, DOM mounting, dynamic imports, and listener handles with deterministic generation-tagged lifecycle messages while preserving managed resize semantics.
+
+
+## Moonclaw Rabbita job UI
+
+- Project: `vectie/moonclaw`
+- Source path: `ui/rabbita-job/main/update.mbt` and `model_types.mbt`
+- Revision: `5fdc845f2a926cdd17260fb9720135a2c50eff38`
+- License: Apache License 2.0
+- Preserved source: `src/vendor/moonclaw_job/upstream/`
+- Adapted source: `src/vendor/moonclaw_job/moonclaw_job.mbt`
+
+The upstream Apache License 2.0 text is included at `src/vendor/moonclaw_job/LICENSE`. The adapter replaces HTTP and browser stream effects with deterministic descriptors and retains the selected-run-only snapshot acceptance behavior for response-order exploration.

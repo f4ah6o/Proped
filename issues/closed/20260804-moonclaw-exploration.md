@@ -1,9 +1,9 @@
 # MoonclawのRabbita job UIを探索する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
-Updated: 2026-08-04
+Updated: 2026-08-05
 Priority: P1
 Depends-On: `20260804-mechanical-external-app-harness.md`
 
@@ -42,10 +42,10 @@ job UIのModel/Msg/updateを抽出し、daemon/API eventをeffect descriptorへ�
 
 ## 受け入れ条件
 
-- [ ] job lifecycle propertyを実装する。
-- [ ] terminal stateの遷移表をmanifestへ持つ。
-- [ ] cancel/retryの最小failureを探索する。
-- [ ] large repository全体ではなくjob UI packageだけをpinする。
+- [x] job lifecycle propertyを実装する。
+- [x] terminal/live status区分をadapterとmanifest propertyへ固定する。
+- [x] pinned Jobs surfaceにcancel/retry messageがないことを確認し、ACP/Cowork scopeを別境界として明記する。
+- [x] large repository全体ではなくjob UI packageだけをpinする。
 
 ## 共通テスト
 
@@ -63,3 +63,18 @@ upstreamの実装上の事実と、非同期・browser boundaryを再現する�
 ## 変更履歴
 
 `CHANGES.md` impact: yes when adapter is shipped
+
+
+## 実装結果
+
+- `moonclaw-job`を10番目のexternal targetとして追加した。
+- `ui/rabbita-job/main/update.mbt`と`model_types.mbt`をApache-2.0 sourceとして保存し、revisionとSHA-256を固定した。
+- HTTP snapshot requestとstream closureをdescriptor化し、同一runのresponseを逆順注入できるnative adapterを実装した。
+- 720 state・2,269 transitionを探索し、1 failure・0 diagnosticsを保持した。
+- 最小trace:
+  1. `StreamClosed("run-1")`
+  2. `StreamClosed("run-1")`
+  3. `SnapshotLoaded(request=2, run="run-1", status=Succeeded)`
+  4. `SnapshotLoaded(request=1, run="run-1", status=Running)`
+- selected run不一致response、timeline重複、pending request ID、rendering propertyはpassした。
+- browser・daemon・Cowork・ACPは実行せず、Jobs surfaceだけを対象にした。

@@ -1,0 +1,27 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "moonclaw-job",
+  "repository": "vectie/moonclaw",
+  "revision": "5fdc845f2a926cdd17260fb9720135a2c50eff38",
+  "license": "Apache-2.0",
+  "packages": [
+    "ui/rabbita-job/main"
+  ],
+  "entryPoints": {
+    "model": "Model",
+    "message": "Msg",
+    "update": "update",
+    "view": "view"
+  },
+  "strategy": "subscription-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "15b8300dce13d0ce57d9c0b7f5076c38a8135fe7659a582cef597e230c27fb04",
+  "properties": [
+    "older snapshot responses do not revive terminal runs",
+    "selected snapshot matches selected run",
+    "timeline entries match selected run",
+    "pending request IDs remain unique",
+    "rendered job state matches model"
+  ],
+  "findingVisibility": "public-bug"
+}

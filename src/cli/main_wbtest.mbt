@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.14.0"))
+  assert_true(schema.contains("0.15.0"))
 }
 
 ///|
@@ -199,6 +199,7 @@ test "external list exposes all pinned applications" {
   assert_true(json.contains("circular-state"))
   assert_true(json.contains("isomorphic-suite"))
   assert_true(json.contains("rabbita-xterm-lifecycle"))
+  assert_true(json.contains("moonclaw-job"))
 }
 
 ///|
@@ -305,5 +306,23 @@ test "Rabbita xterm inspection and handoff expose invalid dimensions" {
   let spec = handoff_spec("rabbita-xterm-lifecycle").unwrap()
   assert_eq(spec.minimal_trace, ["Resize(cols=0, rows=24)"])
   assert_eq(spec.action_ids, ["resize:0:24"])
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "Moonclaw inspection and handoff expose stale snapshot revival" {
+  let json = moonclaw_job_external_inspection_json()
+  assert_true(json.contains("vectie/moonclaw"))
+  assert_true(json.contains("\"strategy\":\"subscription-model\""))
+  assert_true(
+    json.contains("older snapshot responses do not revive terminal runs"),
+  )
+  assert_true(json.contains("SnapshotLoaded(request=1"))
+  let spec = handoff_spec("moonclaw-job").unwrap()
+  assert_eq(spec.minimal_trace.length(), 4)
+  assert_eq(spec.action_ids, [
+    "stream-closed:5:run-1", "stream-closed:5:run-1", "snapshot-loaded:2:5:run-1:Succeeded",
+    "snapshot-loaded:1:5:run-1:Running",
+  ])
   assert_eq(spec.visibility, @disclosure.PublicBug)
 }

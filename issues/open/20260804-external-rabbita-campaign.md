@@ -32,8 +32,8 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 - [ ] `moonbitlang/mooncakes.io`
 - [ ] `moonbitlang/openseek`
 - [ ] `moonbit-community/selene`
-- [ ] `vectie/moonclaw`
-- [ ] `moonbit-community/rabbita_xterm`
+- [x] `vectie/moonclaw`
+- [x] `moonbit-community/rabbita_xterm`
 
 ### Tier 3: 小規模・教育・可視化・周辺利用
 
@@ -105,7 +105,7 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 ## 2026-08-05 進捗
 
-- Proton Todo、Ensenzu、Signal Reader、MoonBit Editor file tree、Canopy components、incr typed spreadsheet、Circular state、Isomorphic suite、Rabbita xterm lifecycleの9 targetを`external run all`へ登録した。
+- Proton Todo、Ensenzu、Signal Reader、MoonBit Editor file tree、Canopy components、incr typed spreadsheet、Circular state、Isomorphic suite、Rabbita xterm lifecycle、Moonclaw Jobsの10 targetを`external run all`へ登録した。
 - MoonBit Editorでは1,600 state・2,646 transitionを探索し、unrelated resolve failureによるauto-reveal中断と、late successによるmanual collapseの再展開を最小3 actionへ縮約した。
 - Canopyではresizable、menu、tabsをpure adapterへ統合し、720 state・2,618 transitionからInt32 overflowによる正方向nudge反転を`ResizeNudge(dw=2147483647, dh=0)`へ縮約した。
 - incr typed spreadsheetでは900 state・1,347 transitionを探索し、`A1=2147483647`と`B1=A1+1`のoverflowを2 actionへ縮約した。Eq-backedとno-backdateのdownstream recompute差も実runtimeで固定した。
@@ -135,3 +135,4 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 `CHANGES.md` impact: no
 
 - 2026-08-05: `rabbita-xterm-lifecycle`を完了し、非正値dimensionを1 actionへ縮約した。
+- 2026-08-05: `moonclaw-job`を完了し、同一runの古いsnapshot responseによるterminal state逆行を4 actionへ縮約した。

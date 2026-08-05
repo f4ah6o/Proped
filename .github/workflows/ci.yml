@@ -64,6 +64,7 @@ jobs:
           moon run src/cli -- external inspect circular-state --json > /tmp/proped-rabbita-circular-inspection.json
           moon run src/cli -- external inspect isomorphic-suite --json > /tmp/proped-rabbita-isomorphic-inspection.json
           moon run src/cli -- external inspect rabbita-xterm-lifecycle --json > /tmp/proped-rabbita-xterm-inspection.json
+          moon run src/cli -- external inspect moonclaw-job --json > /tmp/proped-rabbita-moonclaw-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -82,6 +83,7 @@ jobs:
           circular_inspection = json.loads(Path('/tmp/proped-rabbita-circular-inspection.json').read_text())
           isomorphic_inspection = json.loads(Path('/tmp/proped-rabbita-isomorphic-inspection.json').read_text())
           xterm_inspection = json.loads(Path('/tmp/proped-rabbita-xterm-inspection.json').read_text())
+          moonclaw_inspection = json.loads(Path('/tmp/proped-rabbita-moonclaw-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -102,9 +104,10 @@ jobs:
               'circular-state',
               'isomorphic-suite',
               'rabbita-xterm-lifecycle',
+              'moonclaw-job',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.14.0'
+          assert schema['version'] == '0.15.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -215,6 +218,13 @@ jobs:
           assert xterm_app['findingVisibility'] == 'public-bug'
           assert xterm_app['expectedFailure'] == 'Resize(cols=0, rows=24)'
           assert xterm_app['upstreamWritePolicy'] == 'read-only'
+          moonclaw_app = moonclaw_inspection['application']
+          assert moonclaw_app['id'] == 'moonclaw-job'
+          assert moonclaw_app['strategy'] == 'subscription-model'
+          assert moonclaw_app['effectPolicy'] == 'record-and-inject'
+          assert moonclaw_app['findingVisibility'] == 'public-bug'
+          assert moonclaw_app['expectedFailure'].startswith('StreamClosed')
+          assert moonclaw_app['upstreamWritePolicy'] == 'read-only'
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -426,6 +436,28 @@ jobs:
           assert xterm['firstFailure']['trace'] == ['Resize(cols=0, rows=24)']
           assert xterm['firstFailure']['actionIds'] == ['resize:0:24']
 
+          moonclaw = external_runs['moonclaw-job']
+          assert moonclaw['expectationMet'] is True
+          assert moonclaw['states'] == 720
+          assert moonclaw['transitions'] == 2269
+          assert moonclaw['failures'] == 1
+          assert moonclaw['diagnostics'] == 0
+          assert moonclaw['firstFailure']['property'] == (
+              'older snapshot responses do not revive terminal runs'
+          )
+          assert moonclaw['firstFailure']['trace'] == [
+              'StreamClosed(\"run-1\")',
+              'StreamClosed(\"run-1\")',
+              'SnapshotLoaded(request=2, run=\"run-1\", status=Succeeded)',
+              'SnapshotLoaded(request=1, run=\"run-1\", status=Running)',
+          ]
+          assert moonclaw['firstFailure']['actionIds'] == [
+              'stream-closed:5:run-1',
+              'stream-closed:5:run-1',
+              'snapshot-loaded:2:5:run-1:Succeeded',
+              'snapshot-loaded:1:5:run-1:Running',
+          ]
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -509,6 +541,12 @@ jobs:
           assert hashlib.sha256(xterm_source).hexdigest() == (
               '4b1b32a105a5c7cb4b58b24684a546ba3a98d3acea75209ca9b26acc10068c02'
           )
+          moonclaw_source = Path(
+              'src/vendor/moonclaw_job/upstream/update.mbt.txt'
+          ).read_bytes()
+          assert hashlib.sha256(moonclaw_source).hexdigest() == (
+              '15b8300dce13d0ce57d9c0b7f5076c38a8135fe7659a582cef597e230c27fb04'
+          )
           PY
   external-matrix:
     runs-on: ubuntu-latest
@@ -525,6 +563,7 @@ jobs:
           - circular-state
           - isomorphic-suite
           - rabbita-xterm-lifecycle
+          - moonclaw-job
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -21,6 +21,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `circular-state` | `CAIMEOX/circular web/updater` | clean-room | failure | workspace replacement, modal and selection integrity |
 | `isomorphic-suite` | `moonbit-community/isomorphic` Kanban/Todo/Note | clean-room | failure | shared request matrix, CRUD and reference integrity |
 | `rabbita-xterm-lifecycle` | `moonbit-community/rabbita_xterm` managed state | native lifecycle adapter | failure | loading, subscriptions, UTF-8 writes, disposal, dimensions |
+| `moonclaw-job` | `vectie/moonclaw ui/rabbita-job/main` | 2 preserved source files | failure | selected run, snapshot requests, stream events, response ordering |
 
 ## Counter
 
@@ -165,3 +166,17 @@ One matrix harness preserves the three Elm/MVU response branches and replaces HT
 4. `SwitchApp(note) -> NoteInit -> NoteSelect(1) -> NoteListLoaded(request=301, fixture=1)` leaves a selected ID whose note is absent.
 
 Common entity-ID uniqueness, pending request identity, and rendered active-app properties pass. Remaining Isomorphic frontends are recorded in the closed issue checklist for later expansion.
+
+
+## Moonclaw Rabbita job UI
+
+Moonclaw's Apache-2.0 Jobs surface is pinned at revision `5fdc845f2a926cdd17260fb9720135a2c50eff38`. The adapter preserves the `SnapshotLoaded(run_id, result)` acceptance rule while adding request IDs only as harness delivery metadata. HTTP and stream work are descriptors and no Moonclaw daemon is executed.
+
+Two stream closures create two snapshot requests. Delivering request 2 as `Succeeded` and then request 1 as `Running` replaces the terminal state because the pinned update checks only the selected run ID. The trace shrinks to:
+
+1. `StreamClosed("run-1")`
+2. `StreamClosed("run-1")`
+3. `SnapshotLoaded(request=2, run="run-1", status=Succeeded)`
+4. `SnapshotLoaded(request=1, run="run-1", status=Running)`
+
+The run explores 720 states and 2,269 transitions with one retained failure and zero diagnostics. Other-run responses, timeline duplicates, pending request identity, and rendered-state properties pass. The pinned Jobs surface has no direct cancel or retry message; ACP and Cowork controls are outside this adapter instead of being approximated.

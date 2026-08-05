@@ -77,6 +77,7 @@ moon run src/cli -- external inspect incr-typed-spreadsheet --json
 moon run src/cli -- external inspect circular-state --json
 moon run src/cli -- external inspect isomorphic-suite --json
 moon run src/cli -- external inspect rabbita-xterm-lifecycle --json
+moon run src/cli -- external inspect moonclaw-job --json
 ```
 
 manifestのentry point、source SHA-256、effect policy、有効property、upstreamへの明示的な`read-only` policyを返します。
@@ -121,6 +122,7 @@ moon run src/cli -- external run incr-typed-spreadsheet --json
 moon run src/cli -- external run circular-state --json
 moon run src/cli -- external run isomorphic-suite --json
 moon run src/cli -- external run rabbita-xterm-lifecycle --json
+moon run src/cli -- external run moonclaw-job --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -137,8 +139,9 @@ moon run src/cli -- external run all --output artifacts --json
 | `circular-state` | `task modals retain an existing selected task` | `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)` |
 | `isomorphic-suite` | `kanban cards reference existing columns` | `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)` |
 | `rabbita-xterm-lifecycle` | `terminal dimensions remain positive` | `Resize(cols=0, rows=24)` |
+| `moonclaw-job` | `older snapshot responses do not revive terminal runs` | `StreamClosed("run-1") -> StreamClosed("run-1") -> SnapshotLoaded(request=2, run="run-1", status=Succeeded) -> SnapshotLoaded(request=1, run="run-1", status=Running)` |
 
-Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。MoonBit Editorはauto-reveal開始後に手動collapseしたdirectoryがlate successで再展開される最小traceも保持します。Canopyのmenu focus・tabs selection propertyはpassし、pinned APIにdisabled entry modelがないためdisabled selection propertyは非適用です。 incr targetはformulaのrecomputed・changed・unchanged traceを保存し、Eqとno-backdateのdownstream count差も確認します。Circularはworkspace同期後のtask modalとselectionの参照整合性を検証します。 Isomorphic suiteはKanbanのmissing-column参照、Kanban・Todoのstale list response、Noteのdangling selectionを保持します。 Rabbita xtermはload・mount・listener・UTF-8 write・disposeをnative lifecycleとして検証し、非正値dimensionだけをexpected failureとして保持します。
+Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。MoonBit Editorはauto-reveal開始後に手動collapseしたdirectoryがlate successで再展開される最小traceも保持します。Canopyのmenu focus・tabs selection propertyはpassし、pinned APIにdisabled entry modelがないためdisabled selection propertyは非適用です。 incr targetはformulaのrecomputed・changed・unchanged traceを保存し、Eqとno-backdateのdownstream count差も確認します。Circularはworkspace同期後のtask modalとselectionの参照整合性を検証します。 Isomorphic suiteはKanbanのmissing-column参照、Kanban・Todoのstale list response、Noteのdangling selectionを保持します。 Rabbita xtermはload・mount・listener・UTF-8 write・disposeをnative lifecycleとして検証し、非正値dimensionだけをexpected failureとして保持します。Moonclawはselected run照合、timeline重複排除、pending request ID、renderingを検証し、同一runのsnapshot response逆順適用だけをexpected failureとして保持します。pinned Jobs surfaceには直接のcancel/retry actionはありません。
 
 ### `external handoff <id|all>`
 
@@ -150,6 +153,7 @@ moon run src/cli -- external handoff incr-typed-spreadsheet --output artifacts -
 moon run src/cli -- external handoff circular-state --output artifacts --json
 moon run src/cli -- external handoff isomorphic-suite --output artifacts --json
 moon run src/cli -- external handoff rabbita-xterm-lifecycle --output artifacts --json
+moon run src/cli -- external handoff moonclaw-job --output artifacts --json
 ```
 
 `<output>/handoff/<id>/`へ`issue.md`、`reproduction.md`、`fix-plan.md`、`pr-body.md`、`machine.json`をローカル生成します。metadataの`upstreamWritePerformed`は常に`false`で、GitHubやupstream APIを呼びません。

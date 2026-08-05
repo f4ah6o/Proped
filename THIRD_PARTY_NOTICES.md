@@ -191,3 +191,16 @@ The upstream Apache License 2.0 text is included at `src/vendor/moonclaw_job/LIC
 - Adapted source: `src/vendor/mooncakes_official_ui/mooncakes_official_ui.mbt`
 
 The Apache License 2.0 text is included at `src/vendor/mooncakes_official_ui/LICENSE`. The MoonBit documentation repository license statement is preserved at `src/vendor/mooncakes_official_ui/LICENSE.moonbit-docs.md`; it identifies code examples and website code as Apache-2.0. The adapter replaces HTTP and browser boundaries with deterministic descriptors while preserving the pinned Build Queue result replacement, website index state, and tutorial reply lifecycle.
+
+
+## Selene Editor frontend
+
+- Project: `moonbit-community/selene`
+- Source paths: `selene-editor-frontend/frontend/app` and selected frontend views
+- Revision: `ca68f3a2898a80db9fc45ff96713d1531814371d`
+- License: Apache License 2.0
+- Preserved source: `src/vendor/selene_editor_assets/upstream/`
+- Adapted source: `src/vendor/selene_editor_assets/selene_editor_assets.mbt`
+- Combined preserved-source SHA-256: `00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2`
+
+The upstream Apache License 2.0 text is included at `src/vendor/selene_editor_assets/LICENSE`. The adapter replaces browser DOM, WebGPU, filesystem, SSE, and preview-engine execution with deterministic effect descriptors and typed event replay while preserving initialization, asset-list replacement, entity-selection normalization, and asset-panel rendering behavior.

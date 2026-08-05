@@ -1,9 +1,9 @@
 # Selene editor frontendのasset・preview状態を探索する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
-Updated: 2026-08-04
+Updated: 2026-08-05
 Priority: P1
 Depends-On: `20260804-mechanical-external-app-harness.md`
 
@@ -43,10 +43,10 @@ editor frontendのmain updateとasset panel stateを抽出し、preview bridge�
 
 ## 受け入れ条件
 
-- [ ] asset panelを最初のbounded modelとして選ぶ。
-- [ ] engine event fixtureをrecord/replay可能にする。
-- [ ] selection referential integrity propertyを実装する。
-- [ ] browser/WebGPU boundaryは対象外として明記する。
+- [x] asset panelを最初のbounded modelとして選ぶ。
+- [x] engine event fixtureをrecord/replay可能にする。
+- [x] selection referential integrity propertyを実装する。
+- [x] browser/WebGPU boundaryは対象外として明記する。
 
 ## 共通テスト
 
@@ -64,3 +64,15 @@ upstreamの実装上の事実と、非同期・browser boundaryを再現する�
 ## 変更履歴
 
 `CHANGES.md` impact: yes when adapter is shipped
+
+
+## 実施結果
+
+- `selene-editor-assets`を12番目のexternal targetとして追加した。
+- revision `ca68f3a2898a80db9fc45ff96713d1531814371d`の8 source fixtureを保存し、combined SHA-256 `00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2`を固定した。
+- 920 state・2,098 transitionを探索し、2 failure・0 diagnosticsだった。
+- primary failure `initialization installs each subscription once`を `Initialize -> Initialize`へ縮約した。
+- second failure `older asset responses do not replace newer asset lists`を `AssetFileChanged -> AssetsLoaded(request=2, fixture=empty) -> AssetsLoaded(request=1, fixture=older)`へ縮約した。
+- selected resource/entityの参照整合性と、削除済み・未知entityに対するpreview selection正規化はpassした。
+- browser DOM、WebGPU、実filesystem、service SSE、preview engine実行は対象外とし、descriptor/event replay境界として明記した。
+- upstream repositoryへのissue、PR、comment、commitは行っていない。

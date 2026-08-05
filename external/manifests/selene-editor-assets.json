@@ -1,0 +1,27 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "selene-editor-assets",
+  "repository": "moonbit-community/selene",
+  "revision": "ca68f3a2898a80db9fc45ff96713d1531814371d",
+  "license": "Apache-2.0",
+  "packages": ["selene-editor-frontend/frontend/app", "selene-editor-frontend/frontend"],
+  "entryPoints": {
+    "model": "Model",
+    "message": "Msg",
+    "update": "update",
+    "view": "view"
+  },
+  "strategy": "subscription-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2",
+  "properties": [
+    "older asset responses do not replace newer asset lists",
+    "initialization installs each subscription once",
+    "selected resources reference existing assets",
+    "selected entities reference existing scene entities",
+    "preview selections ignore missing entities",
+    "pending effect IDs remain unique",
+    "rendered asset panel matches model"
+  ],
+  "findingVisibility": "public-bug"
+}

@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.16.0"))
+  assert_true(schema.contains("0.17.0"))
 }
 
 ///|
@@ -201,6 +201,7 @@ test "external list exposes all pinned applications" {
   assert_true(json.contains("rabbita-xterm-lifecycle"))
   assert_true(json.contains("moonclaw-job"))
   assert_true(json.contains("mooncakes-official-ui"))
+  assert_true(json.contains("selene-editor-assets"))
 }
 
 ///|
@@ -347,5 +348,18 @@ test "Mooncakes official UI inspection and handoff expose stale Build Queue resp
   assert_eq(spec.action_ids, [
     "reload-builds", "builds-decode-failed:2:missing-collections", "builds-loaded:1:older",
   ])
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "Selene editor inspection and handoff expose duplicate initialization" {
+  let json = selene_editor_assets_external_inspection_json()
+  assert_true(json.contains("moonbit-community/selene"))
+  assert_true(json.contains("subscription-model"))
+  assert_true(json.contains("initialization installs each subscription once"))
+  assert_true(json.contains("Initialize -> Initialize"))
+  let spec = handoff_spec("selene-editor-assets").unwrap()
+  assert_eq(spec.minimal_trace, ["Initialize", "Initialize"])
+  assert_eq(spec.action_ids, ["initialize", "initialize"])
   assert_eq(spec.visibility, @disclosure.PublicBug)
 }

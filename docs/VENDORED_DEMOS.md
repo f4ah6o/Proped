@@ -22,6 +22,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `isomorphic-suite` | `moonbit-community/isomorphic` Kanban/Todo/Note | clean-room | failure | shared request matrix, CRUD and reference integrity |
 | `rabbita-xterm-lifecycle` | `moonbit-community/rabbita_xterm` managed state | native lifecycle adapter | failure | loading, subscriptions, UTF-8 writes, disposal, dimensions |
 | `mooncakes-official-ui` | Mooncakes Build Queue + official website/tutorial | exact source fixtures | failure | HTTP response ordering, decoder corpus, website/tutorial state |
+| `selene-editor-assets` | `moonbit-community/selene` editor frontend | 8 preserved source files | failure | initialization, asset responses, preview selection, panel state |
 | `moonclaw-job` | `vectie/moonclaw ui/rabbita-job/main` | 2 preserved source files | failure | selected run, snapshot requests, stream events, response ordering |
 
 ## Counter
@@ -202,3 +203,21 @@ A second failure retains the official tutorial boundary:
 5. `TutorialReply(request=2, title="alpha", success=false)`
 
 The run explores 780 states and 4,856 transitions with two retained failures and zero diagnostics. Queue/recent status alignment, malformed queued/recent item corpora, official website tab/carousel bounds, pending request identity, and rendered-state properties pass. Browser DOM, Shiki, real HTTP, clocks, and backend validation are explicitly outside the adapter.
+
+
+## Selene Editor asset and preview boundary
+
+Selene Editor's Apache-2.0 frontend is pinned at revision `ca68f3a2898a80db9fc45ff96713d1531814371d`. Eight exact source fixtures preserve the root update dispatch, project and asset response handling, entity-selection normalization, asset-panel view, and shell view. Their combined SHA-256 is `00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2`.
+
+The pinned `Initialize` branch unconditionally installs service-event, preview-event, keyboard-shortcut, and sidebar-layout subscriptions and requests the current project. No initialized guard or replacement identity is checked. The primary property shrinks to:
+
+1. `Initialize`
+2. `Initialize`
+
+The pinned `AssetsLoaded` message also carries no request generation. A second retained failure is:
+
+1. `AssetFileChanged`
+2. `AssetsLoaded(request=2, fixture=empty)`
+3. `AssetsLoaded(request=1, fixture=older)`
+
+The run explores 920 states and 2,098 transitions with two retained failures and zero diagnostics. Resource and entity referential integrity, stale preview selection normalization, unique effect IDs, and rendered-state properties pass. Browser DOM, WebGPU rendering, actual filesystem access, service SSE, and preview-engine execution are explicitly outside the adapter; their boundaries are represented by deterministic descriptors and typed replay events.

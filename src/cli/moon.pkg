@@ -19,6 +19,7 @@ import {
   "f4ah6o/proped-rabbita/vendor/rabbita_xterm_lifecycle" @xterm_lifecycle,
   "f4ah6o/proped-rabbita/vendor/moonclaw_job",
   "f4ah6o/proped-rabbita/vendor/mooncakes_official_ui" @mooncakes_ui,
+  "f4ah6o/proped-rabbita/vendor/selene_editor_assets" @selene_assets,
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/env",

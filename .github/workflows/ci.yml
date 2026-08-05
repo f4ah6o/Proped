@@ -66,6 +66,7 @@ jobs:
           moon run src/cli -- external inspect rabbita-xterm-lifecycle --json > /tmp/proped-rabbita-xterm-inspection.json
           moon run src/cli -- external inspect moonclaw-job --json > /tmp/proped-rabbita-moonclaw-inspection.json
           moon run src/cli -- external inspect mooncakes-official-ui --json > /tmp/proped-rabbita-mooncakes-inspection.json
+          moon run src/cli -- external inspect selene-editor-assets --json > /tmp/proped-rabbita-selene-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -86,6 +87,7 @@ jobs:
           xterm_inspection = json.loads(Path('/tmp/proped-rabbita-xterm-inspection.json').read_text())
           moonclaw_inspection = json.loads(Path('/tmp/proped-rabbita-moonclaw-inspection.json').read_text())
           mooncakes_inspection = json.loads(Path('/tmp/proped-rabbita-mooncakes-inspection.json').read_text())
+          selene_inspection = json.loads(Path('/tmp/proped-rabbita-selene-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -108,9 +110,10 @@ jobs:
               'rabbita-xterm-lifecycle',
               'moonclaw-job',
               'mooncakes-official-ui',
+              'selene-editor-assets',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.16.0'
+          assert schema['version'] == '0.17.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -239,6 +242,13 @@ jobs:
               'BuildsLoaded(request=1, fixture=older)'
           )
           assert mooncakes_app['upstreamWritePolicy'] == 'read-only'
+          selene_app = selene_inspection['application']
+          assert selene_app['id'] == 'selene-editor-assets'
+          assert selene_app['strategy'] == 'subscription-model'
+          assert selene_app['effectPolicy'] == 'record-and-inject'
+          assert selene_app['findingVisibility'] == 'public-bug'
+          assert selene_app['expectedFailure'].startswith('Initialize -> Initialize')
+          assert selene_app['upstreamWritePolicy'] == 'read-only'
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -505,6 +515,29 @@ jobs:
               'TutorialReply(request=2, title=\"alpha\", success=false)',
           ]
 
+          selene = external_runs['selene-editor-assets']
+          assert selene['expectationMet'] is True
+          assert selene['states'] == 920
+          assert selene['transitions'] == 2098
+          assert selene['failures'] == 2
+          assert selene['diagnostics'] == 0
+          assert selene['firstFailure']['property'] == (
+              'initialization installs each subscription once'
+          )
+          assert selene['firstFailure']['trace'] == ['Initialize', 'Initialize']
+          assert selene['firstFailure']['actionIds'] == ['initialize', 'initialize']
+          selene_atlas = json.loads(
+              (Path(selene['output']) / 'atlas.json').read_text()
+          )
+          selene_failures = {
+              failure['property']: failure for failure in selene_atlas['failures']
+          }
+          assert selene_failures['older asset responses do not replace newer asset lists']['trace'] == [
+              'AssetFileChanged',
+              'AssetsLoaded(request=2, fixture=empty)',
+              'AssetsLoaded(request=1, fixture=older)',
+          ]
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -615,6 +648,19 @@ jobs:
           assert hashlib.sha256(docs_license).hexdigest() == (
               'f5e69ee4ed4842311a35db244c4c0835ffee0e84b334c96a837e90f897fb8c01'
           )
+          selene_sources = b''.join(
+              path.read_bytes()
+              for path in sorted(Path('src/vendor/selene_editor_assets/upstream').glob('*.txt'))
+          )
+          assert hashlib.sha256(selene_sources).hexdigest() == (
+              '00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2'
+          )
+          selene_manifest = json.loads(
+              Path('external/manifests/selene-editor-assets.json').read_text()
+          )
+          assert selene_manifest['sourceSha256'] == (
+              '00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2'
+          )
           PY
   external-matrix:
     runs-on: ubuntu-latest
@@ -633,6 +679,7 @@ jobs:
           - rabbita-xterm-lifecycle
           - moonclaw-job
           - mooncakes-official-ui
+          - selene-editor-assets
     steps:
       - name: Checkout
         uses: actions/checkout@v4

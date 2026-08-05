@@ -79,6 +79,7 @@ moon run src/cli -- external inspect isomorphic-suite --json
 moon run src/cli -- external inspect rabbita-xterm-lifecycle --json
 moon run src/cli -- external inspect moonclaw-job --json
 moon run src/cli -- external inspect mooncakes-official-ui --json
+moon run src/cli -- external inspect selene-editor-assets --json
 ```
 
 manifestのentry point、source SHA-256、effect policy、有効property、upstreamへの明示的な`read-only` policyを返します。
@@ -125,6 +126,7 @@ moon run src/cli -- external run isomorphic-suite --json
 moon run src/cli -- external run rabbita-xterm-lifecycle --json
 moon run src/cli -- external run moonclaw-job --json
 moon run src/cli -- external run mooncakes-official-ui --json
+moon run src/cli -- external run selene-editor-assets --json
 moon run src/cli -- external run all --output artifacts --json
 ```
 
@@ -143,8 +145,9 @@ moon run src/cli -- external run all --output artifacts --json
 | `rabbita-xterm-lifecycle` | `terminal dimensions remain positive` | `Resize(cols=0, rows=24)` |
 | `moonclaw-job` | `older snapshot responses do not revive terminal runs` | `StreamClosed("run-1") -> StreamClosed("run-1") -> SnapshotLoaded(request=2, run="run-1", status=Succeeded) -> SnapshotLoaded(request=1, run="run-1", status=Running)` |
 | `mooncakes-official-ui` | `older build responses do not replace newer Build Queue results` | `ReloadBuilds -> BuildsDecodeFailed(request=2, corpus=missing-collections) -> BuildsLoaded(request=1, fixture=older)` |
+| `selene-editor-assets` | `initialization installs each subscription once` | `Initialize -> Initialize` |
 
-Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。MoonBit Editorはauto-reveal開始後に手動collapseしたdirectoryがlate successで再展開される最小traceも保持します。Canopyのmenu focus・tabs selection propertyはpassし、pinned APIにdisabled entry modelがないためdisabled selection propertyは非適用です。 incr targetはformulaのrecomputed・changed・unchanged traceを保存し、Eqとno-backdateのdownstream count差も確認します。Circularはworkspace同期後のtask modalとselectionの参照整合性を検証します。 Isomorphic suiteはKanbanのmissing-column参照、Kanban・Todoのstale list response、Noteのdangling selectionを保持します。 Rabbita xtermはload・mount・listener・UTF-8 write・disposeをnative lifecycleとして検証し、非正値dimensionだけをexpected failureとして保持します。Moonclawはselected run照合、timeline重複排除、pending request ID、renderingを検証し、同一runのsnapshot response逆順適用だけをexpected failureとして保持します。pinned Jobs surfaceには直接のcancel/retry actionはありません。 Mooncakesはqueue/recent status整合、website index範囲、malformed decoder、effect identity、決定的renderingを検証し、response correlation failureを2件保持します。tutorial traceは `ShowSurface(tutorial) -> EditTitle("alpha") -> SubmitTitle -> EditTitle("beta") -> TutorialReply(request=2, title="alpha", success=false)` です。
+Signal Readerはstale saved-state callbackと古いlive-search responseの最小failureも保持します。MoonBit Editorはauto-reveal開始後に手動collapseしたdirectoryがlate successで再展開される最小traceも保持します。Canopyのmenu focus・tabs selection propertyはpassし、pinned APIにdisabled entry modelがないためdisabled selection propertyは非適用です。 incr targetはformulaのrecomputed・changed・unchanged traceを保存し、Eqとno-backdateのdownstream count差も確認します。Circularはworkspace同期後のtask modalとselectionの参照整合性を検証します。 Isomorphic suiteはKanbanのmissing-column参照、Kanban・Todoのstale list response、Noteのdangling selectionを保持します。 Rabbita xtermはload・mount・listener・UTF-8 write・disposeをnative lifecycleとして検証し、非正値dimensionだけをexpected failureとして保持します。Moonclawはselected run照合、timeline重複排除、pending request ID、renderingを検証し、同一runのsnapshot response逆順適用だけをexpected failureとして保持します。pinned Jobs surfaceには直接のcancel/retry actionはありません。 Mooncakesはqueue/recent status整合、website index範囲、malformed decoder、effect identity、決定的renderingを検証し、response correlation failureを2件保持します。tutorial traceは `ShowSurface(tutorial) -> EditTitle("alpha") -> SubmitTitle -> EditTitle("beta") -> TutorialReply(request=2, title="alpha", success=false)` です。 Seleneは重複初期化を`Initialize -> Initialize`として保持し、`AssetFileChanged -> AssetsLoaded(request=2, fixture=empty) -> AssetsLoaded(request=1, fixture=older)`も第2failureとして保持します。未知preview entityのselection正規化はpassします。
 
 ### `external handoff <id|all>`
 
@@ -158,6 +161,7 @@ moon run src/cli -- external handoff isomorphic-suite --output artifacts --json
 moon run src/cli -- external handoff rabbita-xterm-lifecycle --output artifacts --json
 moon run src/cli -- external handoff moonclaw-job --output artifacts --json
 moon run src/cli -- external handoff mooncakes-official-ui --output artifacts --json
+moon run src/cli -- external handoff selene-editor-assets --output artifacts --json
 ```
 
 `<output>/handoff/<id>/`へ`issue.md`、`reproduction.md`、`fix-plan.md`、`pr-body.md`、`machine.json`をローカル生成します。metadataの`upstreamWritePerformed`は常に`false`で、GitHubやupstream APIを呼びません。

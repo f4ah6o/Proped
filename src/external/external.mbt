@@ -951,3 +951,65 @@ pub fn mooncakes_official_ui_handoff() -> @disclosure.FindingHandoff {
     visibility: @disclosure.PublicBug,
   }
 }
+
+///|
+pub fn selene_editor_assets_manifest() -> ExternalManifest {
+  {
+    id: "selene-editor-assets",
+    repository: "moonbit-community/selene",
+    revision: "ca68f3a2898a80db9fc45ff96713d1531814371d",
+    license: "Apache-2.0",
+    packages: [
+      "selene-editor-frontend/frontend/app", "selene-editor-frontend/frontend",
+    ],
+    model_entry: "Model",
+    message_entry: "Msg",
+    update_entry: "update",
+    view_entry: "view",
+    strategy: SubscriptionModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2",
+    properties: [
+      "older asset responses do not replace newer asset lists", "initialization installs each subscription once",
+      "selected resources reference existing assets", "selected entities reference existing scene entities",
+      "preview selections ignore missing entities", "pending effect IDs remain unique",
+      "rendered asset panel matches model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn selene_editor_assets_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "selene-editor-assets",
+    repository: "moonbit-community/selene",
+    revision: "ca68f3a2898a80db9fc45ff96713d1531814371d",
+    title: "Make Selene Editor initialization subscriptions idempotent",
+    summary: "Selene Editor Initialize installs service, preview, keyboard, and sidebar subscriptions plus a current-project request every time it is dispatched, with no initialized guard or replacement identity.",
+    impact: "A duplicate lifecycle dispatch can install duplicate SSE, preview, and keyboard listeners, causing repeated events, duplicated commands, and retained listener resources.",
+    expected: "Initialize is idempotent: each service, preview, keyboard, and sidebar subscription plus the current-project request is installed once for one frontend instance.",
+    actual: "Dispatching Initialize twice installs eight subscription descriptors plus two project-current requests: two copies of every initialization effect.",
+    property: "initialization installs each subscription once",
+    minimal_trace: ["Initialize", "Initialize"],
+    action_ids: ["initialize", "initialize"],
+    evidence: [
+      "The pinned Initialize branch unconditionally returns SubscribeServiceEvents, SubscribePreviewEvents, SubscribeKeyboardShortcuts, SubscribeSidebarLayout, and RpcProjectCurrent effects.",
+      "No initialized flag, subscription identity, or replacement/cancellation step is checked before those effects are returned.",
+      "The adapter retains a separate reverse-order AssetsLoaded failure because that message also lacks request generation.",
+      "Entity selection normalization rejects deleted or missing preview IDs, so the selection referential-integrity property passes.",
+    ],
+    suggested_fix: [
+      "Make Initialize return no new subscription effects after the frontend instance has initialized.",
+      "Alternatively assign stable subscription keys and replace or cancel existing listeners before installation.",
+      "Add request generation to AssetsLoaded so older asset-list callbacks cannot replace newer filesystem state.",
+    ],
+    verification: [
+      "Dispatch Initialize twice and confirm each service, preview, keyboard, and sidebar listener exists once.",
+      "Confirm one service or preview event produces one update after duplicate lifecycle triggers.",
+      "Issue two assets.list requests in reverse response order and retain the newer list.",
+      "Delete an entity, replay a stale preview SelectionChanged event, and confirm selection remains normalized.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}

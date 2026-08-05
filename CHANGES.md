@@ -1,5 +1,22 @@
 # Changes
 
+## 0.17.0 - 2026-08-05
+
+### Added
+
+- Added `selene-editor-assets` as the twelfth external target with a finite asset-panel, preview-selection, initialization, and response-order adapter.
+- Preserved the Apache-2.0 Selene Editor frontend source boundary at revision `ca68f3a2898a80db9fc45ff96713d1531814371d` with combined SHA-256 provenance.
+
+### Fixed
+
+- Found that dispatching Selene Editor `Initialize` twice installs duplicate service, preview, keyboard, and sidebar subscriptions plus a duplicate current-project request; minimized to `Initialize -> Initialize`.
+- Found that an older `AssetsLoaded` callback can replace a newer accepted asset list because the pinned message carries no request generation.
+
+### Changed
+
+- Expanded the external CI matrix to twelve targets and bumped the package and CLI version to `0.17.0`.
+- Kept browser DOM, WebGPU rendering, filesystem execution, service SSE, and preview execution outside the finite adapter while preserving typed effect boundaries.
+
 ## 0.16.0 - 2026-08-05
 
 ### Added

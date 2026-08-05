@@ -29,7 +29,7 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 - [x] `dowdiness/canopy`
 - [x] `dowdiness/incr`
-- [ ] `moonbitlang/mooncakes.io`
+- [x] `moonbitlang/mooncakes.io`
 - [ ] `moonbitlang/openseek`
 - [ ] `moonbit-community/selene`
 - [x] `vectie/moonclaw`
@@ -45,8 +45,8 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 - [ ] `bobzhang/games`
 - [ ] `beso1225/fullstack_trial_moonbit`
 - [ ] `tekihei2317/moonbit-rpc-poc`
-- [ ] `moonbitlang/website`
-- [ ] `moonbitlang/moonbit-docs` full-stack tutorial
+- [x] `moonbitlang/website`
+- [x] `moonbitlang/moonbit-docs` full-stack tutorial
 - [ ] `moonbitlang/OSC2026`
 
 ## 個別issue
@@ -105,7 +105,8 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 ## 2026-08-05 進捗
 
-- Proton Todo、Ensenzu、Signal Reader、MoonBit Editor file tree、Canopy components、incr typed spreadsheet、Circular state、Isomorphic suite、Rabbita xterm lifecycle、Moonclaw Jobsの10 targetを`external run all`へ登録した。
+- Proton Todo、Ensenzu、Signal Reader、MoonBit Editor file tree、Canopy components、incr typed spreadsheet、Circular state、Isomorphic suite、Rabbita xterm lifecycle、Moonclaw Jobs、Mooncakes official UI suiteの11 targetを`external run all`へ登録した。
+- Mooncakes official UI suiteでは780 state・4,856 transitionを探索し、新しいmalformed Build Queue responseの後へ古いsuccessが適用されるfailureを3 actionへ、tutorialの編集後late replyを5 actionへ縮約した。
 - MoonBit Editorでは1,600 state・2,646 transitionを探索し、unrelated resolve failureによるauto-reveal中断と、late successによるmanual collapseの再展開を最小3 actionへ縮約した。
 - Canopyではresizable、menu、tabsをpure adapterへ統合し、720 state・2,618 transitionからInt32 overflowによる正方向nudge反転を`ResizeNudge(dw=2147483647, dh=0)`へ縮約した。
 - incr typed spreadsheetでは900 state・1,347 transitionを探索し、`A1=2147483647`と`B1=A1+1`のoverflowを2 actionへ縮約した。Eq-backedとno-backdateのdownstream recompute差も実runtimeで固定した。
@@ -136,3 +137,4 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 - 2026-08-05: `rabbita-xterm-lifecycle`を完了し、非正値dimensionを1 actionへ縮約した。
 - 2026-08-05: `moonclaw-job`を完了し、同一runの古いsnapshot responseによるterminal state逆行を4 actionへ縮約した。
+- 2026-08-05: `mooncakes-official-ui`を完了し、Build Queue stale responseを3 action、tutorial late replyを5 actionへ縮約した。

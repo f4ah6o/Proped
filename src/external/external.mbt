@@ -882,3 +882,72 @@ pub fn moonclaw_job_handoff() -> @disclosure.FindingHandoff {
     visibility: @disclosure.PublicBug,
   }
 }
+
+///|
+pub fn mooncakes_official_ui_manifest() -> ExternalManifest {
+  {
+    id: "mooncakes-official-ui",
+    repository: "moonbitlang/mooncakes.io",
+    revision: "f7877338598f6a13387b889dd912b15029a0ce5f",
+    license: "Apache-2.0",
+    packages: [
+      "src/page/build_queue", "moonbitlang/website@a6222f7292ce50f2a08847ef0852b1a8d456a393:src/pages/rabbita-home/main",
+      "moonbitlang/moonbit-docs@24f6b9a0b9ac997119ecd3069825edf65d3473fe:next/sources/fullstack-one-project/frontend",
+    ],
+    model_entry: "Model",
+    message_entry: "Msg",
+    update_entry: "update",
+    view_entry: "view",
+    strategy: EffectModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "ace1fe509cb2135d18f96eb2274a148be6d7324046491b24d1fb0cd03cdf0581",
+    properties: [
+      "older build responses do not replace newer Build Queue results", "tutorial replies match the current edited title",
+      "Build Queue queue and recent statuses remain aligned", "official website indices remain in range",
+      "pending request IDs remain unique", "rendered official UI state matches model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn mooncakes_official_ui_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "mooncakes-official-ui",
+    repository: "moonbitlang/mooncakes.io",
+    revision: "f7877338598f6a13387b889dd912b15029a0ce5f",
+    title: "Correlate Mooncakes Build Queue responses by load generation",
+    summary: "The Build Queue GotBuilds message carries only a decoded Result. Re-entering or reloading the same page can leave multiple /api/v0/builds requests in flight, and each response replaces both queue and recent state without freshness correlation.",
+    impact: "A newer decode or network failure can be replaced by older successful queue data, or newer successful data can be replaced by an older response. The page can therefore display stale build status after navigation or reload races.",
+    expected: "Only the newest Build Queue request updates queue and recent state; older success, decode failure, and network failure responses are ignored.",
+    actual: "After request 2 produces a malformed-response failure, request 1 can still apply older successful data and replace both Failed states with stale content.",
+    property: "older build responses do not replace newer Build Queue results",
+    minimal_trace: [
+      "ReloadBuilds", "BuildsDecodeFailed(request=2, corpus=missing-collections)",
+      "BuildsLoaded(request=1, fixture=older)",
+    ],
+    action_ids: [
+      "reload-builds", "builds-decode-failed:2:missing-collections", "builds-loaded:1:older",
+    ],
+    evidence: [
+      "The pinned load function dispatches GotBuilds(Result[BuildData, Error]) without request or generation identity.",
+      "The pinned update replaces queue and recent for every GotBuilds success and sets both to Failed for every decode or HTTP error.",
+      "The malformed corpus covers missing collections, invalid queued items, and invalid recent items while preserving the source decoder's all-or-nothing result.",
+      "The suite also preserves the official website Rabbita tab/carousel state and the official full-stack tutorial submit/reply lifecycle; a late tutorial reply after a newer edit is retained as a separate failure.",
+      "All three upstream repositories were inspected read-only and no upstream write was performed.",
+    ],
+    suggested_fix: [
+      "Assign a monotonically increasing load generation in the root page or Build Queue model and carry it through GotBuilds.",
+      "Ignore GotBuilds results whose generation is older than the latest issued request for the active Build Queue page.",
+      "Alternatively abort the previous request when routing to a fresh Build Queue model and ensure callbacks from disposed page instances cannot dispatch into the replacement instance.",
+      "Apply the same correlation rule to successful, decode-failed, and network-failed responses.",
+    ],
+    verification: [
+      "Issue two Build Queue loads, deliver the newer malformed response first and the older success last, and confirm the Failed state remains current.",
+      "Repeat with newer success followed by older success, decode failure, and network failure.",
+      "Navigate away before an old response arrives and confirm another page remains unchanged.",
+      "Retain queue/recent status alignment, theme no-op behavior, website index bounds, tutorial malformed response, and deterministic rendering tests.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}

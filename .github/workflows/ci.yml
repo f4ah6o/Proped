@@ -65,6 +65,7 @@ jobs:
           moon run src/cli -- external inspect isomorphic-suite --json > /tmp/proped-rabbita-isomorphic-inspection.json
           moon run src/cli -- external inspect rabbita-xterm-lifecycle --json > /tmp/proped-rabbita-xterm-inspection.json
           moon run src/cli -- external inspect moonclaw-job --json > /tmp/proped-rabbita-moonclaw-inspection.json
+          moon run src/cli -- external inspect mooncakes-official-ui --json > /tmp/proped-rabbita-mooncakes-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -84,6 +85,7 @@ jobs:
           isomorphic_inspection = json.loads(Path('/tmp/proped-rabbita-isomorphic-inspection.json').read_text())
           xterm_inspection = json.loads(Path('/tmp/proped-rabbita-xterm-inspection.json').read_text())
           moonclaw_inspection = json.loads(Path('/tmp/proped-rabbita-moonclaw-inspection.json').read_text())
+          mooncakes_inspection = json.loads(Path('/tmp/proped-rabbita-mooncakes-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -105,9 +107,10 @@ jobs:
               'isomorphic-suite',
               'rabbita-xterm-lifecycle',
               'moonclaw-job',
+              'mooncakes-official-ui',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.15.0'
+          assert schema['version'] == '0.16.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -225,6 +228,17 @@ jobs:
           assert moonclaw_app['findingVisibility'] == 'public-bug'
           assert moonclaw_app['expectedFailure'].startswith('StreamClosed')
           assert moonclaw_app['upstreamWritePolicy'] == 'read-only'
+          mooncakes_app = mooncakes_inspection['application']
+          assert mooncakes_app['id'] == 'mooncakes-official-ui'
+          assert mooncakes_app['strategy'] == 'effect-model'
+          assert mooncakes_app['effectPolicy'] == 'record-and-inject'
+          assert mooncakes_app['findingVisibility'] == 'public-bug'
+          assert mooncakes_app['expectedFailure'] == (
+              'ReloadBuilds -> '
+              'BuildsDecodeFailed(request=2, corpus=missing-collections) -> '
+              'BuildsLoaded(request=1, fixture=older)'
+          )
+          assert mooncakes_app['upstreamWritePolicy'] == 'read-only'
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -458,6 +472,39 @@ jobs:
               'snapshot-loaded:1:5:run-1:Running',
           ]
 
+          mooncakes = external_runs['mooncakes-official-ui']
+          assert mooncakes['expectationMet'] is True
+          assert mooncakes['states'] == 780
+          assert mooncakes['transitions'] == 4856
+          assert mooncakes['failures'] == 2
+          assert mooncakes['diagnostics'] == 0
+          assert mooncakes['firstFailure']['property'] == (
+              'older build responses do not replace newer Build Queue results'
+          )
+          assert mooncakes['firstFailure']['trace'] == [
+              'ReloadBuilds',
+              'BuildsDecodeFailed(request=2, corpus=missing-collections)',
+              'BuildsLoaded(request=1, fixture=older)',
+          ]
+          assert mooncakes['firstFailure']['actionIds'] == [
+              'reload-builds',
+              'builds-decode-failed:2:missing-collections',
+              'builds-loaded:1:older',
+          ]
+          mooncakes_atlas = json.loads(
+              (Path(mooncakes['output']) / 'atlas.json').read_text()
+          )
+          mooncakes_failures = {
+              failure['property']: failure for failure in mooncakes_atlas['failures']
+          }
+          assert mooncakes_failures['tutorial replies match the current edited title']['trace'] == [
+              'ShowSurface(tutorial)',
+              'EditTitle(\"alpha\")',
+              'SubmitTitle',
+              'EditTitle(\"beta\")',
+              'TutorialReply(request=2, title=\"alpha\", success=false)',
+          ]
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -547,6 +594,27 @@ jobs:
           assert hashlib.sha256(moonclaw_source).hexdigest() == (
               '15b8300dce13d0ce57d9c0b7f5076c38a8135fe7659a582cef597e230c27fb04'
           )
+          mooncakes_sources = [
+              ('build_queue_state.mbt.txt', '5d29edd1b217e531267cb7204c298a6b00bc7c8a1484f022fa99cc856d0fc9e3'),
+              ('build_queue_view.mbt.txt', '36ee6aa27c98d528ae80e91c7e67965e64d6981d76e67b7c725bec50b34ad4f0'),
+              ('website_home_main.mbt.txt', 'd6aabd76c9054b3f47a2d84688a576d88f07a04c1fc64d1ae68587665a973891'),
+              ('tutorial_frontend_main.mbt.txt', 'b1d0d909359d9fcfff399799723e468b1cdf19561f057763c4dd03865cbfa809'),
+          ]
+          for filename, expected_hash in mooncakes_sources:
+              source = Path('src/vendor/mooncakes_official_ui/upstream') / filename
+              assert hashlib.sha256(source.read_bytes()).hexdigest() == expected_hash
+          mooncakes_manifest = json.loads(
+              Path('external/manifests/mooncakes-official-ui.json').read_text()
+          )
+          assert mooncakes_manifest['sourceSha256'] == (
+              'ace1fe509cb2135d18f96eb2274a148be6d7324046491b24d1fb0cd03cdf0581'
+          )
+          docs_license = Path(
+              'src/vendor/mooncakes_official_ui/LICENSE.moonbit-docs.md'
+          ).read_bytes()
+          assert hashlib.sha256(docs_license).hexdigest() == (
+              'f5e69ee4ed4842311a35db244c4c0835ffee0e84b334c96a837e90f897fb8c01'
+          )
           PY
   external-matrix:
     runs-on: ubuntu-latest
@@ -564,6 +632,7 @@ jobs:
           - isomorphic-suite
           - rabbita-xterm-lifecycle
           - moonclaw-job
+          - mooncakes-official-ui
     steps:
       - name: Checkout
         uses: actions/checkout@v4

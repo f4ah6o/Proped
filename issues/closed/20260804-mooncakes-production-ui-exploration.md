@@ -1,9 +1,9 @@
 # Mooncakes.ioとMoonBit公式Rabbita UIを探索する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
-Updated: 2026-08-04
+Updated: 2026-08-05
 Priority: P1
 Depends-On: `20260804-mechanical-external-app-harness.md`
 
@@ -51,10 +51,10 @@ build queueの小さいpure stateから開始し、HTTP responseをdescriptorと
 
 ## 受け入れ条件
 
-- [ ] build_queue stateを最初のproduction fixtureとして追加する。
-- [ ] 少なくとも1つのofficial service pageをCIで継続探索する。
-- [ ] API response decoderのmalformed corpusを含める。
-- [ ] official tutorialはharness onboarding fixtureとして使う。
+- [x] build_queue stateを最初のproduction fixtureとして追加する。
+- [x] 少なくとも1つのofficial service pageをCIで継続探索する。
+- [x] API response decoderのmalformed corpusを含める。
+- [x] official tutorialはharness onboarding fixtureとして使う。
 
 ## 共通テスト
 
@@ -72,3 +72,24 @@ upstreamの実装上の事実と、非同期・browser boundaryを再現する�
 ## 変更履歴
 
 `CHANGES.md` impact: yes when adapter is shipped
+
+
+## 実施結果
+
+- `mooncakes-official-ui`を11番目のexternal targetとして追加した。
+- Mooncakes Build Queue、公式Rabbita website home、公式full-stack tutorialの4 sourceをrevisionとSHA-256で固定した。
+- 780 state・4,856 transitionを探索し、2 failure・0 diagnosticsとなった。
+- Build Queueの最小trace:
+  1. `ReloadBuilds`
+  2. `BuildsDecodeFailed(request=2, corpus=missing-collections)`
+  3. `BuildsLoaded(request=1, fixture=older)`
+- tutorialの最小trace:
+  1. `ShowSurface(tutorial)`
+  2. `EditTitle("alpha")`
+  3. `SubmitTitle`
+  4. `EditTitle("beta")`
+  5. `TutorialReply(request=2, title="alpha", success=false)`
+- malformed corpusはcollections欠落、queued item不正、recent item不正を含む。
+- root page種別の照合により別pageへのBuild Queue message誤適用は防がれている。一方、同一Build Queue instanceの複数requestにはgenerationがない。
+- browser DOM、Shiki、実HTTP、clock、backend validationはscope外とし、typed state boundaryのみ保持した。
+- upstream repositoryへの書き込みは行っていない。

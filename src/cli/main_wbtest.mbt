@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.15.0"))
+  assert_true(schema.contains("0.16.0"))
 }
 
 ///|
@@ -200,6 +200,7 @@ test "external list exposes all pinned applications" {
   assert_true(json.contains("isomorphic-suite"))
   assert_true(json.contains("rabbita-xterm-lifecycle"))
   assert_true(json.contains("moonclaw-job"))
+  assert_true(json.contains("mooncakes-official-ui"))
 }
 
 ///|
@@ -323,6 +324,28 @@ test "Moonclaw inspection and handoff expose stale snapshot revival" {
   assert_eq(spec.action_ids, [
     "stream-closed:5:run-1", "stream-closed:5:run-1", "snapshot-loaded:2:5:run-1:Succeeded",
     "snapshot-loaded:1:5:run-1:Running",
+  ])
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "Mooncakes official UI inspection and handoff expose stale Build Queue response" {
+  let json = mooncakes_official_ui_external_inspection_json()
+  assert_true(json.contains("moonbitlang/mooncakes.io"))
+  assert_true(json.contains("\"strategy\":\"effect-model\""))
+  assert_true(
+    json.contains(
+      "older build responses do not replace newer Build Queue results",
+    ),
+  )
+  assert_true(json.contains("BuildsDecodeFailed(request=2"))
+  let spec = handoff_spec("mooncakes-official-ui").unwrap()
+  assert_eq(spec.minimal_trace, [
+    "ReloadBuilds", "BuildsDecodeFailed(request=2, corpus=missing-collections)",
+    "BuildsLoaded(request=1, fixture=older)",
+  ])
+  assert_eq(spec.action_ids, [
+    "reload-builds", "builds-decode-failed:2:missing-collections", "builds-loaded:1:older",
   ])
   assert_eq(spec.visibility, @disclosure.PublicBug)
 }

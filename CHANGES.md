@@ -1,5 +1,23 @@
 # Changes
 
+## 0.16.0 - 2026-08-05
+
+### Added
+
+- Added `mooncakes-official-ui` as the eleventh external target, covering the production Mooncakes Build Queue, the official Rabbita website home state, and the official full-stack tutorial frontend.
+- Preserved four Apache-2.0 source fixtures across `moonbitlang/mooncakes.io`, `moonbitlang/website`, and `moonbitlang/moonbit-docs` with pinned revisions and SHA-256 provenance.
+- Added malformed Build Queue decoder corpora for missing collections, invalid queued items, and invalid recent items.
+
+### Fixed
+
+- Found that an older Build Queue response can replace a newer accepted result because `GotBuilds` carries no request generation; minimized to a reload, a newer malformed response, and an older successful response.
+- Found that the official full-stack tutorial can display a reply for an older submitted title after the user edits the title again.
+
+### Changed
+
+- Expanded the external CI matrix to eleven targets and bumped the package and CLI version to `0.16.0`.
+- Kept browser DOM, Shiki, real HTTP, clocks, and backend validation outside the finite adapter while retaining their typed state boundaries.
+
 ## 0.15.0 - 2026-08-05
 
 ### Added

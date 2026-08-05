@@ -21,6 +21,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `circular-state` | `CAIMEOX/circular web/updater` | clean-room | failure | workspace replacement, modal and selection integrity |
 | `isomorphic-suite` | `moonbit-community/isomorphic` Kanban/Todo/Note | clean-room | failure | shared request matrix, CRUD and reference integrity |
 | `rabbita-xterm-lifecycle` | `moonbit-community/rabbita_xterm` managed state | native lifecycle adapter | failure | loading, subscriptions, UTF-8 writes, disposal, dimensions |
+| `mooncakes-official-ui` | Mooncakes Build Queue + official website/tutorial | exact source fixtures | failure | HTTP response ordering, decoder corpus, website/tutorial state |
 | `moonclaw-job` | `vectie/moonclaw ui/rabbita-job/main` | 2 preserved source files | failure | selected run, snapshot requests, stream events, response ordering |
 
 ## Counter
@@ -180,3 +181,24 @@ Two stream closures create two snapshot requests. Delivering request 2 as `Succe
 4. `SnapshotLoaded(request=1, run="run-1", status=Running)`
 
 The run explores 720 states and 2,269 transitions with one retained failure and zero diagnostics. Other-run responses, timeline duplicates, pending request identity, and rendered-state properties pass. The pinned Jobs surface has no direct cancel or retry message; ACP and Cowork controls are outside this adapter instead of being approximated.
+
+
+## Mooncakes official UI suite
+
+The production Mooncakes Build Queue is pinned at revision `f7877338598f6a13387b889dd912b15029a0ce5f`, the official Rabbita website home at `a6222f7292ce50f2a08847ef0852b1a8d456a393`, and the official full-stack tutorial frontend at `24f6b9a0b9ac997119ecd3069825edf65d3473fe`. The Mooncakes and website fixtures are covered by their Apache-2.0 repository licenses. `moonbit-docs/LICENSE.md` explicitly licenses code examples and website code under Apache-2.0, and that statement is preserved with the vendor fixture.
+
+`GotBuilds` carries a decoded result but no request generation. The finite adapter records HTTP effects and then injects success, network failure, or malformed decoder responses without consulting harness-only request IDs. The primary property shrinks to:
+
+1. `ReloadBuilds`
+2. `BuildsDecodeFailed(request=2, corpus=missing-collections)`
+3. `BuildsLoaded(request=1, fixture=older)`
+
+A second failure retains the official tutorial boundary:
+
+1. `ShowSurface(tutorial)`
+2. `EditTitle("alpha")`
+3. `SubmitTitle`
+4. `EditTitle("beta")`
+5. `TutorialReply(request=2, title="alpha", success=false)`
+
+The run explores 780 states and 4,856 transitions with two retained failures and zero diagnostics. Queue/recent status alignment, malformed queued/recent item corpora, official website tab/carousel bounds, pending request identity, and rendered-state properties pass. Browser DOM, Shiki, real HTTP, clocks, and backend validation are explicitly outside the adapter.

@@ -44,7 +44,7 @@ vendor source、revision、hash、license、adapter変更、failureの根拠は 
 
 外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。`scripts/external_harness.py` はmanifest validation、単純な`Msg` payloadの有限action scaffold生成、決定的なsource hash report、明示的revision更新のpreview、network deny環境でのinspection command実行を提供します。
 
-external campaignは10 targetです。`moonclaw-job`は720 state・2,269 transitionを探索し、stream closeで発行された2つの同一run snapshot requestに対して、新しい`Succeeded`の後へ古い`Running` responseが適用されることを検出します。`rabbita-xterm-lifecycle`はmanaged xtermのload・mount・subscription・UTF-8 write・disposeをnative model化し、`Resize(cols=0, rows=24)`を1 actionへ縮約します。`isomorphic-suite`はKanban・Todo・Noteを同一harnessで実行し、4 failureを保持します。
+external campaignは11 targetです。`mooncakes-official-ui`はproduction Build Queue、公式website state、full-stack tutorialを780 state・4,856 transitionで探索し、3 actionのstale Build Queue responseと5 actionのlate tutorial replyを保持します。`moonclaw-job`は同一runの古いsnapshotによるterminal state逆行を検出し、`rabbita-xterm-lifecycle`はinvalid dimensionを`Resize(cols=0, rows=24)`へ縮約します。
 
 外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。`external handoff <id>`はissue、再現、fix plan、PR本文のローカル下書きだけを生成します。security-sensitive findingはpublic exportを拒否し、Gitでignoreされる `.private/disclosures/`へ隔離します。詳細は [docs/DISCLOSURE.ja.md](docs/DISCLOSURE.ja.md) を参照してください。
 

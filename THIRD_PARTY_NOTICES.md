@@ -176,3 +176,18 @@ The upstream Apache License 2.0 text is included at `src/vendor/rabbita_xterm_li
 - Adapted source: `src/vendor/moonclaw_job/moonclaw_job.mbt`
 
 The upstream Apache License 2.0 text is included at `src/vendor/moonclaw_job/LICENSE`. The adapter replaces HTTP and browser stream effects with deterministic descriptors and retains the selected-run-only snapshot acceptance behavior for response-order exploration.
+
+
+## Mooncakes and official MoonBit Rabbita UI fixtures
+
+- Projects: `moonbitlang/mooncakes.io`, `moonbitlang/website`, and `moonbitlang/moonbit-docs`
+- Revisions: `f7877338598f6a13387b889dd912b15029a0ce5f`, `a6222f7292ce50f2a08847ef0852b1a8d456a393`, and `24f6b9a0b9ac997119ecd3069825edf65d3473fe`
+- License: Apache License 2.0
+- Preserved sources:
+  - `src/vendor/mooncakes_official_ui/upstream/build_queue_state.mbt.txt` — `5d29edd1b217e531267cb7204c298a6b00bc7c8a1484f022fa99cc856d0fc9e3`
+  - `src/vendor/mooncakes_official_ui/upstream/build_queue_view.mbt.txt` — `36ee6aa27c98d528ae80e91c7e67965e64d6981d76e67b7c725bec50b34ad4f0`
+  - `src/vendor/mooncakes_official_ui/upstream/website_home_main.mbt.txt` — `d6aabd76c9054b3f47a2d84688a576d88f07a04c1fc64d1ae68587665a973891`
+  - `src/vendor/mooncakes_official_ui/upstream/tutorial_frontend_main.mbt.txt` — `b1d0d909359d9fcfff399799723e468b1cdf19561f057763c4dd03865cbfa809`
+- Adapted source: `src/vendor/mooncakes_official_ui/mooncakes_official_ui.mbt`
+
+The Apache License 2.0 text is included at `src/vendor/mooncakes_official_ui/LICENSE`. The MoonBit documentation repository license statement is preserved at `src/vendor/mooncakes_official_ui/LICENSE.moonbit-docs.md`; it identifies code examples and website code as Apache-2.0. The adapter replaces HTTP and browser boundaries with deterministic descriptors while preserving the pinned Build Queue result replacement, website index state, and tutorial reply lifecycle.

@@ -1,0 +1,8 @@
+import {
+  "f4ah6o/proped-rabbita" @proped,
+  "f4ah6o/proped-rabbita/external",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+}
+
+supported_targets = "+native+js"

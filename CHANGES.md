@@ -1,5 +1,16 @@
 # Changes
 
+## 0.27.0 - 2026-08-06
+
+### Added
+
+- Added React Component Mode with an actual React 19/JSDOM fixture, semantic action discovery, normalized snapshots, generic property evaluation, deterministic replay, deletion shrinking, and HTML/JSON/SVG/DOT artifacts.
+- Added a 10,000-transition bounded React benchmark that retains stale-response, duplicate-submit, and invalid-number-input failures.
+
+### Changed
+
+- Bumped the package and CLI version to `0.27.0`.
+
 ## 0.26.0 - 2026-08-06
 
 ### Added

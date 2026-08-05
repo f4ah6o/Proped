@@ -1,0 +1,99 @@
+{
+  "ok": true,
+  "framework": "react",
+  "runtime": "component",
+  "actionCount": 23,
+  "corpus": [
+    " ",
+    "",
+    "😀",
+    "a",
+    "ab",
+    "invalid"
+  ],
+  "benchmark": {
+    "transitions": 10000,
+    "distinctStates": 5955,
+    "violationCodes": [
+      "duplicate_submit",
+      "stale_response"
+    ]
+  },
+  "failures": [
+    {
+      "property": "stale_response",
+      "message": "stale response changed current state",
+      "severity": "error",
+      "evidence": {
+        "generation": 1,
+        "currentGeneration": 2
+      },
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "react-fault-form",
+        "property": "stale_response",
+        "failureClass": "stale_response",
+        "trace": [
+          "type|searchbox|Search|within=form:Profile|input=\"a\"",
+          "type|searchbox|Search|within=form:Profile|input=\"ab\"",
+          "inject|network|Search response|generation=1|query=\"a\""
+        ],
+        "snapshotHash": "0977352e7de46fd1cb97ad1ca6d7e8fdda3acdf7d39edf24f0715de9b96482f0",
+        "seed": 7,
+        "normalizerVersion": "1",
+        "semanticHash": "48cb1d60c13a05f3949848d8f3a799dfa4975cf83ead300da6a0842713b49d50"
+      }
+    },
+    {
+      "property": "duplicate_submit",
+      "message": "submit created a duplicate pending effect",
+      "severity": "error",
+      "evidence": {
+        "before": [
+          {
+            "kind": "submit",
+            "key": "submit:",
+            "generation": 1
+          }
+        ],
+        "after": [
+          {
+            "kind": "submit",
+            "key": "submit:",
+            "generation": 1
+          },
+          {
+            "kind": "submit",
+            "key": "submit:",
+            "generation": 2
+          }
+        ]
+      },
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "react-fault-form",
+        "property": "duplicate_submit",
+        "failureClass": "duplicate_submit",
+        "trace": [
+          "submit|form|Profile",
+          "submit|form|Profile"
+        ],
+        "snapshotHash": "1dca13f341c2c846a2f1977316b033803fa3d817d45896b393dea79bf35aa5d6",
+        "seed": 7,
+        "normalizerVersion": "1",
+        "semanticHash": "c317bc11b082dcb3f8ece51e7ccf91e11d7685f06d3ea22ff9ace5c25aab9c71"
+      }
+    },
+    {
+      "property": "invalid_input_preserves_previous_result",
+      "message": "invalid numeric input destroyed the previous valid result",
+      "trace": [
+        "type|spinbutton|Number|within=form:Profile|input=\"invalid\""
+      ],
+      "semanticHash": "70c1570151d0b5da5e0db9606b64d81e187b10df67bc0db1271095ab07de8448"
+    }
+  ],
+  "replayHash": "0977352e7de46fd1cb97ad1ca6d7e8fdda3acdf7d39edf24f0715de9b96482f0",
+  "diagnostics": [],
+  "semanticHash": "5856b18ffda12064fcfe4cc28c48d4662abdf4cac80d93db0d2ef033d9fd5829"
+}

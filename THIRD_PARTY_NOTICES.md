@@ -239,3 +239,10 @@ The upstream Apache License 2.0 text is included at `src/vendor/selene_editor_as
 - Combined preserved-source SHA-256: `f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b`
 
 The upstream Apache License 2.0 text is included at `src/vendor/openseek_desktop_lifecycle/LICENSE`. The clean-room adapter replaces desktop bridge, PTY, filesystem, DOM, and network operations with deterministic effect descriptors while preserving selected self-update, terminal-open, and file-load acceptance rules. Exact source hashes, toolchain limitations, and scope qualifications are recorded in `src/vendor/openseek_desktop_lifecycle/UPSTREAM.md`.
+
+## React Component Mode test runtime
+
+- React 19.2.8 and React DOM 19.2.8, Meta Platforms, Inc. and affiliates, MIT License.
+- jsdom 29.1.1, jsdom contributors, MIT License.
+
+These dependencies are pinned by `web/react-component/package-lock.json` and are used only by the isolated React Component Mode fixture and CI benchmark. Their transitive dependency versions are recorded in that lockfile.

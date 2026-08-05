@@ -13,3 +13,7 @@ demo/out/
 
 __pycache__/
 *.py[cod]
+
+node_modules/
+
+web/react-component/out/

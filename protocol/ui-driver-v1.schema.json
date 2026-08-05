@@ -24,7 +24,8 @@
         "actions",
         "execute",
         "replay",
-        "dispose"
+        "dispose",
+        "shutdown"
       ]
     },
     "params": {

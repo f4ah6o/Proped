@@ -42,6 +42,9 @@ jobs:
       - name: Utility batch unit tests
         run: python3 -m unittest scripts/test_utility_batch.py
 
+      - name: Web driver protocol tests
+        run: node scripts/test_web_driver_protocol.mjs
+
       - name: Utility batch report validation
         run: python3 scripts/utility_batch.py validate
 
@@ -135,7 +138,7 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.21.0'
+          assert schema['version'] == '0.22.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(

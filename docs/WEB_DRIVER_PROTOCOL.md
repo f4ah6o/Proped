@@ -40,3 +40,10 @@ Replay always starts from a fresh fixture. A minimized trace is accepted only wh
 ## Safety
 
 Network is denied by default. External repositories are read-only. Mail, payment, cloud mutation, filesystem writes, native bridges, and credentials are unsupported effects unless replaced by deterministic descriptors. Browser sessions use ephemeral profiles and isolated storage.
+
+
+## Production module
+
+The executable protocol implementation lives in `protocol/ui-driver-v1.mjs` and `protocol/jsonl-server.mjs`. The server rejects unknown fields, unsupported versions, duplicate request IDs, non-negotiated calls, disposed-session calls, and bounded-operation timeouts. Error responses use stable machine-readable codes.
+
+The bounded fixture host is `scripts/web_driver_protocol_host.mjs`. It models network work as descriptors and explicitly reports real network, filesystem writes, mail, payment, cloud mutation, and native bridges as unsupported effects. `scripts/test_web_driver_protocol.mjs` validates negotiation, malformed requests, replay signatures, timeout mapping, disposal, shutdown, and real JSONL child-process transport.

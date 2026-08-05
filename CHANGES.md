@@ -1,5 +1,16 @@
 # Changes
 
+## 0.22.0 - 2026-08-05
+
+### Added
+
+- Shipped the production Web UI driver protocol v1 modules with strict JSONL envelopes, capability negotiation, stable error codes, timeout handling, disposal, and shutdown.
+- Added a bounded stale-search fixture that emits deterministic replay and failure signatures across in-process and child-process transports.
+
+### Changed
+
+- Closed the Web driver protocol v1 issue and bumped the package and CLI version to `0.22.0`.
+
 ## 0.21.0 - 2026-08-05
 
 ### Added

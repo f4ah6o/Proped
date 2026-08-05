@@ -131,6 +131,9 @@ test "flow SVG contains routed nodes and edges" {
   assert_true(svg.contains("flow-arrow"))
   assert_true(svg.contains("Start"))
   assert_true(svg.contains("Submit"))
+  assert_true(svg.contains("data-flow-node="))
+  assert_true(svg.contains("data-flow-edge="))
+  assert_true(svg.contains("role=\"button\""))
 }
 
 ///|

@@ -1,0 +1,105 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/canopy_editor_integration"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+// Errors
+
+// Types and methods
+pub(all) enum CallbackKind {
+  DocumentChanged(String)
+  SelectionChanged(Int, Int)
+  FocusChanged(Bool)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ContextMenuState {
+  open : Bool
+  focused : Int?
+  item_count : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum EditorCommand {
+  Mount(Int, String, String)
+  SetDocument(Int, String)
+  SetReadonly(Int, Bool)
+  Unmount(Int)
+  ForwardSelection(Int, Int, Int)
+} derive(Eq, @debug.Debug)
+pub fn EditorCommand::to_string(Self) -> String
+
+pub(all) struct Model {
+  editor_id : String
+  host_id : String
+  mounted : Bool
+  generation : Int
+  active_document : String
+  document : String
+  accepted_revision : Int
+  next_revision : Int
+  selection_from : Int
+  selection_to : Int
+  focused : Bool
+  read_only : Bool
+  pending : Array[PendingCallback]
+  next_callback_id : Int
+  commands : Array[EditorCommand]
+  context_menu : ContextMenuState
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  MountCompleted
+  MountRequested
+  UnmountRequested
+  BrowserDocumentChanged(String)
+  BrowserSelectionChanged(Int, Int)
+  BrowserFocusChanged(Bool)
+  DeliverCallback(Int)
+  SetDocumentRequested(String)
+  ToggleReadonly
+  SwitchDocument(String)
+  ContextMenuOpen
+  ContextMenuClose
+  ContextMenuFocus(Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PendingCallback {
+  id : Int
+  generation : Int
+  revision : Int
+  document_id : String
+  kind : CallbackKind
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

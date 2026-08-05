@@ -70,7 +70,7 @@ fn parse_args(raw : Array[String]) -> CliArgs {
 
 ///|
 fn print_help() -> Unit {
-  println("Proped Rabbita CLI 0.18.0")
+  println("Proped Rabbita CLI 0.19.0")
   println("")
   println("Usage:")
   println("  moon run src/cli -- <command> [arguments] [--json] [--output DIR]")
@@ -119,6 +119,8 @@ fn print_help() -> Unit {
   println("  signal-reader              Signal Reader response-order failures")
   println("  moonbit-editor-file-tree   Editor file-tree resolve race")
   println("  canopy-components         Canopy resizable overflow failure")
+  println("  canopy-editor-integration CodeMirror callback-order failure")
+  println("  rabbita-utility-batch    Public utility-app batch exploration")
   println("  incr-typed-spreadsheet    incr formula overflow and backdating")
   println("  circular-state            Circular dangling task modal failure")
   println(
@@ -144,7 +146,7 @@ fn print_help() -> Unit {
 ///|
 fn schema_json() -> String {
   (
-    #|{"name":"proped-rabbita","version":"0.18.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","handoff","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["issue.md","reproduction.md","fix-plan.md","pr-body.md","machine.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo","ensenzu-app","signal-reader","moonbit-editor-file-tree","canopy-components","incr-typed-spreadsheet","circular-state","isomorphic-suite","rabbita-xterm-lifecycle","moonclaw-job","mooncakes-official-ui","selene-editor-assets","openseek-desktop-lifecycle"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
+    #|{"name":"proped-rabbita","version":"0.19.0","commands":[{"argv":["schema"],"output":"command-contract-json"},{"argv":["version"],"output":"version"},{"argv":["demo","list"],"flags":["--json"]},{"argv":["demo","describe","<id>"],"flags":["--json"]},{"argv":["demo","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","list"],"flags":["--json"]},{"argv":["external","inspect","<id>"],"flags":["--json"]},{"argv":["external","inspect-source","<file>"],"flags":["--json"]},{"argv":["external","run","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["atlas.html","atlas.svg","atlas.json","atlas.dot","summary.json"]},{"argv":["external","handoff","<id|all>"],"flags":["--json","--output <dir>"],"artifacts":["issue.md","reproduction.md","fix-plan.md","pr-body.md","machine.json"]}],"demoIds":["newsletter","rabbita-counter","rabbita-todo","rabbita-sokoban","rabbita-subscriptions","rabbita-websocket"],"externalIds":["proton-demo-todo","ensenzu-app","signal-reader","moonbit-editor-file-tree","canopy-components","canopy-editor-integration","rabbita-utility-batch","incr-typed-spreadsheet","circular-state","isomorphic-suite","rabbita-xterm-lifecycle","moonclaw-job","mooncakes-official-ui","selene-editor-assets","openseek-desktop-lifecycle"],"summaryFields":["expectedOutcome","expectationMet","expectedFailure","firstFailure"],"exitCodes":{"0":"expectation_met","2":"usage_error","3":"expectation_mismatch"}}
   )
 }
 
@@ -158,7 +160,7 @@ fn demo_list_json() -> String {
 ///|
 fn external_list_json() -> String {
   (
-    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"},{"id":"ensenzu-app","repository":"shiguri-01/ensenzu","revision":"f1fbec776a393e7023c8fa8324ea26c0774752e5","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Ensenzu numeric forms, SVG calculation, reset, and non-finite input exploration"},{"id":"signal-reader","repository":"CAIMEOX/signal_reader","revision":"e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a","license":"MIT","strategy":"effect-model","expectedOutcome":"failure","description":"Signal Reader stale feed, search, and saved-state response exploration"},{"id":"moonbit-editor-file-tree","repository":"moonbitlang/editor","revision":"001c9db52bcdc543c2bec8689b70e97941cecc18","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"MoonBit Editor overlapping file-tree resolve and auto-reveal exploration"},{"id":"canopy-components","repository":"dowdiness/canopy","revision":"cb41945b04801084e8abe1d8edc27eb0cdce4a1c","license":"Apache-2.0","strategy":"pure","expectedOutcome":"failure","description":"Canopy resizable, menu, and tabs direct-dispatch exploration"},{"id":"incr-typed-spreadsheet","repository":"dowdiness/incr","revision":"afc715b261d99f35245f1a14a2390ae8ad86d7d0","license":"Apache-2.0","strategy":"pure","expectedOutcome":"failure","description":"Typed spreadsheet formula overflow, trace, and Eq/no-backdate exploration"},{"id":"circular-state","repository":"CAIMEOX/circular","revision":"bf8549a9c13505f3dc5632347acfffbba864c406","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Circular workspace synchronization and task-modal referential-integrity exploration"},{"id":"isomorphic-suite","repository":"moonbit-community/isomorphic","revision":"590ac1c4de71050419cc6643942e0d1f181301aa","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Kanban, Todo, and Note shared stale-load and referential-integrity exploration"},{"id":"rabbita-xterm-lifecycle","repository":"moonbit-community/rabbita_xterm","revision":"9734f6a39ce3899dbf6738fa3a100c2cebaefc23","license":"Apache-2.0","strategy":"subscription-model","expectedOutcome":"failure","description":"Managed xterm lifecycle, UTF-8 writes, disposal, and terminal dimension exploration"},{"id":"moonclaw-job","repository":"vectie/moonclaw","revision":"5fdc845f2a926cdd17260fb9720135a2c50eff38","license":"Apache-2.0","strategy":"subscription-model","expectedOutcome":"failure","description":"Moonclaw Jobs stale same-run snapshot response exploration"},{"id":"mooncakes-official-ui","repository":"moonbitlang/mooncakes.io","revision":"f7877338598f6a13387b889dd912b15029a0ce5f","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Mooncakes Build Queue, official website, and full-stack tutorial response-order exploration"},{"id":"selene-editor-assets","repository":"moonbit-community/selene","revision":"ca68f3a2898a80db9fc45ff96713d1531814371d","license":"Apache-2.0","strategy":"subscription-model","expectedOutcome":"failure","description":"Selene Editor asset-list, initialization, and preview-selection exploration"},{"id":"openseek-desktop-lifecycle","repository":"moonbitlang/openseek","revision":"b21e078a4f3cdd11129b4d33348dcc09abf22026","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"OpenSeek self-update, terminal, and file-editor lifecycle exploration"}]}
+    #|{"ok":true,"command":"external list","applications":[{"id":"proton-demo-todo","repository":"justjavac/proton-demo","revision":"5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d","license":"MIT","strategy":"subscription-model","expectedOutcome":"failure","description":"Proton Todo with deterministic native-effect recording and stale snapshot ordering"},{"id":"ensenzu-app","repository":"shiguri-01/ensenzu","revision":"f1fbec776a393e7023c8fa8324ea26c0774752e5","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Ensenzu numeric forms, SVG calculation, reset, and non-finite input exploration"},{"id":"signal-reader","repository":"CAIMEOX/signal_reader","revision":"e2867cd5ca46fc54a8b72ee45ea3d9a7b4db9b6a","license":"MIT","strategy":"effect-model","expectedOutcome":"failure","description":"Signal Reader stale feed, search, and saved-state response exploration"},{"id":"moonbit-editor-file-tree","repository":"moonbitlang/editor","revision":"001c9db52bcdc543c2bec8689b70e97941cecc18","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"MoonBit Editor overlapping file-tree resolve and auto-reveal exploration"},{"id":"canopy-components","repository":"dowdiness/canopy","revision":"cb41945b04801084e8abe1d8edc27eb0cdce4a1c","license":"Apache-2.0","strategy":"pure","expectedOutcome":"failure","description":"Canopy resizable, menu, and tabs direct-dispatch exploration"},{"id":"canopy-editor-integration","repository":"dowdiness/canopy","revision":"cb41945b04801084e8abe1d8edc27eb0cdce4a1c","license":"Apache-2.0","strategy":"subscription-model","expectedOutcome":"failure","description":"Canopy CodeMirror lifecycle, callback ordering, selection, and context-menu boundary exploration"},{"id":"rabbita-utility-batch","repository":"beso1225/fullstack_trial_moonbit","revision":"5ed67d454600210861eb4ba8178aa91e1e34406f","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Symweb, Issues Dashboard, Fullstack Trial, and Proton adapter generic exploration"},{"id":"incr-typed-spreadsheet","repository":"dowdiness/incr","revision":"afc715b261d99f35245f1a14a2390ae8ad86d7d0","license":"Apache-2.0","strategy":"pure","expectedOutcome":"failure","description":"Typed spreadsheet formula overflow, trace, and Eq/no-backdate exploration"},{"id":"circular-state","repository":"CAIMEOX/circular","revision":"bf8549a9c13505f3dc5632347acfffbba864c406","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Circular workspace synchronization and task-modal referential-integrity exploration"},{"id":"isomorphic-suite","repository":"moonbit-community/isomorphic","revision":"590ac1c4de71050419cc6643942e0d1f181301aa","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Kanban, Todo, and Note shared stale-load and referential-integrity exploration"},{"id":"rabbita-xterm-lifecycle","repository":"moonbit-community/rabbita_xterm","revision":"9734f6a39ce3899dbf6738fa3a100c2cebaefc23","license":"Apache-2.0","strategy":"subscription-model","expectedOutcome":"failure","description":"Managed xterm lifecycle, UTF-8 writes, disposal, and terminal dimension exploration"},{"id":"moonclaw-job","repository":"vectie/moonclaw","revision":"5fdc845f2a926cdd17260fb9720135a2c50eff38","license":"Apache-2.0","strategy":"subscription-model","expectedOutcome":"failure","description":"Moonclaw Jobs stale same-run snapshot response exploration"},{"id":"mooncakes-official-ui","repository":"moonbitlang/mooncakes.io","revision":"f7877338598f6a13387b889dd912b15029a0ce5f","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"Mooncakes Build Queue, official website, and full-stack tutorial response-order exploration"},{"id":"selene-editor-assets","repository":"moonbit-community/selene","revision":"ca68f3a2898a80db9fc45ff96713d1531814371d","license":"Apache-2.0","strategy":"subscription-model","expectedOutcome":"failure","description":"Selene Editor asset-list, initialization, and preview-selection exploration"},{"id":"openseek-desktop-lifecycle","repository":"moonbitlang/openseek","revision":"b21e078a4f3cdd11129b4d33348dcc09abf22026","license":"Apache-2.0","strategy":"effect-model","expectedOutcome":"failure","description":"OpenSeek self-update, terminal, and file-editor lifecycle exploration"}]}
   )
 }
 
@@ -256,6 +258,26 @@ fn canopy_components_external_inspection_json() -> String {
     [],
     "not applicable",
     "ResizeNudge(dw=2147483647, dh=0)",
+  )
+}
+
+///|
+fn canopy_editor_integration_external_inspection_json() -> String {
+  external_inspection_json(
+    @external.canopy_editor_integration_manifest(),
+    ["dom-command", "subscription-installed"],
+    "bounded browser callback delivery with reverse revision and stale lifecycle replay",
+    "MountCompleted -> BrowserDocumentChanged(draft) -> BrowserDocumentChanged(draft) -> DeliverCallback(2) -> DeliverCallback(1)",
+  )
+}
+
+///|
+fn rabbita_utility_batch_external_inspection_json() -> String {
+  external_inspection_json(
+    @external.rabbita_utility_batch_manifest(),
+    ["http-request", "timer-scheduled", "subscription-installed"],
+    "bounded utility callbacks with reverse HTTP replies and stale subscription events",
+    "FullstackSubmit",
   )
 }
 
@@ -392,6 +414,22 @@ fn print_canopy_components_external_inspection() -> Unit {
   print_external_inspection(
     @external.canopy_components_manifest(),
     "ResizeNudge(dw=2147483647, dh=0)",
+  )
+}
+
+///|
+fn print_canopy_editor_integration_external_inspection() -> Unit {
+  print_external_inspection(
+    @external.canopy_editor_integration_manifest(),
+    "newer document callback -> older document callback; stale callback after unmount retained separately",
+  )
+}
+
+///|
+fn print_rabbita_utility_batch_external_inspection() -> Unit {
+  print_external_inspection(
+    @external.rabbita_utility_batch_manifest(),
+    "FullstackSubmit crosses HTTP boundary with an initially empty title",
   )
 }
 
@@ -1064,6 +1102,41 @@ async fn run_canopy_components(output_root : String) -> RunSummary {
 }
 
 ///|
+async fn run_canopy_editor_integration(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @canopy_editor.machine(),
+    @canopy_editor.properties(),
+    @canopy_editor.default_config(),
+  )
+  finish_external_run(
+    @external.canopy_editor_integration_manifest(),
+    output_root,
+    "older document callbacks do not replace newer accepted revisions",
+    [
+      "MountCompleted(generation=1)", "BrowserDocumentChanged(\"draft\")", "BrowserDocumentChanged(\"draft\")",
+      "DeliverCallback(id=2)", "DeliverCallback(id=1)",
+    ],
+    report,
+  )
+}
+
+///|
+async fn run_rabbita_utility_batch(output_root : String) -> RunSummary {
+  let report = @proped.run(
+    @utility_batch.machine(),
+    @utility_batch.properties(),
+    @utility_batch.default_config(),
+  )
+  finish_external_run(
+    @external.rabbita_utility_batch_manifest(),
+    output_root,
+    "Fullstack invalid titles are not submitted",
+    ["FullstackSubmit"],
+    report,
+  )
+}
+
+///|
 async fn run_incr_typed_spreadsheet(output_root : String) -> RunSummary {
   let report = @proped.run(
     @incr_sheet.machine(),
@@ -1263,6 +1336,10 @@ fn handoff_spec(id : String) -> @disclosure.FindingHandoff? {
     Some(@external.editor_file_tree_handoff())
   } else if id == "canopy-components" {
     Some(@external.canopy_components_handoff())
+  } else if id == "canopy-editor-integration" {
+    Some(@external.canopy_editor_integration_handoff())
+  } else if id == "rabbita-utility-batch" {
+    Some(@external.rabbita_utility_batch_handoff())
   } else if id == "incr-typed-spreadsheet" {
     Some(@external.incr_typed_spreadsheet_handoff())
   } else if id == "circular-state" {
@@ -1365,9 +1442,9 @@ async fn main {
       return
     }
     if parsed.json {
-      println("{\"ok\":true,\"version\":\"0.18.0\"}")
+      println("{\"ok\":true,\"version\":\"0.19.0\"}")
     } else {
-      println("proped-rabbita 0.18.0")
+      println("proped-rabbita 0.19.0")
     }
     return
   }
@@ -1412,6 +1489,12 @@ async fn main {
         )
         println(
           "canopy-components\tdowdiness/canopy\tpure\tfailure\tResizable, menu, and tabs exploration",
+        )
+        println(
+          "canopy-editor-integration\tdowdiness/canopy\tsubscription-model\tfailure\tCodeMirror lifecycle and callback ordering exploration",
+        )
+        println(
+          "rabbita-utility-batch\tbeso1225/fullstack_trial_moonbit\teffect-model\tfailure\tPublic utility-app batch exploration",
         )
         println(
           "incr-typed-spreadsheet\tdowdiness/incr\tpure\tfailure\tFormula overflow and backdating exploration",
@@ -1466,6 +1549,18 @@ async fn main {
         )
         statuses.push(
           generate_handoff(parsed.output, @external.canopy_components_handoff()),
+        )
+        statuses.push(
+          generate_handoff(
+            parsed.output,
+            @external.canopy_editor_integration_handoff(),
+          ),
+        )
+        statuses.push(
+          generate_handoff(
+            parsed.output,
+            @external.rabbita_utility_batch_handoff(),
+          ),
         )
         statuses.push(
           generate_handoff(
@@ -1585,6 +1680,18 @@ async fn main {
         } else {
           print_canopy_components_external_inspection()
         }
+      } else if inspect_id == "canopy-editor-integration" {
+        if parsed.json {
+          println(canopy_editor_integration_external_inspection_json())
+        } else {
+          print_canopy_editor_integration_external_inspection()
+        }
+      } else if inspect_id == "rabbita-utility-batch" {
+        if parsed.json {
+          println(rabbita_utility_batch_external_inspection_json())
+        } else {
+          print_rabbita_utility_batch_external_inspection()
+        }
       } else if inspect_id == "incr-typed-spreadsheet" {
         if parsed.json {
           println(incr_typed_spreadsheet_external_inspection_json())
@@ -1659,6 +1766,10 @@ async fn main {
       external_summaries.push(run_editor_file_tree(external_root))
     } else if external_id == "canopy-components" {
       external_summaries.push(run_canopy_components(external_root))
+    } else if external_id == "canopy-editor-integration" {
+      external_summaries.push(run_canopy_editor_integration(external_root))
+    } else if external_id == "rabbita-utility-batch" {
+      external_summaries.push(run_rabbita_utility_batch(external_root))
     } else if external_id == "incr-typed-spreadsheet" {
       external_summaries.push(run_incr_typed_spreadsheet(external_root))
     } else if external_id == "circular-state" {
@@ -1681,6 +1792,8 @@ async fn main {
       external_summaries.push(run_signal_reader(external_root))
       external_summaries.push(run_editor_file_tree(external_root))
       external_summaries.push(run_canopy_components(external_root))
+      external_summaries.push(run_canopy_editor_integration(external_root))
+      external_summaries.push(run_rabbita_utility_batch(external_root))
       external_summaries.push(run_incr_typed_spreadsheet(external_root))
       external_summaries.push(run_circular_state(external_root))
       external_summaries.push(run_isomorphic_suite(external_root))

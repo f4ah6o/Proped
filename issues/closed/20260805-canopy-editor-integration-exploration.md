@@ -1,6 +1,6 @@
 # Canopy editor・CodeMirror integrationを探索する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-05
 Updated: 2026-08-05
@@ -38,11 +38,26 @@ Split-From: `20260804-canopy-and-incr-exploration.md`
 
 ## 受け入れ条件
 
-- [ ] CodeMirror command descriptorを定義する。
-- [ ] mount/change/unmountの順序を探索する。
-- [ ] Ideal editor integrationの最小boundaryを文書化する。
-- [ ] pure adapterで不十分なDOM semanticsをbrowser replayへ分類する。
+- [x] CodeMirror command descriptorを定義する。
+- [x] mount/change/unmountの順序を探索する。
+- [x] Ideal editor integrationの最小boundaryを文書化する。
+- [x] pure adapterで不十分なDOM semanticsをbrowser replayへ分類する。
 
 ## 変更履歴
 
 `CHANGES.md` impact: yes when adapter is shipped
+
+## 実装結果
+
+- `Mount`、`SetDocument`、`SetReadonly`、`Unmount`、`ForwardSelection`のcommand descriptorを定義した。
+- browser callbackの生成と配送を分離し、generation・revision・document identityをtest harness側で記録するbrowser-replay adapterを実装した。
+- 900 state・1,633 transitionを探索し、2 failure・0 diagnosticsを保持した。
+- primary failure `older document callbacks do not replace newer accepted revisions`を5 actionへ縮約した。
+  1. `MountCompleted(generation=1)`
+  2. `BrowserDocumentChanged("draft")`
+  3. `BrowserDocumentChanged("draft")`
+  4. `DeliverCallback(id=2)`
+  5. `DeliverCallback(id=1)`
+- unmount後のqueued callback適用も4 actionの独立testとして固定した。
+- Idealの`CmMounted`、`CmDocChanged`、`CmSelectionChanged`、`CmFocusChanged`境界と、DOM selection・focus・CodeMirror registryをbrowser replayとする理由を`UPSTREAM.md`へ記録した。
+- upstream repositoryへのissue、PR、comment、commitは行っていない。

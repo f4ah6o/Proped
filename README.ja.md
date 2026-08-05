@@ -44,7 +44,7 @@ vendor source、revision、hash、license、adapter変更、failureの根拠は 
 
 外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。`scripts/external_harness.py` はmanifest validation、単純な`Msg` payloadの有限action scaffold生成、決定的なsource hash report、明示的revision更新のpreview、network deny環境でのinspection command実行を提供します。
 
-external campaignは13 targetです。`openseek-desktop-lifecycle`はself-update、terminal、file editor境界を2,600 state・5,615 transitionで探索し、staging切替後の古いproduction update reply、重複`EmulatorReady`によるterminal二重open、逆順file readを保持します。`selene-editor-assets`の重複初期化とstale asset-list orderingも継続検証します。
+external campaignは15 runnable targetです。`canopy-editor-integration`は900 state・1,633 transitionでdocument callbackの逆順適用とunmount後配送を保持します。`rabbita-utility-batch`は公開10 repositoryを分類し、supported 4境界を1,400 state・2,777 transitionで機械探索して、初期空タイトル送信を`FullstackSubmit`へ縮約しました。`scripts/utility_batch.py`はcommit済み分類reportを検証し、upstreamへ書き込まずに固定checkoutを再確認できます。
 
 外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。`external handoff <id>`はissue、再現、fix plan、PR本文のローカル下書きだけを生成します。security-sensitive findingはpublic exportを拒否し、Gitでignoreされる `.private/disclosures/`へ隔離します。詳細は [docs/DISCLOSURE.ja.md](docs/DISCLOSURE.ja.md) を参照してください。
 
@@ -119,6 +119,8 @@ src/
   vendor/ensenzu_core/              固定したEnsenzu計算実装
   vendor/moonbit_editor_file_tree/  file tree resolve・auto-reveal adapter
   vendor/canopy_components/         resizable・menu・tabs finite adapter
+  vendor/canopy_editor_integration/ CodeMirror lifecycle・browser replay adapter
+  vendor/rabbita_utility_batch/     supported公開utility app batch
   vendor/incr_typed_spreadsheet/     worksheet UI・backdating adapter
   vendor/incr_typed_spreadsheet_core/ pinned worksheet実装
   vendor/isomorphic_suite/           Kanban・Todo・Note matrix adapter

@@ -1,5 +1,26 @@
 # Changes
 
+## 0.19.0 - 2026-08-05
+
+### Added
+
+- Restored an interactive Atlas Inspector on top of the existing Flow Canvas identities, with selectable states and transitions, rendered state previews, metadata, related transitions, minimized failure traces, and English/Japanese switching.
+- Added `canopy-editor-integration` as a browser-replay external target for CodeMirror mount, document, selection, focus, unmount, and Ideal callback boundaries.
+- Added `rabbita-utility-batch` plus `external/utility-apps.json` and `scripts/utility_batch.py` to classify ten public Rabbita repositories, validate pinned revisions and source hashes, and execute generic properties for four supported boundaries.
+
+### Fixed
+
+- Found that reverse-ordered Canopy document callbacks can replace a newer accepted revision, minimized to five actions; also retained the four-action queued-callback-after-unmount failure.
+- Found that `beso1225/fullstack_trial_moonbit` can submit its initial empty title because the initial cached warning is `None`, minimized to `FullstackSubmit`.
+- Preserved secondary utility-batch failures for reverse `GraphSaved` delivery and a late Fullstack reply after a newer edit.
+- Fixed Atlas JSON escaping for non-BMP Unicode such as emoji; generated artifacts now remain valid JSON instead of emitting MoonBit-specific `\u{...}` escapes.
+
+### Changed
+
+- Expanded the external campaign and CI matrix from thirteen to fifteen runnable targets and completed classification of the remaining Tier 3 repositories plus Proton framework internals.
+- Added stable `data-flow-node` and `data-flow-edge` identities to standalone Flow SVG output without changing Atlas JSON or DOT contracts.
+- Bumped the package and CLI version to `0.19.0`.
+
 ## 0.18.0 - 2026-08-05
 
 ### Added

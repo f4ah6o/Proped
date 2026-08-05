@@ -12,6 +12,10 @@ pub fn canopy_components_handoff() -> @disclosure.FindingHandoff
 
 pub fn canopy_components_manifest() -> ExternalManifest
 
+pub fn canopy_editor_integration_handoff() -> @disclosure.FindingHandoff
+
+pub fn canopy_editor_integration_manifest() -> ExternalManifest
+
 pub fn circular_state_handoff() -> @disclosure.FindingHandoff
 
 pub fn circular_state_manifest() -> ExternalManifest
@@ -38,11 +42,35 @@ pub fn isomorphic_suite_manifest() -> ExternalManifest
 
 pub fn[Model, Msg] monotonic_int_property(String, (Model) -> Int, (Msg) -> Bool) -> @proped-rabbita.Property[Model, Msg]
 
+pub fn mooncakes_official_ui_handoff() -> @disclosure.FindingHandoff
+
+pub fn mooncakes_official_ui_manifest() -> ExternalManifest
+
+pub fn moonclaw_job_handoff() -> @disclosure.FindingHandoff
+
+pub fn moonclaw_job_manifest() -> ExternalManifest
+
+pub fn openseek_desktop_lifecycle_handoff() -> @disclosure.FindingHandoff
+
+pub fn openseek_desktop_lifecycle_manifest() -> ExternalManifest
+
 pub fn proton_todo_handoff() -> @disclosure.FindingHandoff
 
 pub fn proton_todo_manifest() -> ExternalManifest
 
+pub fn rabbita_utility_batch_handoff() -> @disclosure.FindingHandoff
+
+pub fn rabbita_utility_batch_manifest() -> ExternalManifest
+
+pub fn rabbita_xterm_lifecycle_handoff() -> @disclosure.FindingHandoff
+
+pub fn rabbita_xterm_lifecycle_manifest() -> ExternalManifest
+
 pub fn response_orders(Array[EffectDescriptor]) -> Array[Array[Int]]
+
+pub fn selene_editor_assets_handoff() -> @disclosure.FindingHandoff
+
+pub fn selene_editor_assets_manifest() -> ExternalManifest
 
 pub fn signal_reader_handoff() -> @disclosure.FindingHandoff
 
@@ -125,4 +153,3 @@ pub(all) struct SourceInspection {
 // Type aliases
 
 // Traits
-

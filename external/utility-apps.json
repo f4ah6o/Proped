@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "id": "rabbita-utility-apps",
+  "generatedAt": "2026-08-05",
+  "upstreamWritePolicy": "read-only",
+  "classificationValues": [
+    "supported",
+    "partial",
+    "unsupported"
+  ],
+  "supportedTarget": "rabbita-utility-batch",
+  "entries": [
+    {
+      "repository": "chnlkw/moonxi_board",
+      "revision": "32e9cde5daab28ce76f43d2678c57e2b2f265253",
+      "license": "MIT",
+      "classification": "partial",
+      "strategy": "subscription-model",
+      "paths": [
+        "src/model.mbt",
+        "src/update.mbt",
+        "src/view.mbt",
+        "src/subscriptions.mbt"
+      ],
+      "sourceSha256": "55c6ff1ae141bee19d05573f352388f4e0ef9f12b6e9540cd2815e41b0e52ceb",
+      "sourceVendored": false,
+      "rationale": "Model/Msg/update/view are explicit, but HTTP, SSE, keyboard, timer, and browser lifecycle require a larger effect replay than this batch.",
+      "genericExecution": "classified-only"
+    },
+    {
+      "repository": "xz-xuezhe/moonblox",
+      "revision": "d9d5e74f3a61ac7b75a257d6abdca0d05769af90",
+      "license": "Apache-2.0",
+      "classification": "partial",
+      "strategy": "unsupported",
+      "paths": [
+        "render/html.mbt",
+        "cmd/moonblox/init_tui.mbt"
+      ],
+      "sourceSha256": "4372757e752b899ff16a99992c97fb4c36a798c6dd4c7d2ceb724a524fdded27",
+      "sourceVendored": false,
+      "rationale": "Rabbita is used by the static HTML renderer while the interactive Model/Msg/update loop is a TUI, so there is no single Rabbita state machine to explore.",
+      "genericExecution": "classified-only"
+    },
+    {
+      "repository": "CAIMEOX/symweb",
+      "revision": "a37f96d283b4bdbb2d1654ca88a9c26033db6c46",
+      "license": "Apache-2.0",
+      "classification": "supported",
+      "strategy": "effect-model",
+      "paths": [
+        "playground/app.mbt"
+      ],
+      "sourceSha256": "e9c17dfbf2a6366254f3b6a3962edd119454a3ae076525b5a7ccbf64ec9729f0",
+      "sourceVendored": true,
+      "fixturePaths": [
+        "src/vendor/rabbita_utility_batch/upstream/symweb/app.mbt.txt"
+      ],
+      "rationale": "Draft revision, debounce, modal, and display toggles form a finite deterministic boundary; WASM evaluation and theme DOM calls remain outside.",
+      "genericExecution": "rabbita-utility-batch"
+    },
+    {
+      "repository": "CAIMEOX/calculus-singularity",
+      "revision": "9bf304763233a310971d609bf6db39dfeb697fca",
+      "license": "Apache-2.0",
+      "classification": "partial",
+      "strategy": "browser-replay",
+      "paths": [
+        "web/web_app.mbt",
+        "web/web_state.mbt",
+        "web/web_update.mbt"
+      ],
+      "sourceSha256": "27ba359e3b0063d340b80644ad33047be24206a6850d5c31d5aa5e48113c7d34",
+      "sourceVendored": false,
+      "rationale": "The web state is finite in parts, but animation frames, keyboard, resize, timers, storage, downloads, and mutable game state dominate the boundary.",
+      "genericExecution": "classified-only"
+    },
+    {
+      "repository": "bobzhang/issues",
+      "revision": "a348501b2ca848d6564557b58446269c90ba4e3a",
+      "license": "Apache-2.0",
+      "classification": "supported",
+      "strategy": "effect-model",
+      "paths": [
+        "dashboard/dashboard.mbt"
+      ],
+      "sourceSha256": "cd7bda08e972e02d0227dab38de8d8a361219364300065de194694247390fc86",
+      "sourceVendored": true,
+      "fixturePaths": [
+        "src/vendor/rabbita_utility_batch/upstream/issues/dashboard.mbt.txt"
+      ],
+      "rationale": "Selection, drafts, save commands, and GraphSaved callbacks form a bounded effect model. Reverse response ordering is explored explicitly.",
+      "genericExecution": "rabbita-utility-batch"
+    },
+    {
+      "repository": "bobzhang/games",
+      "revision": "b17fb377b143537c534213e516bba126b8198e4e",
+      "license": "unknown",
+      "classification": "unsupported",
+      "strategy": "unsupported",
+      "paths": [
+        "website/main.mbt"
+      ],
+      "sourceSha256": "0e9c43a4cea487b496b8359f1cd904f8a6fe769b26f4fc70f81e16f947be32d7",
+      "sourceVendored": false,
+      "rationale": "No repository license was found at the pinned revision. Rabbita is limited to the website while game updates are separate mutable loops; metadata only.",
+      "genericExecution": "license-blocked"
+    },
+    {
+      "repository": "beso1225/fullstack_trial_moonbit",
+      "revision": "5ed67d454600210861eb4ba8178aa91e1e34406f",
+      "license": "Apache-2.0",
+      "classification": "supported",
+      "strategy": "effect-model",
+      "paths": [
+        "frontend/main.mbt"
+      ],
+      "sourceSha256": "885181549c4142139d76e683cc0e04f69e295976ff9fce1f106e0e6c61615893",
+      "sourceVendored": true,
+      "fixturePaths": [
+        "src/vendor/rabbita_utility_batch/upstream/fullstack_trial/main.mbt.txt"
+      ],
+      "rationale": "The title form and one HTTP callback are finite. The batch checks local validation and stale reply behavior.",
+      "genericExecution": "rabbita-utility-batch"
+    },
+    {
+      "repository": "tekihei2317/moonbit-rpc-poc",
+      "revision": "22069dc53724d7afdd6951652d7b6bbe114e6e11",
+      "license": "unknown",
+      "classification": "partial",
+      "strategy": "effect-model",
+      "paths": [
+        "frontend/app/app.mbt",
+        "frontend/app/view.mbt"
+      ],
+      "sourceSha256": "804ffe745c15fb42a85623f7610d5aca431fbace731331402332f00002011c20",
+      "sourceVendored": false,
+      "rationale": "Model/Msg/update/view are suitable for an effect model, but no repository license was found. Source is not vendored; metadata and hash only.",
+      "genericExecution": "license-blocked"
+    },
+    {
+      "repository": "moonbitlang/OSC2026",
+      "revision": "ef740c25e924d873b5be760923f02262e98d9c24",
+      "license": "unknown",
+      "classification": "partial",
+      "strategy": "effect-model",
+      "paths": [
+        "main/main.mbt"
+      ],
+      "sourceSha256": "68b2774a52a93cf5a1a6e06945cce913e53ab843453380eb5c6a6921c58e8e5f",
+      "sourceVendored": false,
+      "rationale": "A large Model/Msg/update/view boundary exists, but browser/network behavior is extensive and no repository license was found. Metadata only.",
+      "genericExecution": "license-blocked"
+    },
+    {
+      "repository": "moonbit-community/proton",
+      "revision": "7e819f385af0c7cc7b78397281b1ab5c3306bc5f",
+      "license": "Apache-2.0",
+      "classification": "supported",
+      "strategy": "subscription-model",
+      "paths": [
+        "rabbita/adapter.mbt",
+        "rabbita/adapter_wbtest.mbt"
+      ],
+      "sourceSha256": "bea5e1dd930f0f8d9a2b0e5d56db5b17925bd51f21c3a79214c443aa92eb8d2a",
+      "sourceVendored": true,
+      "fixturePaths": [
+        "src/vendor/rabbita_utility_batch/upstream/proton/adapter.mbt.txt",
+        "src/vendor/rabbita_utility_batch/upstream/proton/adapter_wbtest.mbt.txt"
+      ],
+      "rationale": "The framework invoke and subscription adapter has explicit scheduler boundaries and upstream tests. The batch models invoke completion and subscription generation.",
+      "genericExecution": "rabbita-utility-batch",
+      "group": "framework",
+      "fixtureSha256": "8c0d094eba2d3b64c4efb96b8ebb0ad5577d4244cabecdeaae80080423abce07"
+    }
+  ]
+}

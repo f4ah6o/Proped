@@ -571,6 +571,138 @@ pub fn canopy_components_handoff() -> @disclosure.FindingHandoff {
 }
 
 ///|
+pub fn canopy_editor_integration_manifest() -> ExternalManifest {
+  {
+    id: "canopy-editor-integration",
+    repository: "dowdiness/canopy",
+    revision: "cb41945b04801084e8abe1d8edc27eb0cdce4a1c",
+    license: "Apache-2.0",
+    packages: [
+      "modules/rabbita_codemirror", "examples/codemirror/main", "apps/ideal/main",
+    ],
+    model_entry: "Model",
+    message_entry: "Msg / CmDocChanged / CmSelectionChanged / CmFocusChanged",
+    update_entry: "update / handle_codemirror",
+    view_entry: "view",
+    strategy: SubscriptionModel,
+    effect_policy: "browser-replay",
+    source_sha256: "98722c622fe4d2026c82e4f9ad8647735a85c2d4f2b6ee16f903a983535cc0e8",
+    properties: [
+      "callbacks queued before unmount do not mutate the detached editor", "older document callbacks do not replace newer accepted revisions",
+      "selection remains inside the visible document", "closed context menus clear focus",
+      "rendered editor state matches the model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn canopy_editor_integration_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "canopy-editor-integration",
+    repository: "dowdiness/canopy",
+    revision: "cb41945b04801084e8abe1d8edc27eb0cdce4a1c",
+    title: "Correlate CodeMirror callbacks with lifecycle and document revision",
+    summary: "The CodeMirror subscription emits document text without an editor generation, active-document identity, or revision. Ideal applies CmDocChanged directly, so reverse-ordered callbacks can replace newer text and a callback queued before unmount can still mutate the detached editor model.",
+    impact: "Rapid edits, document switches, remounts, or queued browser events can roll visible editor content backward or reintroduce text after the editor has been unmounted.",
+    expected: "Only a callback from the current mounted editor generation and active document may update text, and accepted document revisions never decrease.",
+    actual: "Two document callbacks delivered newest-first then oldest-first leave the older text visible. A separately fixed four-action trace also applies a queued document callback after UnmountRequested.",
+    property: "older document callbacks do not replace newer accepted revisions",
+    minimal_trace: [
+      "MountCompleted(generation=1)", "BrowserDocumentChanged(\"draft\")", "BrowserDocumentChanged(\"draft\")",
+      "DeliverCallback(id=2)", "DeliverCallback(id=1)",
+    ],
+    action_ids: [
+      "mount-completed", "browser-doc:5:draft", "browser-doc:5:draft", "deliver:2",
+      "deliver:1",
+    ],
+    evidence: [
+      "The preserved public listen callback emits only String document text; no lifecycle generation, document ID, or revision is carried into the consumer message.",
+      "Ideal handle_codemirror applies CmDocChanged without checking mounted state or correlating the callback with the current document.",
+      "The deterministic browser-replay adapter separates callback generation from delivery and shrinks reverse ordering to five actions.",
+      "MountCompleted -> BrowserDocumentChanged(\"draft\") -> UnmountRequested -> DeliverCallback(id=1) independently demonstrates the unmount race.",
+      "Selection ranges are clamped in the adapter, context-menu close clears focus, and rendered-state properties pass.",
+    ],
+    suggested_fix: [
+      "Carry an editor generation and active-document ID through document, selection, and focus callbacks.",
+      "Assign a monotonically increasing document revision and ignore callbacks older than the latest accepted revision.",
+      "Dispose or invalidate the active listener before unmount and reject callbacks when the generation is no longer mounted.",
+      "Keep programmatic set_doc synchronization distinguishable from user-originated changes to prevent feedback loops.",
+    ],
+    verification: [
+      "Queue two document callbacks, deliver the newer one first and the older one last, and retain the newer text.",
+      "Queue a callback, unmount, deliver it, and confirm model text and selection do not change.",
+      "Switch documents or remount while a callback is queued and ignore the callback from the previous generation.",
+      "Retain mount/set-doc/readonly/unmount command descriptor tests and browser replay for DOM selection semantics.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn rabbita_utility_batch_manifest() -> ExternalManifest {
+  {
+    id: "rabbita-utility-batch",
+    repository: "beso1225/fullstack_trial_moonbit",
+    revision: "5ed67d454600210861eb4ba8178aa91e1e34406f",
+    license: "Apache-2.0",
+    packages: [
+      "CAIMEOX/symweb/playground", "bobzhang/issues/dashboard", "beso1225/fullstack_trial_moonbit/frontend",
+      "moonbit-community/proton/rabbita",
+    ],
+    model_entry: "Symweb DocModel / Issues Model / Fullstack Model / Proton lifecycle",
+    message_entry: "DocMsg / Msg / synthetic effect delivery",
+    update_entry: "update / Model::update / scheduler callback replay",
+    view_entry: "view / deterministic batch projection",
+    strategy: EffectModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "25ab15a6554c1558d2942ef78252872d98d4886adc88f41dda540cfcded68871",
+    properties: [
+      "symweb revisions remain internally consistent", "Symweb stale debounce callbacks are ignored",
+      "Issues Dashboard selection remains valid", "Issues Dashboard older save replies do not roll back graph revision",
+      "Fullstack local warning matches the current title", "Fullstack invalid titles are not submitted",
+      "Fullstack replies match the current submitted title", "Proton stale subscription events are ignored",
+      "utility pending effect sets remain bounded", "rendered utility state matches every supported model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn rabbita_utility_batch_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "rabbita-utility-batch",
+    repository: "beso1225/fullstack_trial_moonbit",
+    revision: "5ed67d454600210861eb4ba8178aa91e1e34406f",
+    title: "Validate the initial title before submitting the Fullstack Trial form",
+    summary: "The initial model stores an empty title with warning=None. Submit gates only on the cached warning, so the first click constructs and sends an HTTP request whose title is empty even though local validation rejects it.",
+    impact: "The UI advertises local validation but the initial empty form bypasses it, crosses the network boundary, and depends on the backend to reject an invalid request.",
+    expected: "Submit recomputes validation or initializes warning from the initial title, and invalid titles never enter the HTTP command boundary.",
+    actual: "FullstackSubmit from the initial state appends an HTTP request descriptor with an empty title in one action.",
+    property: "Fullstack invalid titles are not submitted",
+    minimal_trace: ["FullstackSubmit"],
+    action_ids: ["fullstack-submit"],
+    evidence: [
+      "The pinned initial model has an empty title with warning=None and server_message=None.",
+      "Submit matches model.warning rather than calling local_warning(model.title).",
+      "Local validation returns title cannot be empty for the initial title.", "The finite adapter preserves that gate and shrinks the request-boundary failure to FullstackSubmit.",
+      "The same batch also retains reverse GraphSaved and late Fullstack reply failures while Symweb debounce and Proton stale-event properties pass.",
+    ],
+    suggested_fix: [
+      "Initialize warning from the empty title or recompute local_warning(model.title) inside Submit.",
+      "Do not construct the request command when current validation returns an error.",
+      "Add a request generation or submitted-title identity to ServerReplied so late replies cannot overwrite newer edits.",
+    ],
+    verification: [
+      "Submit immediately after mount and assert no HTTP command is created.", "Edit to a valid title and assert exactly one request is created.",
+      "Edit after submit, deliver the older reply, and confirm it is ignored or clearly associated with the submitted title.",
+      "Rerun rabbita-utility-batch and require exact one-action failure removal after the fix.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
 pub fn incr_typed_spreadsheet_manifest() -> ExternalManifest {
   {
     id: "incr-typed-spreadsheet",

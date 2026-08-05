@@ -637,7 +637,11 @@ pub fn flow_to_svg(graph : FlowGraph) -> String {
       if edge.selected {
         output.write_string(" selected")
       }
-      output.write_string("\"><path class=\"flow-edge")
+      output.write_string("\" data-flow-edge=\"")
+      output.write_string(flow_xml_escape(edge.id))
+      output.write_string(
+        "\" role=\"button\" tabindex=\"0\" aria-pressed=\"false\"><path class=\"flow-edge",
+      )
       if edge.selected {
         output.write_string(" selected")
       }
@@ -662,7 +666,11 @@ pub fn flow_to_svg(graph : FlowGraph) -> String {
     if node.selected {
       output.write_string(" selected")
     }
-    output.write_string("\" transform=\"translate(")
+    output.write_string("\" data-flow-node=\"")
+    output.write_string(flow_xml_escape(node.id))
+    output.write_string(
+      "\" role=\"button\" tabindex=\"0\" aria-pressed=\"false\" transform=\"translate(",
+    )
     output.write_object(node.position.x)
     output.write_char(' ')
     output.write_object(node.position.y)

@@ -1,0 +1,905 @@
+///|
+using @html {
+  a,
+  button,
+  div,
+  h2,
+  header,
+  nothing,
+  p,
+  pre,
+  section,
+  small,
+  span,
+  textarea,
+}
+
+///|
+using @svg {circle, line, polyline, rect, svg}
+
+///|
+fn nav_button_class(active : Bool) -> String {
+  if active {
+    "nav-button nav-button-active"
+  } else {
+    "nav-button"
+  }
+}
+
+///|
+fn example_button_class(active : Bool) -> String {
+  if active {
+    "example-button example-button-active"
+  } else {
+    "example-button"
+  }
+}
+
+///|
+fn parser_button_class(active : Bool) -> String {
+  if active {
+    "parser-button parser-button-active"
+  } else {
+    "parser-button"
+  }
+}
+
+///|
+fn tree_button_class(active : Bool) -> String {
+  if active {
+    "tree-function-button tree-function-button-active"
+  } else {
+    "tree-function-button"
+  }
+}
+
+///|
+fn github_repo_url() -> String {
+  "https://github.com/CAIMEOX/symbit"
+}
+
+///|
+fn github_button_label() -> String {
+  "GitHub"
+}
+
+///|
+fn topbar_view(dispatch : @rabbita.Emit[DocMsg]) -> @html.Html {
+  header(class="topbar", [
+    p(class="topbar-brand", "symbit"),
+    div(class="topbar-actions", [
+      a(class="topbar-button", href=github_repo_url(), github_button_label()),
+      button(
+        class="topbar-button",
+        type_="button",
+        on_click=dispatch(DocMsg::OpenSettings),
+        "Settings",
+      ),
+    ]),
+  ])
+}
+
+///|
+fn plot_width() -> Int {
+  560
+}
+
+///|
+fn plot_height() -> Int {
+  320
+}
+
+///|
+fn plot_padding() -> Int {
+  18
+}
+
+///|
+fn plot_inner_width() -> Int {
+  plot_width() - 2 * plot_padding()
+}
+
+///|
+fn plot_inner_height() -> Int {
+  plot_height() - 2 * plot_padding()
+}
+
+///|
+fn double_min(a : Double, b : Double) -> Double {
+  if a <= b {
+    a
+  } else {
+    b
+  }
+}
+
+///|
+fn double_max(a : Double, b : Double) -> Double {
+  if a >= b {
+    a
+  } else {
+    b
+  }
+}
+
+///|
+fn plot_value_span(min_value : Double, max_value : Double) -> Double {
+  let span = max_value - min_value
+  if span == 0.0 {
+    1.0
+  } else {
+    span
+  }
+}
+
+///|
+fn plot_units_per_pixel(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  let span_x = plot_value_span(min_x, max_x)
+  let span_y = plot_value_span(min_y, max_y)
+  let units_per_pixel_x = span_x / plot_inner_width().to_double()
+  let units_per_pixel_y = span_y / plot_inner_height().to_double()
+  double_max(units_per_pixel_x, units_per_pixel_y)
+}
+
+///|
+fn plot_display_span_x(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  plot_units_per_pixel(min_x, max_x, min_y, max_y) *
+  plot_inner_width().to_double()
+}
+
+///|
+fn plot_display_span_y(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  plot_units_per_pixel(min_x, max_x, min_y, max_y) *
+  plot_inner_height().to_double()
+}
+
+///|
+fn plot_view_min_x(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  min_x -
+  (
+    plot_display_span_x(min_x, max_x, min_y, max_y) -
+    plot_value_span(min_x, max_x)
+  ) /
+  2.0
+}
+
+///|
+fn plot_view_min_y(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  min_y -
+  (
+    plot_display_span_y(min_x, max_x, min_y, max_y) -
+    plot_value_span(min_y, max_y)
+  ) /
+  2.0
+}
+
+///|
+fn plot_scale_x(
+  value : Double,
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Int {
+  let ratio = (value - plot_view_min_x(min_x, max_x, min_y, max_y)) /
+    plot_display_span_x(min_x, max_x, min_y, max_y)
+  plot_padding() + (ratio * plot_inner_width().to_double()).to_int()
+}
+
+///|
+fn plot_scale_y(
+  value : Double,
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Int {
+  let ratio = (value - plot_view_min_y(min_x, max_x, min_y, max_y)) /
+    plot_display_span_y(min_x, max_x, min_y, max_y)
+  plot_height() -
+  plot_padding() -
+  (ratio * plot_inner_height().to_double()).to_int()
+}
+
+///|
+fn line_bounds(points : Array[PlotPoint]) -> (Double, Double, Double, Double)? {
+  match points {
+    [] => None
+    [first, ..] => {
+      let mut min_x = first.x
+      let mut max_x = first.x
+      let mut min_y = first.y
+      let mut max_y = first.y
+      for point in points {
+        min_x = double_min(min_x, point.x)
+        max_x = double_max(max_x, point.x)
+        min_y = double_min(min_y, point.y)
+        max_y = double_max(max_y, point.y)
+      }
+      Some((min_x, max_x, min_y, max_y))
+    }
+  }
+}
+
+///|
+fn rect_bounds(rects : Array[PlotRect]) -> (Double, Double, Double, Double)? {
+  match rects {
+    [] => None
+    [first, ..] => {
+      let mut min_x = double_min(first.x_start, first.x_end)
+      let mut max_x = double_max(first.x_start, first.x_end)
+      let mut min_y = double_min(first.y_start, first.y_end)
+      let mut max_y = double_max(first.y_start, first.y_end)
+      for rect_item in rects {
+        min_x = double_min(
+          min_x,
+          double_min(rect_item.x_start, rect_item.x_end),
+        )
+        max_x = double_max(
+          max_x,
+          double_max(rect_item.x_start, rect_item.x_end),
+        )
+        min_y = double_min(
+          min_y,
+          double_min(rect_item.y_start, rect_item.y_end),
+        )
+        max_y = double_max(
+          max_y,
+          double_max(rect_item.y_start, rect_item.y_end),
+        )
+      }
+      Some((min_x, max_x, min_y, max_y))
+    }
+  }
+}
+
+///|
+fn plot_axes(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Array[@svg.Svg] {
+  let axes : Array[@svg.Svg] = [
+    rect(
+      class="plot-frame",
+      x=0,
+      y=0,
+      width=plot_width(),
+      height=plot_height(),
+      fill="none",
+      stroke="currentColor",
+      stroke_width=1,
+    ),
+  ]
+  if min_y <= 0.0 && 0.0 <= max_y {
+    let axis_y = plot_scale_y(0.0, min_x, max_x, min_y, max_y)
+    axes.push(
+      line(
+        class="plot-axis",
+        x1=plot_padding(),
+        y1=axis_y,
+        x2=plot_width() - plot_padding(),
+        y2=axis_y,
+        stroke="currentColor",
+        stroke_width=1,
+      ),
+    )
+  }
+  if min_x <= 0.0 && 0.0 <= max_x {
+    let axis_x = plot_scale_x(0.0, min_x, max_x, min_y, max_y)
+    axes.push(
+      line(
+        class="plot-axis",
+        x1=axis_x,
+        y1=plot_padding(),
+        x2=axis_x,
+        y2=plot_height() - plot_padding(),
+        stroke="currentColor",
+        stroke_width=1,
+      ),
+    )
+  }
+  axes
+}
+
+///|
+fn line_plot_view(points : Array[PlotPoint], class_name : String) -> @html.Html {
+  match line_bounds(points) {
+    None => div(class="plot-empty", "No sampled points.")
+    Some((min_x, max_x, min_y, max_y)) => {
+      let mapped = points.map(fn(point) {
+        (
+          plot_scale_x(point.x, min_x, max_x, min_y, max_y),
+          plot_scale_y(point.y, min_x, max_x, min_y, max_y),
+        )
+      })
+      let children = plot_axes(min_x, max_x, min_y, max_y) +
+        [
+          polyline(
+            class=class_name,
+            points=mapped,
+            fill="none",
+            stroke="currentColor",
+            stroke_width=2,
+            stroke_linecap="round",
+          ),
+        ]
+      svg(
+        class="plot-svg",
+        width=plot_width(),
+        height=plot_height(),
+        view_box="0 0 \{plot_width()} \{plot_height()}",
+        children,
+      )
+    }
+  }
+}
+
+///|
+fn scatter_plot_view(points : Array[PlotPoint]) -> @html.Html {
+  match line_bounds(points) {
+    None => div(class="plot-empty", "No contour samples.")
+    Some((min_x, max_x, min_y, max_y)) => {
+      let children = plot_axes(min_x, max_x, min_y, max_y) +
+        points.map(fn(point) {
+          circle(
+            class="plot-point",
+            cx=plot_scale_x(point.x, min_x, max_x, min_y, max_y),
+            cy=plot_scale_y(point.y, min_x, max_x, min_y, max_y),
+            r=2,
+            fill="currentColor",
+          )
+        })
+      svg(
+        class="plot-svg",
+        width=plot_width(),
+        height=plot_height(),
+        view_box="0 0 \{plot_width()} \{plot_height()}",
+        children,
+      )
+    }
+  }
+}
+
+///|
+fn rect_plot_view(rects : Array[PlotRect]) -> @html.Html {
+  match rect_bounds(rects) {
+    None => div(class="plot-empty", "No filled regions.")
+    Some((min_x, max_x, min_y, max_y)) => {
+      let children = plot_axes(min_x, max_x, min_y, max_y) +
+        rects.map(fn(item) {
+          let left = plot_scale_x(
+            double_min(item.x_start, item.x_end),
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+          )
+          let right = plot_scale_x(
+            double_max(item.x_start, item.x_end),
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+          )
+          let top = plot_scale_y(
+            double_max(item.y_start, item.y_end),
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+          )
+          let bottom = plot_scale_y(
+            double_min(item.y_start, item.y_end),
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+          )
+          rect(
+            class="plot-region",
+            x=left,
+            y=top,
+            width=right - left,
+            height=bottom - top,
+            fill="currentColor",
+            opacity="0.22",
+          )
+        })
+      svg(
+        class="plot-svg",
+        width=plot_width(),
+        height=plot_height(),
+        view_box="0 0 \{plot_width()} \{plot_height()}",
+        children,
+      )
+    }
+  }
+}
+
+///|
+fn plot_view(plot : PlotPayload) -> @html.Html {
+  match plot {
+    PlotPayload::Line(points) => line_plot_view(points, "plot-line")
+    PlotPayload::Scatter(points) => scatter_plot_view(points)
+    PlotPayload::Rects(rects) => rect_plot_view(rects)
+  }
+}
+
+///|
+fn result_card(
+  label_text : String,
+  value : String,
+  latex : String?,
+  plot : PlotPayload?,
+) -> @html.Html {
+  let rendered_value = match plot {
+    Some(payload) =>
+      div(class="plot-result-shell", [
+        plot_view(payload),
+        pre(class="result-value plot-caption", value),
+      ])
+    None =>
+      match latex {
+        Some(source) =>
+          div(class="result-value-latex-shell", [
+            pre(class="result-value latex-fallback", value),
+            pre(class="latex-source", source),
+            div(class="latex-render", nothing),
+          ])
+        None => pre(class="result-value", value)
+      }
+  }
+  div(class="result-card", [p(class="result-label", label_text), rendered_value])
+}
+
+///|
+fn visible_result_fields(
+  model : DocModel,
+  result : EvalResult,
+) -> Array[ResultField] {
+  let visible_fields : Array[ResultField] = []
+  for field in result.fields {
+    if model.show_structural_form || field.label != "Structural Form" {
+      visible_fields.push(field)
+    }
+  }
+  visible_fields
+}
+
+///|
+fn result_grid_class(field_count : Int) -> String {
+  if field_count >= 3 {
+    "result-grid result-grid-3"
+  } else {
+    "result-grid result-grid-2"
+  }
+}
+
+///|
+fn package_is_expanded(model : DocModel, pkg : DocPackage) -> Bool {
+  for item in model.expanded_packages {
+    if item == pkg {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn tree_function_button(
+  dispatch : @rabbita.Emit[DocMsg],
+  model : DocModel,
+  doc : FunctionDoc,
+) -> @html.Html {
+  button(
+    class=tree_button_class(model.active_function == doc.id),
+    type_="button",
+    title=doc.summary,
+    on_click=dispatch(DocMsg::SelectFunction(doc.id)),
+    [span(class="tree-function-name", doc.label)],
+  )
+}
+
+///|
+fn package_button(
+  dispatch : @rabbita.Emit[DocMsg],
+  model : DocModel,
+  doc : PackageDoc,
+) -> @html.Html {
+  let expanded = package_is_expanded(model, doc.id)
+  div(class="nav-node", [
+    button(
+      class=nav_button_class(model.active_package == doc.id),
+      type_="button",
+      on_click=dispatch(DocMsg::TogglePackageNode(doc.id)),
+      [
+        div(class="nav-title-row", [
+          span(class="nav-chevron", if expanded { "−" } else { "+" }),
+          span(class="nav-title", doc.label),
+        ]),
+      ],
+    ),
+    if expanded {
+      div(
+        class="nav-children",
+        function_catalog(doc.id).map(fn(fn_doc) {
+          tree_function_button(dispatch, model, fn_doc)
+        }),
+      )
+    } else {
+      div(class="nav-children-hidden", nothing)
+    },
+  ])
+}
+
+///|
+fn example_button(
+  dispatch : @rabbita.Emit[DocMsg],
+  model : DocModel,
+  item : FunctionExample,
+) -> @html.Html {
+  button(
+    class=example_button_class(model.active_example == item.id),
+    type_="button",
+    title=item.description,
+    on_click=dispatch(DocMsg::SelectExample(item.id)),
+    [
+      span(class="example-title", item.label),
+      small(class="example-copy", item.description),
+    ],
+  )
+}
+
+///|
+fn parser_button(
+  dispatch : @rabbita.Emit[DocMsg],
+  model : DocModel,
+  toggle : ParserToggle,
+) -> @html.Html {
+  let active = parser_toggle_value(model.parser, toggle)
+  button(
+    class=parser_button_class(active),
+    type_="button",
+    title=parser_toggle_help(toggle),
+    on_click=dispatch(DocMsg::ToggleParser(toggle)),
+    [
+      span(class="parser-state", if active { "on" } else { "off" }),
+      span(class="parser-copy", parser_toggle_label(toggle)),
+    ],
+  )
+}
+
+///|
+fn theme_button(
+  dispatch : @rabbita.Emit[DocMsg],
+  model : DocModel,
+  mode : ThemeMode,
+) -> @html.Html {
+  button(
+    class=parser_button_class(model.theme_mode == mode),
+    type_="button",
+    title=theme_mode_help(mode),
+    on_click=dispatch(DocMsg::SetThemeMode(mode)),
+    [
+      span(
+        class="parser-state",
+        if model.theme_mode == mode {
+          "on"
+        } else {
+          "off"
+        },
+      ),
+      span(class="parser-copy", theme_mode_label(mode)),
+    ],
+  )
+}
+
+///|
+fn result_panel(model : DocModel) -> @html.Html {
+  match model.result {
+    EvalState::Failure(message) =>
+      section(class="panel panel-danger", [
+        h2("Output"),
+        pre(class="error-block", message),
+      ])
+    EvalState::Success(result) => {
+      let visible_fields = visible_result_fields(model, result)
+      section(class="panel", [
+        h2("Output"),
+        p(class="result-headline", result.headline),
+        p(class="result-summary", result.summary),
+        div(
+          class=result_grid_class(visible_fields.length()),
+          visible_fields.map(field => {
+            result_card(field.label, field.value, field.latex, field.plot)
+          }),
+        ),
+      ])
+    }
+  }
+}
+
+///|
+fn settings_modal(
+  dispatch : @rabbita.Emit[DocMsg],
+  model : DocModel,
+) -> @html.Html {
+  if !model.settings_open {
+    return div(class="settings-modal-hidden", nothing)
+  }
+  div(class="settings-backdrop", [
+    div(class="settings-dialog panel", [
+      div(class="settings-header", [
+        h2("Settings"),
+        button(
+          class="settings-close-button",
+          type_="button",
+          on_click=dispatch(DocMsg::CloseSettings),
+          "Close",
+        ),
+      ]),
+      div(class="settings-section", [
+        h2("Theme"),
+        div(
+          class="parser-grid settings-theme-grid",
+          theme_mode_catalog().map(mode => theme_button(dispatch, model, mode)),
+        ),
+      ]),
+      div(class="settings-section", [
+        h2("Display"),
+        button(
+          class=parser_button_class(model.show_structural_form),
+          type_="button",
+          on_click=dispatch(DocMsg::ToggleStructuralFormDisplay),
+          [
+            span(
+              class="parser-state",
+              if model.show_structural_form {
+                "on"
+              } else {
+                "off"
+              },
+            ),
+            span(class="parser-copy", "Show Structural Form"),
+          ],
+        ),
+      ]),
+      div(
+        class="parser-grid settings-parser-grid",
+        parser_toggle_catalog().map(toggle => {
+          parser_button(dispatch, model, toggle)
+        }),
+      ),
+    ]),
+  ])
+}
+
+///|
+fn view(dispatch : @rabbita.Emit[DocMsg], model : DocModel) -> @html.Html {
+  let function_ref = function_doc(model.active_function)
+  let package_ref = package_doc(model.active_package)
+  let active_example = example_source_or_default(
+    model.active_function,
+    model.active_example,
+  )
+  div(class="reference-shell", [
+    topbar_view(dispatch),
+    div(class="reference-layout", [
+      div(class="sidebar", [
+        section(class="panel sidebar-panel", [
+          h2("Packages"),
+          div(
+            class="nav-stack",
+            package_catalog().map(doc => package_button(dispatch, model, doc)),
+          ),
+        ]),
+      ]),
+      div(class="content-column", [
+        section(class="panel package-panel", [
+          h2(package_ref.label),
+          p(class="package-overview", package_ref.overview),
+          p(class="package-architecture", package_ref.architecture),
+        ]),
+        section(class="panel examples-panel", [
+          h2(function_ref.label),
+          p(class="function-module-line", function_ref.module_path),
+          p(class="function-signature-line", function_ref.signature),
+          p(class="function-summary-line", function_ref.summary),
+          p(class="function-narrative-line", function_ref.narrative),
+          p(class="function-interpretation-line", function_ref.interpretation),
+          p(
+            class="function-meta-line",
+            "Topic: \{function_topic(function_ref.id)}",
+          ),
+          p(
+            class="function-meta-line",
+            "Input: \{function_input_format(function_ref.id)}",
+          ),
+          div(
+            class="example-grid",
+            function_ref.examples.map(item => {
+              example_button(dispatch, model, item)
+            }),
+          ),
+        ]),
+        section(class="panel runner-panel", [
+          h2("Source"),
+          textarea(
+            id="doc-source",
+            class="editor-area",
+            value=model.draft_source,
+            rows=12,
+            placeholder=active_example.source,
+            on_input=s => dispatch(DocMsg::UpdateDraft(s)),
+            nothing,
+          ),
+          p(class="example-description", active_example.description),
+        ]),
+        result_panel(model),
+      ]),
+    ]),
+    settings_modal(dispatch, model),
+  ])
+}
+
+///|
+fn update(
+  dispatch : @rabbita.Emit[DocMsg],
+  msg : DocMsg,
+  model : DocModel,
+) -> (@rabbita.Cmd, DocModel) {
+  match msg {
+    DocMsg::UpdateDraft(source) => {
+      let next_revision = model.draft_revision + 1
+      (
+        @rabbita.delay(
+          dispatch(DocMsg::DebouncedRun(next_revision)),
+          debounce_ms(),
+        ),
+        {
+          ..model,
+          draft_source: source,
+          dirty: true,
+          draft_revision: next_revision,
+        },
+      )
+    }
+    DocMsg::CheckKernelReady =>
+      match wasm_kernel_status() {
+        "loading" =>
+          (
+            @rabbita.delay(dispatch(DocMsg::CheckKernelReady), kernel_poll_ms()),
+            model,
+          )
+        _ => (@rabbita.none, recompute_model(model))
+      }
+    DocMsg::OpenSettings => (@rabbita.none, { ..model, settings_open: true })
+    DocMsg::CloseSettings => (@rabbita.none, { ..model, settings_open: false })
+    DocMsg::SetThemeMode(theme_mode) => {
+      apply_theme_mode(theme_mode_token(theme_mode))
+      (@rabbita.none, { ..model, theme_mode, })
+    }
+    DocMsg::ToggleStructuralFormDisplay =>
+      (
+        @rabbita.none,
+        { ..model, show_structural_form: !model.show_structural_form },
+      )
+    DocMsg::TogglePackageNode(pkg) => {
+      let expanded_packages : Array[DocPackage] = []
+      let mut was_expanded = false
+      for item in model.expanded_packages {
+        if item == pkg {
+          was_expanded = true
+        } else {
+          expanded_packages.push(item)
+        }
+      }
+      if was_expanded {
+        (
+          @rabbita.none,
+          {
+            ..model,
+            active_package: pkg,
+            expanded_packages,
+            settings_open: false,
+          },
+        )
+      } else {
+        expanded_packages.push(pkg)
+        let next = model_for_function(model, default_function(pkg))
+        (@rabbita.none, { ..next, expanded_packages, settings_open: false })
+      }
+    }
+    DocMsg::DebouncedRun(revision) =>
+      if revision == model.draft_revision && model.dirty {
+        (@rabbita.none, recompute_model(model))
+      } else {
+        (@rabbita.none, model)
+      }
+    DocMsg::SelectFunction(function_id) =>
+      (
+        @rabbita.none,
+        {
+          ..model_for_function(model, function_id),
+          expanded_packages: if package_is_expanded(
+              model,
+              function_doc(function_id).package_id,
+            ) {
+            model.expanded_packages
+          } else {
+            model.expanded_packages + [function_doc(function_id).package_id]
+          },
+          settings_open: false,
+        },
+      )
+    DocMsg::SelectExample(id) =>
+      match example_by_id(model.active_function, id) {
+        Some(item) =>
+          (
+            @rabbita.none,
+            recompute_model({
+              ..model,
+              active_example: item.id,
+              draft_source: item.source,
+              draft_revision: model.draft_revision + 1,
+              settings_open: false,
+            }),
+          )
+        None => (@rabbita.none, model)
+      }
+    DocMsg::ToggleParser(toggle) =>
+      (
+        @rabbita.none,
+        recompute_model({
+          ..model,
+          parser: toggle_parser_setting(model.parser, toggle),
+        }),
+      )
+  }
+}
+
+///|
+pub fn algebra_app() -> @rabbita.Cell {
+  @rabbita.cell(model=default_model(), update~, view~)
+}
+
+///|
+#warnings("-alert_unstable")
+#cfg(target="js")
+pub fn algebra_web_app() -> @rabbita.App {
+  let (dispatch, cell) = @rabbita.cell_with_emit(
+    model=default_model(),
+    update~,
+    view~,
+  )
+  let app = @rabbita.new(cell)
+  app.with_init(dispatch(DocMsg::CheckKernelReady))
+  app
+}

@@ -1,9 +1,9 @@
 # Flow Canvas 化後の Atlas 調査機能を復活する
 
-Status: open
+Status: closed
 Model: gpt-5.6-luna
 Created: 2026-07-22
-Updated: 2026-08-04
+Updated: 2026-08-05
 Branch: codex/feat/20260722-flow-canvas-demo
 
 ## 概要
@@ -64,14 +64,14 @@ Flow Canvas 化により、静的 SVG だけでは次の既存機能が失われ
 
 ## 受け入れ条件
 
-- [ ] Atlas 上でノードとエッジを選択でき、選択対象が視覚的に分かる。
-- [ ] 選択 state の rendered app preview、fingerprint、depth、dependencies を確認できる。
-- [ ] 選択 state の incoming / outgoing transition を確認できる。
-- [ ] property failure の名前、メッセージ、対象 state、minimized trace を確認できる。
-- [ ] 英語と日本語を切り替えると主要な Atlas UI 文言が切り替わる。
-- [ ] `atlas.json` の既存キー、raw action、states、transitions、failures が不要に変更されない。
-- [ ] Flow Canvas の静的 SVG 出力と、復活した調査 UI の表示内容に状態・遷移の不一致がない。
-- [ ] 初期状態、空の report、failure を含む report で上記機能が壊れない。
+- [x] Atlas 上でノードとエッジを選択でき、選択対象が視覚的に分かる。
+- [x] 選択 state の rendered app preview、fingerprint、depth、dependencies を確認できる。
+- [x] 選択 state の incoming / outgoing transition を確認できる。
+- [x] property failure の名前、メッセージ、対象 state、minimized trace を確認できる。
+- [x] 英語と日本語を切り替えると主要な Atlas UI 文言が切り替わる。
+- [x] `atlas.json` の既存キー、raw action、states、transitions、failures が不要に変更されない。
+- [x] Flow Canvas の静的 SVG 出力と、復活した調査 UI の表示内容に状態・遷移の不一致がない。
+- [x] 初期状態、空の report、failure を含む report で上記機能が壊れない。
 
 ## テスト計画
 
@@ -93,7 +93,7 @@ Flow Canvas 化により、静的 SVG だけでは次の既存機能が失われ
 
 ## 変更履歴
 
-`CHANGES.md` impact: no
+`CHANGES.md` impact: yes
 
 ## 注記
 
@@ -101,3 +101,11 @@ Flow Canvas 化により、静的 SVG だけでは次の既存機能が失われ
 - 2026-07-22: 実装方式は YAGNI に従い固定せず、実装着手時の API と利用要件に基づいて決定する。
 
 - 2026-08-04: CLI移行と完了issueの整理に合わせ、参照pathと検証commandを更新した。
+
+## 実装結果
+
+- `report_to_flow_svg`の同一node/edge IDを`data-flow-node`・`data-flow-edge`として公開し、独自graph rendererを再導入せずFlow Canvasを選択UIの基盤にした。
+- node/edgeのclick・keyboard選択、選択強調、state/transition Inspectorを実装した。
+- state previewはescaped `srcdoc`を`iframe sandbox`へ埋め込み、fingerprint、depth、dependencies、incoming/outgoing transition、state failureを表示する。
+- property failureの名前、message、state、minimized traceを表示し、英語・日本語を切り替えられる。
+- `atlas.json`と`atlas.dot`の契約は変更せず、空report・failure report・Flow SVG identityをunit testで固定した。

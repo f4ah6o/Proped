@@ -39,6 +39,9 @@ jobs:
       - name: External manifest validation
         run: python3 scripts/external_harness.py validate
 
+      - name: Utility batch report validation
+        run: python3 scripts/utility_batch.py validate
+
       - name: Format check
         run: moon fmt --check
 
@@ -60,6 +63,8 @@ jobs:
           moon run src/cli -- external inspect signal-reader --json > /tmp/proped-rabbita-signal-inspection.json
           moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json > /tmp/proped-rabbita-editor-inspection.json
           moon run src/cli -- external inspect canopy-components --json > /tmp/proped-rabbita-canopy-inspection.json
+          moon run src/cli -- external inspect canopy-editor-integration --json > /tmp/proped-rabbita-canopy-editor-inspection.json
+          moon run src/cli -- external inspect rabbita-utility-batch --json > /tmp/proped-rabbita-utility-inspection.json
           moon run src/cli -- external inspect incr-typed-spreadsheet --json > /tmp/proped-rabbita-incr-inspection.json
           moon run src/cli -- external inspect circular-state --json > /tmp/proped-rabbita-circular-inspection.json
           moon run src/cli -- external inspect isomorphic-suite --json > /tmp/proped-rabbita-isomorphic-inspection.json
@@ -82,6 +87,8 @@ jobs:
           signal_inspection = json.loads(Path('/tmp/proped-rabbita-signal-inspection.json').read_text())
           editor_inspection = json.loads(Path('/tmp/proped-rabbita-editor-inspection.json').read_text())
           canopy_inspection = json.loads(Path('/tmp/proped-rabbita-canopy-inspection.json').read_text())
+          canopy_editor_inspection = json.loads(Path('/tmp/proped-rabbita-canopy-editor-inspection.json').read_text())
+          utility_inspection = json.loads(Path('/tmp/proped-rabbita-utility-inspection.json').read_text())
           incr_inspection = json.loads(Path('/tmp/proped-rabbita-incr-inspection.json').read_text())
           circular_inspection = json.loads(Path('/tmp/proped-rabbita-circular-inspection.json').read_text())
           isomorphic_inspection = json.loads(Path('/tmp/proped-rabbita-isomorphic-inspection.json').read_text())
@@ -106,6 +113,8 @@ jobs:
               'signal-reader',
               'moonbit-editor-file-tree',
               'canopy-components',
+              'canopy-editor-integration',
+              'rabbita-utility-batch',
               'incr-typed-spreadsheet',
               'circular-state',
               'isomorphic-suite',
@@ -116,7 +125,7 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.18.0'
+          assert schema['version'] == '0.19.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -188,6 +197,18 @@ jobs:
           assert canopy_app['findingVisibility'] == 'public-bug'
           assert canopy_app['expectedFailure'] == 'ResizeNudge(dw=2147483647, dh=0)'
           assert canopy_app['upstreamWritePolicy'] == 'read-only'
+          canopy_editor_app = canopy_editor_inspection['application']
+          assert canopy_editor_app['id'] == 'canopy-editor-integration'
+          assert canopy_editor_app['strategy'] == 'subscription-model'
+          assert canopy_editor_app['effectPolicy'] == 'browser-replay'
+          assert canopy_editor_app['expectedFailure'].endswith('DeliverCallback(1)')
+          assert canopy_editor_app['upstreamWritePolicy'] == 'read-only'
+          utility_app = utility_inspection['application']
+          assert utility_app['id'] == 'rabbita-utility-batch'
+          assert utility_app['strategy'] == 'effect-model'
+          assert utility_app['effectPolicy'] == 'record-and-inject'
+          assert utility_app['expectedFailure'] == 'FullstackSubmit'
+          assert utility_app['upstreamWritePolicy'] == 'read-only'
           incr_app = incr_inspection['application']
           assert incr_app['id'] == 'incr-typed-spreadsheet'
           assert incr_app['strategy'] == 'pure'
@@ -373,6 +394,35 @@ jobs:
           assert canopy['firstFailure']['actionIds'] == [
               'resize-nudge:2147483647:0',
           ]
+
+          canopy_editor = external_runs['canopy-editor-integration']
+          assert canopy_editor['expectationMet'] is True
+          assert canopy_editor['states'] == 900
+          assert canopy_editor['transitions'] == 1633
+          assert canopy_editor['failures'] == 2
+          assert canopy_editor['diagnostics'] == 0
+          assert canopy_editor['firstFailure']['property'] == (
+              'older document callbacks do not replace newer accepted revisions'
+          )
+          assert canopy_editor['firstFailure']['trace'] == [
+              'MountCompleted(generation=1)',
+              'BrowserDocumentChanged(\"draft\")',
+              'BrowserDocumentChanged(\"draft\")',
+              'DeliverCallback(id=2)',
+              'DeliverCallback(id=1)',
+          ]
+
+          utility = external_runs['rabbita-utility-batch']
+          assert utility['expectationMet'] is True
+          assert utility['states'] == 1400
+          assert utility['transitions'] == 2777
+          assert utility['failures'] == 2
+          assert utility['diagnostics'] == 0
+          assert utility['firstFailure']['property'] == (
+              'Fullstack invalid titles are not submitted'
+          )
+          assert utility['firstFailure']['trace'] == ['FullstackSubmit']
+          assert utility['firstFailure']['actionIds'] == ['fullstack-submit']
 
           incr = external_runs['incr-typed-spreadsheet']
           assert incr['expectationMet'] is True
@@ -643,6 +693,29 @@ jobs:
           assert hashlib.sha256(canopy_source).hexdigest() == (
               'ac88ca22d332ea66853e7ad34f07492f97d150e11155ff66bd821b8413ae55cb'
           )
+          canopy_editor_manifest = json.loads(
+              Path('external/manifests/canopy-editor-integration.json').read_text()
+          )
+          assert canopy_editor_manifest['sourceSha256'] == (
+              '98722c622fe4d2026c82e4f9ad8647735a85c2d4f2b6ee16f903a983535cc0e8'
+          )
+          utility_manifest = json.loads(
+              Path('external/manifests/rabbita-utility-batch.json').read_text()
+          )
+          assert utility_manifest['sourceSha256'] == (
+              '25ab15a6554c1558d2942ef78252872d98d4886adc88f41dda540cfcded68871'
+          )
+          utility_report = json.loads(Path('external/utility-apps.json').read_text())
+          assert len(utility_report['entries']) == 10
+          assert sum(
+              entry['classification'] == 'supported'
+              for entry in utility_report['entries']
+          ) == 4
+          assert all(
+              not entry['sourceVendored']
+              for entry in utility_report['entries']
+              if entry['license'] == 'unknown'
+          )
           incr_formula = Path(
               'src/vendor/incr_typed_spreadsheet_core/formula.mbt'
           ).read_bytes()
@@ -737,6 +810,8 @@ jobs:
           - signal-reader
           - moonbit-editor-file-tree
           - canopy-components
+          - canopy-editor-integration
+          - rabbita-utility-batch
           - incr-typed-spreadsheet
           - circular-state
           - isomorphic-suite

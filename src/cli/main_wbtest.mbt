@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.18.0"))
+  assert_true(schema.contains("0.19.0"))
 }
 
 ///|
@@ -195,6 +195,8 @@ test "external list exposes all pinned applications" {
   assert_true(json.contains("signal-reader"))
   assert_true(json.contains("moonbit-editor-file-tree"))
   assert_true(json.contains("canopy-components"))
+  assert_true(json.contains("canopy-editor-integration"))
+  assert_true(json.contains("rabbita-utility-batch"))
   assert_true(json.contains("incr-typed-spreadsheet"))
   assert_true(json.contains("circular-state"))
   assert_true(json.contains("isomorphic-suite"))
@@ -249,6 +251,30 @@ test "Canopy inspection and handoff expose overflow boundary" {
   assert_true(json.contains("ResizeNudge(dw=2147483647, dh=0)"))
   let spec = handoff_spec("canopy-components").unwrap()
   assert_eq(spec.action_ids, ["resize-nudge:2147483647:0"])
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "Canopy editor inspection and handoff expose callback ordering" {
+  let json = canopy_editor_integration_external_inspection_json()
+  assert_true(json.contains("dowdiness/canopy"))
+  assert_true(json.contains("subscription-model"))
+  assert_true(json.contains("older document callbacks"))
+  assert_true(json.contains("DeliverCallback(2)"))
+  let spec = handoff_spec("canopy-editor-integration").unwrap()
+  assert_eq(spec.action_ids.length(), 5)
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "utility batch inspection and handoff expose initial validation bypass" {
+  let json = rabbita_utility_batch_external_inspection_json()
+  assert_true(json.contains("beso1225/fullstack_trial_moonbit"))
+  assert_true(json.contains("effect-model"))
+  assert_true(json.contains("Fullstack invalid titles are not submitted"))
+  assert_true(json.contains("FullstackSubmit"))
+  let spec = handoff_spec("rabbita-utility-batch").unwrap()
+  assert_eq(spec.action_ids, ["fullstack-submit"])
   assert_eq(spec.visibility, @disclosure.PublicBug)
 }
 

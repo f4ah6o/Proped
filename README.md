@@ -44,7 +44,7 @@ Vendored source, revision, hashes, license, adapter changes, and failure rationa
 
 External targets are pinned by manifests under `external/manifests/`. `external inspect-source` mechanically detects common `Model`, `Msg`, `update`, `view`, command, and subscription boundaries in a local source file. Effects are recorded as deterministic descriptors rather than executing upstream network or native operations. `scripts/external_harness.py` validates manifests, generates bounded action scaffolds for simple `Msg` payloads, prepares deterministic source-hash reports, previews explicit revision updates, and runs requested inspection commands with network denied.
 
-The external campaign currently includes thirteen targets. `openseek-desktop-lifecycle` explores 2,600 states and 5,615 transitions across self-update, terminal, and file-editor boundaries. It retains an old production update reply after switching to staging, duplicate terminal opens from repeated `EmulatorReady`, and reverse-ordered file reads. `selene-editor-assets` continues to verify duplicate initialization and stale asset-list ordering.
+The external campaign currently includes fifteen runnable targets. `canopy-editor-integration` explores 900 states and 1,633 transitions and retains reverse-ordered document callbacks plus delivery after unmount. `rabbita-utility-batch` classifies ten public repositories, mechanically exercises four supported boundaries across 1,400 states and 2,777 transitions, and minimizes an initial empty-title submission to `FullstackSubmit`. `scripts/utility_batch.py` validates the committed classification report and can re-check pinned local checkouts without writing upstream.
 
 Upstream repositories are read-only inputs: this project does not create issues, pull requests, comments, or commits in them. `external handoff <id>` generates local issue, reproduction, fix-plan, and PR-body drafts only. Security-sensitive findings are blocked from public export and isolated below ignored `.private/disclosures/`; see [docs/DISCLOSURE.md](docs/DISCLOSURE.md).
 
@@ -119,6 +119,8 @@ src/
   vendor/ensenzu_core/              pinned Ensenzu calculation implementation
   vendor/moonbit_editor_file_tree/  file-tree resolve and auto-reveal adapter
   vendor/canopy_components/         resizable, menu, and tabs finite adapter
+  vendor/canopy_editor_integration/ CodeMirror lifecycle/browser replay adapter
+  vendor/rabbita_utility_batch/     supported public utility-app batch
   vendor/incr_typed_spreadsheet/     worksheet UI and backdating adapter
   vendor/incr_typed_spreadsheet_core/ pinned worksheet implementation
   vendor/isomorphic_suite/           Kanban, Todo, and Note matrix adapter

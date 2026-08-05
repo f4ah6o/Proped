@@ -122,6 +122,28 @@ The Apache License 2.0 text is included at `src/vendor/moonbit_editor_file_tree/
 
 The upstream Apache License 2.0 text is included at `src/vendor/canopy_components/LICENSE`. The adapter combines the three private-state component models into a finite native/JavaScript exploration target and replaces browser event, focus, and subscription boundaries with typed messages. Exact source hashes and scope qualifications are recorded in `src/vendor/canopy_components/UPSTREAM.md`.
 
+## Canopy CodeMirror and Ideal integration
+
+- Project: `dowdiness/canopy`
+- Source paths: `modules/rabbita_codemirror/codemirror.mbt`, `examples/codemirror/main/client.mbt`, and `apps/ideal/main/update_codemirror.mbt`
+- Revision: `cb41945b04801084e8abe1d8edc27eb0cdce4a1c`
+- License: Apache License 2.0
+- Preserved source: `src/vendor/canopy_editor_integration/upstream/`
+- Adapted source: `src/vendor/canopy_editor_integration/canopy_editor_integration.mbt`
+
+The upstream Apache License 2.0 text is included at `src/vendor/canopy_editor_integration/LICENSE`. The browser-replay adapter preserves command and callback boundaries while modeling callback generation and delivery separately. Exact source hashes and the pure-versus-browser classification are recorded in `src/vendor/canopy_editor_integration/UPSTREAM.md`.
+
+## Rabbita utility batch sources
+
+The supported utility batch preserves only sources whose pinned repositories include an explicit license:
+
+- `CAIMEOX/symweb`, revision `a37f96d283b4bdbb2d1654ca88a9c26033db6c46`, Apache License 2.0, `playground/app.mbt`.
+- `bobzhang/issues`, revision `a348501b2ca848d6564557b58446269c90ba4e3a`, Apache License 2.0, `dashboard/dashboard.mbt`.
+- `beso1225/fullstack_trial_moonbit`, revision `5ed67d454600210861eb4ba8178aa91e1e34406f`, Apache License 2.0, `frontend/main.mbt`.
+- `moonbit-community/proton`, revision `7e819f385af0c7cc7b78397281b1ab5c3306bc5f`, Apache License 2.0, `rabbita/adapter.mbt` and `rabbita/adapter_wbtest.mbt`.
+
+Preserved files and their license texts are under `src/vendor/rabbita_utility_batch/upstream/`. The remaining utility repositories are represented by metadata and source hashes in `external/utility-apps.json`; repositories without an explicit license are not vendored. The clean-room adapter is `src/vendor/rabbita_utility_batch/rabbita_utility_batch.mbt`.
+
 ## incr typed spreadsheet
 
 - Project: `dowdiness/incr`

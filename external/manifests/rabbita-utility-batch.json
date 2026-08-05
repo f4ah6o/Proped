@@ -1,0 +1,35 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "rabbita-utility-batch",
+  "repository": "beso1225/fullstack_trial_moonbit",
+  "revision": "5ed67d454600210861eb4ba8178aa91e1e34406f",
+  "license": "Apache-2.0",
+  "packages": [
+    "CAIMEOX/symweb/playground",
+    "bobzhang/issues/dashboard",
+    "beso1225/fullstack_trial_moonbit/frontend",
+    "moonbit-community/proton/rabbita"
+  ],
+  "entryPoints": {
+    "model": "Symweb DocModel / Issues Model / Fullstack Model / Proton adapter lifecycle",
+    "message": "DocMsg / Msg / synthetic effect delivery",
+    "update": "update / Model::update / scheduler callback replay",
+    "view": "view / deterministic batch projection"
+  },
+  "strategy": "effect-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "25ab15a6554c1558d2942ef78252872d98d4886adc88f41dda540cfcded68871",
+  "properties": [
+    "symweb revisions remain internally consistent",
+    "Symweb stale debounce callbacks are ignored",
+    "Issues Dashboard selection remains valid",
+    "Issues Dashboard older save replies do not roll back graph revision",
+    "Fullstack local warning matches the current title",
+    "Fullstack invalid titles are not submitted",
+    "Fullstack replies match the current submitted title",
+    "Proton stale subscription events are ignored",
+    "utility pending effect sets remain bounded",
+    "rendered utility state matches every supported model"
+  ],
+  "findingVisibility": "public-bug"
+}

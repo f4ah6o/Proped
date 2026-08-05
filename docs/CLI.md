@@ -73,6 +73,8 @@ moon run src/cli -- external inspect ensenzu-app --json
 moon run src/cli -- external inspect signal-reader --json
 moon run src/cli -- external inspect moonbit-editor-file-tree --json
 moon run src/cli -- external inspect canopy-components --json
+moon run src/cli -- external inspect canopy-editor-integration --json
+moon run src/cli -- external inspect rabbita-utility-batch --json
 moon run src/cli -- external inspect incr-typed-spreadsheet --json
 moon run src/cli -- external inspect circular-state --json
 moon run src/cli -- external inspect isomorphic-suite --json
@@ -99,6 +101,8 @@ Mechanically scans one local MoonBit source file for Rabbita imports, state cons
 
 ```bash
 python3 scripts/external_harness.py validate
+python3 scripts/utility_batch.py validate
+python3 scripts/utility_batch.py sync --checkout-root .tmp/rabbita-usage-scan
 python3 scripts/external_harness.py scaffold --source app.mbt --message Msg
 python3 scripts/external_harness.py prepare \
   --manifest external/manifests/proton-demo-todo.json \
@@ -121,6 +125,8 @@ moon run src/cli -- external run ensenzu-app --json
 moon run src/cli -- external run signal-reader --json
 moon run src/cli -- external run moonbit-editor-file-tree --json
 moon run src/cli -- external run canopy-components --json
+moon run src/cli -- external run canopy-editor-integration --json
+moon run src/cli -- external run rabbita-utility-batch --json
 moon run src/cli -- external run incr-typed-spreadsheet --json
 moon run src/cli -- external run circular-state --json
 moon run src/cli -- external run isomorphic-suite --json
@@ -141,6 +147,8 @@ Runs deterministic external adapters under `<output>/external/<id>/`. Native, ne
 | `signal-reader` | `feed responses match the current subscription` | `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)` |
 | `moonbit-editor-file-tree` | `asynchronous resolve responses preserve newer tree intent` | `ToggleDirectory("readonly-remote://workspace/tests") -> SetActive("readonly-remote://workspace/src/lib/util.mbt") -> DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")` |
 | `canopy-components` | `positive resize nudges do not decrease width` | `ResizeNudge(dw=2147483647, dh=0)` |
+| `canopy-editor-integration` | `older document callbacks do not replace newer accepted revisions` | `MountCompleted -> BrowserDocumentChanged -> BrowserDocumentChanged -> DeliverCallback(2) -> DeliverCallback(1)` |
+| `rabbita-utility-batch` | `Fullstack invalid titles are not submitted` | `FullstackSubmit` |
 | `incr-typed-spreadsheet` | `positive formula addition does not wrap backward` | `UpdateDraft(A1, "2147483647") -> ApplySelected` |
 | `circular-state` | `task modals retain an existing selected task` | `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)` |
 | `isomorphic-suite` | `kanban cards reference existing columns` | `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)` |
@@ -158,6 +166,8 @@ Signal Reader also retains minimized failures for a stale saved-state callback a
 moon run src/cli -- external handoff signal-reader --output artifacts --json
 moon run src/cli -- external handoff moonbit-editor-file-tree --output artifacts --json
 moon run src/cli -- external handoff canopy-components --output artifacts --json
+moon run src/cli -- external handoff canopy-editor-integration --output artifacts --json
+moon run src/cli -- external handoff rabbita-utility-batch --output artifacts --json
 moon run src/cli -- external handoff incr-typed-spreadsheet --output artifacts --json
 moon run src/cli -- external handoff circular-state --output artifacts --json
 moon run src/cli -- external handoff isomorphic-suite --output artifacts --json
@@ -265,7 +275,7 @@ The full structured trace remains available in `atlas.json`, including `from`, `
 | --- | --- |
 | `summary.json` | Compact copy of the per-demo CLI summary, including `firstFailure` |
 | `atlas.json` | Complete `RunReport`, including states, raw transitions, minimized failures, structured traces, dependencies, and diagnostics |
-| `atlas.html` | Standalone human-readable state atlas with minimized failure traces |
+| `atlas.html` | Interactive Atlas with Flow Canvas selection, state previews, metadata, related transitions, locale switching, and minimized failure traces |
 | `atlas.svg` | Standalone deterministic Flow Canvas graph |
 | `atlas.dot` | Graphviz transition graph |
 

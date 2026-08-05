@@ -1,0 +1,29 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "canopy-editor-integration",
+  "repository": "dowdiness/canopy",
+  "revision": "cb41945b04801084e8abe1d8edc27eb0cdce4a1c",
+  "license": "Apache-2.0",
+  "packages": [
+    "modules/rabbita_codemirror",
+    "examples/codemirror/main",
+    "apps/ideal/main"
+  ],
+  "entryPoints": {
+    "model": "Model",
+    "message": "Msg / CmDocChanged / CmSelectionChanged / CmFocusChanged",
+    "update": "update / handle_codemirror",
+    "view": "view"
+  },
+  "strategy": "subscription-model",
+  "effectPolicy": "browser-replay",
+  "sourceSha256": "98722c622fe4d2026c82e4f9ad8647735a85c2d4f2b6ee16f903a983535cc0e8",
+  "properties": [
+    "callbacks queued before unmount do not mutate the detached editor",
+    "older document callbacks do not replace newer accepted revisions",
+    "selection remains inside the visible document",
+    "closed context menus clear focus",
+    "rendered editor state matches the model"
+  ],
+  "findingVisibility": "public-bug"
+}

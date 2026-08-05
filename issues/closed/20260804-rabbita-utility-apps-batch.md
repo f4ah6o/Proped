@@ -1,9 +1,9 @@
 # その他の公開Rabbita利用事例をbatch探索する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
-Updated: 2026-08-04
+Updated: 2026-08-05
 Priority: P2
 Depends-On: `20260804-mechanical-external-app-harness.md`
 
@@ -57,10 +57,10 @@ external inspect commandで自動classificationし、pure modelが見つかっ�
 
 ## 受け入れ条件
 
-- [ ] 全repositoryをinspect reportへ載せる。
-- [ ] 各repositoryをsupported/partial/unsupportedへ分類する。
-- [ ] supported targetは最低generic propertyを実行する。
-- [ ] license不明targetはsourceをvendorせずmetadataだけ固定する。
+- [x] 全repositoryをinspect reportへ載せる。
+- [x] 各repositoryをsupported/partial/unsupportedへ分類する。
+- [x] supported targetは最低generic propertyを実行する。
+- [x] license不明targetはsourceをvendorせずmetadataだけ固定する。
 
 ## 共通テスト
 
@@ -78,3 +78,14 @@ external inspect commandで自動classificationし、pure modelが見つかっ�
 ## 変更履歴
 
 `CHANGES.md` impact: yes when adapter is shipped
+
+## 実装結果
+
+- Tier 3の9 repositoryに`moonbit-community/proton` framework internalsを加えた10対象を`external/utility-apps.json`へ固定した。
+- 全対象でrevision、license、対象path、source SHA-256、strategy、supported/partial/unsupported、分類理由を記録した。
+- supportedは`CAIMEOX/symweb`、`bobzhang/issues`、`beso1225/fullstack_trial_moonbit`、`moonbit-community/proton`の4対象とし、共通`rabbita-utility-batch`でgeneric/domain propertyを実行した。
+- 1,400 state・2,777 transitionを探索し、2 failure・0 diagnosticsだった。primary failure `Fullstack invalid titles are not submitted`を`FullstackSubmit`の1 actionへ縮約した。
+- Symweb stale debounceとProton stale subscription eventはpassし、Issues reverse `GraphSaved`とFullstack late replyを追加failureとして保持した。
+- license不明の`bobzhang/games`、`tekihei2317/moonbit-rpc-poc`、`moonbitlang/OSC2026`はsourceをvendorせずmetadataとhashだけを固定した。
+- `scripts/utility_batch.py validate|inspect|sync`でreport、fixture、read-only checkoutの再取得・revision/hash照合を機械化した。
+- upstream repositoryへのissue、PR、comment、commitは行っていない。

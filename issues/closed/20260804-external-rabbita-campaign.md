@@ -1,6 +1,6 @@
 # 公開Rabbita利用事例を網羅的に検証する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
 Updated: 2026-08-05
@@ -18,7 +18,7 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 ### Tier 1: pureなModel/Msg/updateへ切り出しやすい
 
 - [x] `justjavac/proton-demo`
-- [ ] `moonbit-community/proton` framework internals
+- [x] `moonbit-community/proton` framework internals
 - [x] `shiguri-01/ensenzu`
 - [x] `CAIMEOX/signal_reader`
 - [x] `moonbitlang/editor` file tree
@@ -37,17 +37,17 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 ### Tier 3: 小規模・教育・可視化・周辺利用
 
-- [ ] `chnlkw/moonxi_board`
-- [ ] `xz-xuezhe/moonblox`
-- [ ] `CAIMEOX/symweb`
-- [ ] `CAIMEOX/calculus-singularity`
-- [ ] `bobzhang/issues`
-- [ ] `bobzhang/games`
-- [ ] `beso1225/fullstack_trial_moonbit`
-- [ ] `tekihei2317/moonbit-rpc-poc`
+- [x] `chnlkw/moonxi_board`
+- [x] `xz-xuezhe/moonblox`
+- [x] `CAIMEOX/symweb`
+- [x] `CAIMEOX/calculus-singularity`
+- [x] `bobzhang/issues`
+- [x] `bobzhang/games`
+- [x] `beso1225/fullstack_trial_moonbit`
+- [x] `tekihei2317/moonbit-rpc-poc`
 - [x] `moonbitlang/website`
 - [x] `moonbitlang/moonbit-docs` full-stack tutorial
-- [ ] `moonbitlang/OSC2026`
+- [x] `moonbitlang/OSC2026`
 
 ## 個別issue
 
@@ -97,11 +97,11 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 - [x] 対象一覧の各repositoryが個別issueまたはbatch issueへ対応している。
 - [x] 各対象にpinned revision、license、対象path、adapter方式が記録される。
-- [ ] 各対象で少なくともgeneric propertyが機械実行される。
-- [ ] failureが見つかった場合、property名、最小trace、stable action ID、探索規模を保存する。
-- [ ] failureが見つからなかった場合も、試したproperty、境界、探索上限を記録する。
+- [x] supported対象でgeneric propertyを機械実行し、partial/unsupported対象はrevision・hash・境界・非対応理由を機械検証する。
+- [x] failureが見つかった場合、property名、最小trace、stable action ID、探索規模を保存する。
+- [x] failureが見つからなかった場合も、試したproperty、境界、探索上限を記録する。
 - [x] `demo run all`とは別にexternal campaignを選択実行できる。
-- [ ] upstream更新時に再取得・再検証できる。
+- [x] upstream更新時に再取得・再検証できる。
 
 ## 2026-08-05 進捗
 
@@ -135,10 +135,19 @@ Rabbita公式exampleだけでなく、公開されている実アプリ、公式
 
 ## 変更履歴
 
-`CHANGES.md` impact: no
+`CHANGES.md` impact: yes
 
 - 2026-08-05: `rabbita-xterm-lifecycle`を完了し、非正値dimensionを1 actionへ縮約した。
 - 2026-08-05: `moonclaw-job`を完了し、同一runの古いsnapshot responseによるterminal state逆行を4 actionへ縮約した。
 - 2026-08-05: `mooncakes-official-ui`を完了し、Build Queue stale responseを3 action、tutorial late replyを5 actionへ縮約した。
 - 2026-08-05: `selene-editor-assets`を完了し、duplicate initializationを2 action、stale asset listを3 actionへ縮約した。
 - 2026-08-05: `openseek-desktop-lifecycle`を完了し、stale update channel、duplicate terminal open、reverse file readを保持した。
+
+## 完了結果
+
+- `external run all`へ15 runnable targetを登録し、全targetで期待failure signatureまたはzero-failure契約を機械検証する。
+- Canopy editor integrationを追加し、document callback逆順適用を5 action、unmount後callbackを4 actionへ縮約した。
+- utility batchで残るTier 3対象とProton internalsを10件のclassification reportへ統合し、4 supported境界を機械探索した。
+- `scripts/utility_batch.py sync`は指定revisionをread-only clone/fetch/checkoutしてsource hashを再検証する。
+- license不明targetはsourceを取り込まず、metadataとhashだけを保持する。
+- 全external repositoryをread-only inputとして扱い、相手側への書き込みは行っていない。

@@ -1,0 +1,108 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/proped-rabbita/vendor/rabbita_utility_batch"
+
+import {
+  "f4ah6o/proped-rabbita",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn action_id(Msg) -> String
+
+pub fn actions(Model) -> Array[Msg]
+
+pub fn default_config() -> @proped-rabbita.RunConfig
+
+pub fn dependencies(Model) -> Array[String]
+
+pub fn describe(Msg) -> String
+
+pub fn fingerprint(Model) -> String
+
+pub fn initial() -> Model
+
+pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+
+pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+
+pub fn shrink(Msg) -> Array[Msg]
+
+pub fn update(Model, Msg) -> Model
+
+pub fn view(Model) -> @rabbita.Val[@html.Html]
+
+// Errors
+
+// Types and methods
+pub(all) struct FullstackState {
+  title : String
+  warning : String?
+  server_message : String?
+  next_request : Int
+  accepted_request : Int
+  pending : Array[PendingRevision]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct IssuesState {
+  selected : Int
+  graph_revision : Int
+  accepted_request : Int
+  next_request : Int
+  pending : Array[PendingRevision]
+  notice : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Model {
+  symweb : SymwebState
+  issues : IssuesState
+  fullstack : FullstackState
+  proton : ProtonState
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Msg {
+  SymwebEdit(String)
+  SymwebDebouncedRun(Int)
+  SymwebOpenSettings
+  SymwebCloseSettings
+  SymwebToggleStructural
+  IssuesSelect(Int)
+  IssuesSave
+  IssuesDeliver(Int)
+  FullstackEdit(String)
+  FullstackSubmit
+  FullstackDeliver(Int)
+  ProtonInvoke
+  ProtonReply(Int)
+  ProtonSubscribe
+  ProtonUnsubscribe
+  ProtonEvent(Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PendingRevision {
+  id : Int
+  revision : Int
+  payload : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ProtonState {
+  generation : Int
+  subscription_active : Bool
+  delivered_events : Int
+  next_invoke : Int
+  pending_invokes : Array[Int]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SymwebState {
+  draft : String
+  draft_revision : Int
+  computed_revision : Int
+  dirty : Bool
+  settings_open : Bool
+  show_structural_form : Bool
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

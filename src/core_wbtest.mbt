@@ -574,11 +574,25 @@ test "transition failure target is included in state snapshots" {
   assert_true(html.contains("increment fails"))
   assert_true(html.contains("Property failures"))
   assert_true(html.contains("flow-node"))
+  assert_true(html.contains("data-flow-node="))
+  assert_true(html.contains("data-flow-edge="))
+  assert_true(html.contains("data-detail-kind=\"node\""))
+  assert_true(html.contains("<iframe class=\"preview\" sandbox"))
+  assert_true(html.contains("data-locale=\"ja\""))
+  assert_true(html.contains("プロパティ失敗"))
   assert_true(report_to_dot(report).contains("color=red"))
   let failure_json = report_to_json(report)
   assert_true(failure_json.contains("structuredTrace"))
   assert_true(failure_json.contains("actionId"))
-  assert_true(!html.contains("<script"))
+  assert_true(html.contains("<script"))
+}
+
+///|
+test "Atlas JSON keeps non-BMP Unicode as valid JSON text" {
+  let output = StringBuilder::new()
+  write_json_string(output, "日本語🙂")
+  assert_eq(output.to_string(), "\"日本語🙂\"")
+  assert_true(!output.to_string().contains("\\u{"))
 }
 
 ///|
@@ -605,7 +619,9 @@ test "atlas exporters include discovered graph" {
   assert_true(html.contains("flow-node"))
   assert_true(html.contains("atlas.json"))
   assert_true(html.contains("atlas.dot"))
-  assert_true(!html.contains("<script"))
+  assert_true(html.contains("Incoming transitions"))
+  assert_true(html.contains("Outgoing transitions"))
+  assert_true(html.contains("<script"))
   assert_true(html.contains(report_to_flow_svg(report)))
 }
 
@@ -640,7 +656,7 @@ test "static atlas escapes failure details" {
   )
   assert_true(html.contains("state&lt;&#39;one&#39;&gt;"))
   assert_true(html.contains("Action&lt;&amp;&gt;"))
-  assert_true(!html.contains("<script"))
+  assert_true(html.contains("<script"))
 }
 
 ///|
@@ -663,6 +679,8 @@ test "empty static atlas includes a flow SVG and success summary" {
   assert_true(html.contains("Flow Canvas"))
   assert_true(html.contains("flow-arrow"))
   assert_true(html.contains("All generated traces satisfied"))
+  assert_true(html.contains("Select a state or transition"))
+  assert_true(html.contains("<script"))
 }
 
 ///|

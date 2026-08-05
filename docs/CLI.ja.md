@@ -73,6 +73,8 @@ moon run src/cli -- external inspect ensenzu-app --json
 moon run src/cli -- external inspect signal-reader --json
 moon run src/cli -- external inspect moonbit-editor-file-tree --json
 moon run src/cli -- external inspect canopy-components --json
+moon run src/cli -- external inspect canopy-editor-integration --json
+moon run src/cli -- external inspect rabbita-utility-batch --json
 moon run src/cli -- external inspect incr-typed-spreadsheet --json
 moon run src/cli -- external inspect circular-state --json
 moon run src/cli -- external inspect isomorphic-suite --json
@@ -99,6 +101,8 @@ local MoonBit source fileからRabbita import、state constructor、`Model`、`M
 
 ```bash
 python3 scripts/external_harness.py validate
+python3 scripts/utility_batch.py validate
+python3 scripts/utility_batch.py sync --checkout-root .tmp/rabbita-usage-scan
 python3 scripts/external_harness.py scaffold --source app.mbt --message Msg
 python3 scripts/external_harness.py prepare \
   --manifest external/manifests/proton-demo-todo.json \
@@ -121,6 +125,8 @@ moon run src/cli -- external run ensenzu-app --json
 moon run src/cli -- external run signal-reader --json
 moon run src/cli -- external run moonbit-editor-file-tree --json
 moon run src/cli -- external run canopy-components --json
+moon run src/cli -- external run canopy-editor-integration --json
+moon run src/cli -- external run rabbita-utility-batch --json
 moon run src/cli -- external run incr-typed-spreadsheet --json
 moon run src/cli -- external run circular-state --json
 moon run src/cli -- external run isomorphic-suite --json
@@ -141,6 +147,8 @@ moon run src/cli -- external run all --output artifacts --json
 | `signal-reader` | `feed responses match the current subscription` | `SelectSubscription(2) -> SelectSubscription(1) -> ItemsLoaded(request=1, subscription=2)` |
 | `moonbit-editor-file-tree` | `asynchronous resolve responses preserve newer tree intent` | `ToggleDirectory("readonly-remote://workspace/tests") -> SetActive("readonly-remote://workspace/src/lib/util.mbt") -> DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")` |
 | `canopy-components` | `positive resize nudges do not decrease width` | `ResizeNudge(dw=2147483647, dh=0)` |
+| `canopy-editor-integration` | `older document callbacks do not replace newer accepted revisions` | `MountCompleted -> BrowserDocumentChanged -> BrowserDocumentChanged -> DeliverCallback(2) -> DeliverCallback(1)` |
+| `rabbita-utility-batch` | `Fullstack invalid titles are not submitted` | `FullstackSubmit` |
 | `incr-typed-spreadsheet` | `positive formula addition does not wrap backward` | `UpdateDraft(A1, "2147483647") -> ApplySelected` |
 | `circular-state` | `task modals retain an existing selected task` | `SelectTask("TSK-1") -> WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)` |
 | `isomorphic-suite` | `kanban cards reference existing columns` | `KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)` |
@@ -158,6 +166,8 @@ Signal Readerはstale saved-state callbackと古いlive-search responseの最小
 moon run src/cli -- external handoff signal-reader --output artifacts --json
 moon run src/cli -- external handoff moonbit-editor-file-tree --output artifacts --json
 moon run src/cli -- external handoff canopy-components --output artifacts --json
+moon run src/cli -- external handoff canopy-editor-integration --output artifacts --json
+moon run src/cli -- external handoff rabbita-utility-batch --output artifacts --json
 moon run src/cli -- external handoff incr-typed-spreadsheet --output artifacts --json
 moon run src/cli -- external handoff circular-state --output artifacts --json
 moon run src/cli -- external handoff isomorphic-suite --output artifacts --json
@@ -265,7 +275,7 @@ passを期待するdemoでは `expectedOutcome` が `pass`、`failures` が `0`�
 | --- | --- |
 | `summary.json` | `firstFailure` を含むdemo単位のCLI summary |
 | `atlas.json` | state、raw transition、最小failure、structured trace、dependency、diagnosticを含む完全な`RunReport` |
-| `atlas.html` | 最小failure traceを含む単独で開ける人間向けstate Atlas |
+| `atlas.html` | Flow Canvas選択、state preview、metadata、関連transition、日英切替、最小failure traceを含む対話型Atlas |
 | `atlas.svg` | 単独の決定的Flow Canvas graph |
 | `atlas.dot` | Graphviz transition graph |
 

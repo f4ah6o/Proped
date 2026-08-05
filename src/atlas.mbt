@@ -1,6 +1,40 @@
 ///|
+fn json_hex_digit(value : Int) -> Char {
+  [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
+  ][value]
+}
+
+///|
 fn write_json_string(output : StringBuilder, value : String) -> Unit {
-  output.write_string(value.escape(quote=true))
+  output.write_char('"')
+  for char in value {
+    let code = char.to_int()
+    if char == '"' {
+      output.write_string("\\\"")
+    } else if char == '\\' {
+      output.write_string("\\\\")
+    } else if code == 8 {
+      output.write_string("\\b")
+    } else if code == 9 {
+      output.write_string("\\t")
+    } else if code == 10 {
+      output.write_string("\\n")
+    } else if code == 12 {
+      output.write_string("\\f")
+    } else if code == 13 {
+      output.write_string("\\r")
+    } else if code < 32 {
+      output.write_string("\\u00")
+      output.write_char(json_hex_digit(code / 16))
+      output.write_char(json_hex_digit(code % 16))
+    } else {
+      // JSON is Unicode text. Keeping non-ASCII scalar values verbatim avoids
+      // MoonBit's language-specific `\u{...}` escape, which is not JSON.
+      output.write_char(char)
+    }
+  }
+  output.write_char('"')
 }
 
 ///|

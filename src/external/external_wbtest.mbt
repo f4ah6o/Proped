@@ -132,6 +132,39 @@ test "Canopy component manifest and handoff record bounded direct dispatch" {
 }
 
 ///|
+test "Canopy editor manifest and handoff preserve browser replay evidence" {
+  let manifest = canopy_editor_integration_manifest()
+  assert_eq(validate_manifest(manifest), [])
+  assert_eq(manifest.strategy, SubscriptionModel)
+  assert_eq(manifest.effect_policy, "browser-replay")
+  assert_true(
+    manifest.properties.contains(
+      "older document callbacks do not replace newer accepted revisions",
+    ),
+  )
+  let handoff = canopy_editor_integration_handoff()
+  assert_eq(handoff.minimal_trace.length(), 5)
+  assert_eq(handoff.action_ids[3], "deliver:2")
+  assert_eq(handoff.action_ids[4], "deliver:1")
+  assert_eq(handoff.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "utility batch manifest and handoff preserve classification failure" {
+  let manifest = rabbita_utility_batch_manifest()
+  assert_eq(validate_manifest(manifest), [])
+  assert_eq(manifest.strategy, EffectModel)
+  assert_eq(manifest.effect_policy, "record-and-inject")
+  assert_true(
+    manifest.properties.contains("Fullstack invalid titles are not submitted"),
+  )
+  let handoff = rabbita_utility_batch_handoff()
+  assert_eq(handoff.minimal_trace, ["FullstackSubmit"])
+  assert_eq(handoff.action_ids, ["fullstack-submit"])
+  assert_eq(handoff.visibility, @disclosure.PublicBug)
+}
+
+///|
 test "incr typed spreadsheet manifest and handoff preserve overflow evidence" {
   let manifest = incr_typed_spreadsheet_manifest()
   assert_eq(validate_manifest(manifest), [])

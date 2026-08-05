@@ -1,6 +1,6 @@
 # React・Vue・Next.js・Nuxt向けUI状態探索基盤を設計する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-05
 Updated: 2026-08-05
@@ -312,10 +312,10 @@ Proped Rabbita repository内で開始する場合も、Rabbita adapterとWeb ada
 
 ### Phase 0: architecture spike
 
-- [ ] driver protocol v1 draftを作成する。
-- [ ] MoonBit JS targetとnative JSON transportを比較する。
-- [ ] 同一synthetic machineでstate、transition、failure、shrink結果が一致することを確認する。
-- [ ] ADRでcore hosting方式を決定する。
+- [x] driver protocol v1 draftを作成する。
+- [x] MoonBit JS targetとnative JSON transportを比較する。
+- [x] 同一synthetic machineでstate、transition、failure、shrink結果が一致することを確認する。
+- [x] ADRでcore hosting方式を決定する。
 
 ### Phase 1: React Component Mode
 
@@ -379,13 +379,13 @@ Proped Rabbita repository内で開始する場合も、Rabbita adapterとWeb ada
 
 このproposal issueを完了扱いにする条件は実装完了ではなく、実装へ分割可能な設計判断が揃うことである。
 
-- [ ] driver protocol v1の入出力とversioning方針が確定している。
-- [ ] core hosting方式がADRで選定されている。
-- [ ] Component ModeとBrowser Modeの責務が分離されている。
-- [ ] snapshot、fingerprint、stable action ID、settle、replayの契約が定義されている。
-- [ ] effect安全性とexternal read-only policyが定義されている。
-- [ ] React spikeのfixture、性能基準、期待failure signatureが定義されている。
-- [ ] 実装作業が独立したissueへ分割されている。
+- [x] driver protocol v1の入出力とversioning方針が確定している。
+- [x] core hosting方式がADRで選定されている。
+- [x] Component ModeとBrowser Modeの責務が分離されている。
+- [x] snapshot、fingerprint、stable action ID、settle、replayの契約が定義されている。
+- [x] effect安全性とexternal read-only policyが定義されている。
+- [x] React spikeのfixture、性能基準、期待failure signatureが定義されている。
+- [x] 実装作業が独立したissueへ分割されている。
 
 ## 実装issueへの分割案
 
@@ -445,3 +445,12 @@ Proped Rabbita repository内で開始する場合も、Rabbita adapterとWeb ada
 `CHANGES.md` impact: no
 
 - 2026-08-05: initial proposal。React/Vue Component Mode、Next.js/Nuxt Browser Mode、hybrid exploration、driver protocol v1、段階導入案を定義した。
+
+## Phase 0 実施結果
+
+- `protocol/ui-driver-v1.schema.json`でprotocol version、request envelope、action、snapshot、settle schemaを固定した。
+- `docs/WEB_DRIVER_PROTOCOL.md`でsession、stable action ID、normalization、settle、replay、safety契約を定義した。
+- `docs/adr/0001-web-core-hosting.md`でnative MoonBit core + Node JSONL driverを採用し、TypeScript core再実装を却下した。
+- `spikes/web-driver/parity.mjs`でdirect driverとJSONL child processを比較した。両方とも15 state・48 transition、同一property、`type:a -> type:ab -> deliver:1`、semantic hash `da41ee1bed57dc6c67ad4a6feb910dc7e0ca460df7939ab9c13ca5d66d2c4d20`となった。
+- `spikes/web-driver/react-spike.json`でReact fixture、10,000 transition性能基準、fault corpus、期待failure signatureを固定した。
+- 実装を14件の独立issueへ分割した。

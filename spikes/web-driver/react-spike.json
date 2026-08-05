@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "react-form-spike",
+  "mode": "component",
+  "runtime": {
+    "node": "22",
+    "react": "pinned-at-implementation",
+    "dom": "jsdom-or-happy-dom-gated-by-benchmark"
+  },
+  "fixtureFaults": [
+    "whitespace-only todo title",
+    "stale search response",
+    "duplicate submit while loading",
+    "dangling modal entity",
+    "invalid numeric input destroys previous result"
+  ],
+  "bounds": {
+    "minTransitions": 10000,
+    "maxDepth": 12,
+    "maxStates": 5000,
+    "ciSeconds": 60
+  },
+  "expectedPrimaryFailure": {
+    "property": "todo titles are not blank",
+    "maxTraceLength": 3,
+    "signature": [
+      "type:textbox:Todo:\" \"",
+      "click:button:Add"
+    ]
+  },
+  "browserReplay": {
+    "required": true,
+    "baseline": "chromium",
+    "exploration": "minimized-trace-first"
+  }
+}

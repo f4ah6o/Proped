@@ -45,6 +45,12 @@ jobs:
       - name: Utility batch report validation
         run: python3 scripts/utility_batch.py validate
 
+      - name: Web driver protocol spike
+        run: |
+          python3 -m json.tool protocol/ui-driver-v1.schema.json > /dev/null
+          python3 -m json.tool spikes/web-driver/react-spike.json > /dev/null
+          node spikes/web-driver/parity.mjs
+
       - name: Format check
         run: moon fmt --check
 
@@ -129,7 +135,7 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.20.0'
+          assert schema['version'] == '0.21.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(

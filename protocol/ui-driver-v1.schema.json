@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://f4ah6o.github.io/proped-rabbita/protocol/ui-driver-v1.schema.json",
+  "title": "Proped UI Driver Protocol v1",
+  "type": "object",
+  "required": [
+    "protocolVersion",
+    "id",
+    "method",
+    "params"
+  ],
+  "properties": {
+    "protocolVersion": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "method": {
+      "enum": [
+        "hello",
+        "reset",
+        "actions",
+        "execute",
+        "replay",
+        "dispose"
+      ]
+    },
+    "params": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "elementIdentity": {
+      "type": "object",
+      "required": [
+        "role",
+        "name"
+      ],
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "within": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "testIdentity": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "target",
+        "label"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "click",
+            "type",
+            "clear",
+            "check",
+            "uncheck",
+            "select",
+            "submit",
+            "close",
+            "confirm",
+            "cancel",
+            "navigate",
+            "inject"
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/elementIdentity"
+        },
+        "input": {},
+        "label": {
+          "type": "string"
+        },
+        "ambiguity": {
+          "enum": [
+            "none",
+            "diagnostic"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "settle": {
+      "type": "object",
+      "required": [
+        "status",
+        "microtasks",
+        "timers",
+        "renders",
+        "elapsedMs"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "settled",
+            "timeout",
+            "cycle",
+            "unsupported"
+          ]
+        },
+        "microtasks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "renders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "elapsedMs": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "snapshot": {
+      "type": "object",
+      "required": [
+        "fingerprint",
+        "semanticDomHash",
+        "forms",
+        "effects",
+        "console",
+        "pending"
+      ],
+      "properties": {
+        "fingerprint": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "semanticDomHash": {
+          "type": "string"
+        },
+        "dom": {
+          "type": "string"
+        },
+        "focus": {
+          "$ref": "#/$defs/elementIdentity"
+        },
+        "forms": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "storage": {
+          "type": "object"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "console": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "pending": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "applicationState": {}
+      },
+      "additionalProperties": false
+    }
+  }
+}

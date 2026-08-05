@@ -1,5 +1,17 @@
 # Changes
 
+## 0.21.0 - 2026-08-05
+
+### Added
+
+- Added Web UI driver protocol v1, snapshot/settle/replay contracts, a native JSONL hosting ADR, and a React spike manifest.
+- Added a direct-versus-JSONL parity spike that retains the same stale-search failure, minimized trace, and semantic hash.
+- Split the React, Vue, Playwright, Next.js, Nuxt, property, scheduling, replay, benchmark, and dogfood implementation into independent issues.
+
+### Changed
+
+- Closed the cross-framework proposal after Phase 0 and bumped the package and CLI version to `0.21.0`.
+
 ## 0.20.0 - 2026-08-05
 
 ### Added

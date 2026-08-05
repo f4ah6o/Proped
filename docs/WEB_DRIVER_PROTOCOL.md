@@ -1,0 +1,42 @@
+# Web UI driver protocol v1
+
+## Decision
+
+Proped core remains the source of truth. Web runtimes connect through versioned JSON Lines. One driver process owns one isolated session; `reset` creates a fresh fixture and `dispose` destroys it.
+
+## Request envelope
+
+```json
+{"protocolVersion":"1.0","id":1,"method":"reset","params":{"seed":1,"fixture":"react-form"}}
+```
+
+Every response echoes `id` and contains either `result` or `error`. Unknown fields and protocol versions fail closed.
+
+## Lifecycle
+
+1. `hello` negotiates protocol and capabilities.
+2. `reset` creates an isolated session and returns a snapshot.
+3. `actions` returns only currently valid semantic actions.
+4. `execute` applies one action and returns snapshot, settle result, and emitted effects.
+5. `replay` resets the fixture and verifies a complete trace.
+6. `dispose` releases timers, browser contexts, servers, and storage.
+
+## Stable action identity
+
+Action identity is separate from its human label. CSS selectors, DOM addresses, translated copy, framework IDs, and list indexes are not sufficient identities. The canonical form is composed from kind, role, accessible name, ancestor scope, stable test identity when necessary, and normalized input. Ambiguous actions are not executed and become diagnostics.
+
+## Snapshot and fingerprint
+
+Exploration fingerprints URL, normalized semantic DOM, forms, focus, relevant storage, pending effects, and optional application-state hash. Full DOM and accessibility trees are retained only for initial, failure, collision, and debug states. Timestamps, random tokens, build hashes, request IDs, animation progress, and framework-generated unstable IDs are normalized out.
+
+## Settle contract
+
+`execute` completes only after the configured settle policy reports `settled`, `timeout`, `cycle`, or `unsupported`. Component drivers drain framework updates and bounded microtasks/fake timers. Browser drivers wait for explicit application readiness; network idle alone is not a valid universal settle condition.
+
+## Replay and failure signature
+
+Replay always starts from a fresh fixture. A minimized trace is accepted only when protocol version, fixture, property name, failure class, and semantic snapshot hash match. Runtime versions, seed, bounds, corpus, normalizer version, and driver capabilities are recorded.
+
+## Safety
+
+Network is denied by default. External repositories are read-only. Mail, payment, cloud mutation, filesystem writes, native bridges, and credentials are unsupported effects unless replaced by deterministic descriptors. Browser sessions use ephemeral profiles and isolated storage.

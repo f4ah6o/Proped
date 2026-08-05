@@ -15,6 +15,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -59,6 +60,82 @@ def run_git(path: Path, *args: str) -> str:
     )
     return completed.stdout.strip()
 
+
+
+
+def remote_head(checkout: Path) -> str:
+    """Resolve origin's default branch head without changing the checkout."""
+    run_git(checkout, "remote", "set-head", "origin", "--auto")
+    symbolic = run_git(checkout, "symbolic-ref", "refs/remotes/origin/HEAD")
+    return run_git(checkout, "rev-parse", symbolic)
+
+
+def revision_diff_report(
+    report: dict[str, Any], checkout_root: Path, *, fetch: bool
+) -> tuple[list[str], list[dict[str, Any]]]:
+    """Compare every pinned revision with origin's current default branch head.
+
+    The operation is read-only with respect to upstream repositories and never
+    changes the detached worktree used by `inspect`. When `fetch` is true only
+    remote-tracking refs are updated.
+    """
+    errors: list[str] = []
+    changes: list[dict[str, Any]] = []
+    for entry in report["entries"]:
+        repository = entry["repository"]
+        checkout = checkout_root / checkout_name(repository)
+        item: dict[str, Any] = {
+            "repository": repository,
+            "pinnedRevision": entry["revision"],
+            "changed": False,
+            "sourceChanged": False,
+            "changedPaths": [],
+            "commitCount": 0,
+        }
+        if not (checkout / ".git").is_dir():
+            errors.append(f"{repository}: checkout missing: {checkout}")
+            changes.append(item)
+            continue
+        try:
+            if fetch:
+                run_git(checkout, "fetch", "--prune", "origin")
+            head = remote_head(checkout)
+            item["remoteRevision"] = head
+            item["changed"] = head != entry["revision"]
+            if item["changed"]:
+                item["commitCount"] = int(
+                    run_git(checkout, "rev-list", "--count", f"{entry['revision']}..{head}")
+                )
+                names = run_git(
+                    checkout, "diff", "--name-only", entry["revision"], head, "--", *entry["paths"]
+                )
+                changed_paths = [line for line in names.splitlines() if line]
+                item["changedPaths"] = changed_paths
+                item["sourceChanged"] = bool(changed_paths)
+                if item["sourceChanged"]:
+                    with tempfile.TemporaryDirectory(prefix="utility-batch-diff-") as temp_dir:
+                        materialized: list[Path] = []
+                        root = Path(temp_dir)
+                        for relative in entry["paths"]:
+                            output = root / relative
+                            output.parent.mkdir(parents=True, exist_ok=True)
+                            try:
+                                blob = subprocess.run(
+                                    ["git", "-C", str(checkout), "show", f"{head}:{relative}"],
+                                    check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                ).stdout
+                            except subprocess.CalledProcessError:
+                                continue
+                            output.write_bytes(blob)
+                            materialized.append(output)
+                        if materialized:
+                            item["remoteSourceSha256"] = source_sha256(materialized)
+            changes.append(item)
+        except (subprocess.CalledProcessError, ValueError) as error:
+            detail = error.stderr.strip() if isinstance(error, subprocess.CalledProcessError) else str(error)
+            errors.append(f"{repository}: revision diff failed: {detail}")
+            changes.append(item)
+    return errors, changes
 
 def load_report(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -252,7 +329,7 @@ def sync_checkouts(report: dict[str, Any], checkout_root: Path) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["validate", "inspect", "sync"])
+    parser.add_argument("command", choices=["validate", "inspect", "sync", "diff"])
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument(
         "--checkout-root",
@@ -265,12 +342,16 @@ def main() -> int:
     errors = validate_report(report)
     errors.extend(validate_fixtures(report))
     inspections: list[dict[str, Any]] = []
+    revision_changes: list[dict[str, Any]] = []
     checkout_root = args.checkout_root.resolve()
     if args.command == "sync":
         errors.extend(sync_checkouts(report, checkout_root))
     if args.command in {"inspect", "sync"}:
         checkout_errors, inspections = inspect_checkouts(report, checkout_root)
         errors.extend(checkout_errors)
+    if args.command == "diff":
+        diff_errors, revision_changes = revision_diff_report(report, checkout_root, fetch=True)
+        errors.extend(diff_errors)
     payload = {
         "ok": not errors,
         "command": args.command,
@@ -282,6 +363,9 @@ def main() -> int:
         "upstreamWritePerformed": False,
         "errors": errors,
         "inspections": inspections,
+        "revisionChanges": revision_changes,
+        "changedCount": sum(1 for item in revision_changes if item.get("changed")),
+        "sourceChangedCount": sum(1 for item in revision_changes if item.get("sourceChanged")),
     }
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0 if not errors else 1

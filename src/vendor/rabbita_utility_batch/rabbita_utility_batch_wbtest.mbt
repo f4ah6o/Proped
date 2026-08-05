@@ -50,11 +50,25 @@ test "Fullstack Trial initial submit crosses request boundary with empty title" 
 test "utility batch exploration retains exact primary failure" {
   let report = @proped.run(machine(), properties(), default_config())
   assert_eq(report.diagnostics.length(), 0)
-  assert_true(report.failures.length() >= 1)
+  assert_eq(report.failures.length(), 3)
   let failure = report.failures[0]
   assert_eq(failure.property, "Fullstack invalid titles are not submitted")
   assert_eq(failure.trace, ["FullstackSubmit"])
-  assert_true(report.states.length() >= 100)
+  let mut issues_trace : Array[String]? = None
+  for candidate in report.failures {
+    if candidate.property ==
+      "Issues Dashboard older save replies do not roll back graph revision" {
+      issues_trace = Some(candidate.trace)
+    }
+  }
+  assert_eq(
+    issues_trace,
+    Some([
+      "IssuesSave", "IssuesSave", "IssuesDeliver(id=2)", "IssuesDeliver(id=1)",
+    ]),
+  )
+  assert_eq(report.states.length(), 3400)
+  assert_eq(report.transitions.length(), 7646)
   assert_true(report.transitions.length() >= 200)
   for prefix in ["symweb-", "issues-", "fullstack-", "proton-"] {
     assert_true(

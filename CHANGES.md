@@ -1,5 +1,20 @@
 # Changes
 
+## 0.20.0 - 2026-08-05
+
+### Added
+
+- Added read-only upstream revision diff reporting for the utility batch, including commit counts, changed target paths, and recomputed source hashes.
+- Added generated Atlas interaction E2E coverage for state/transition selection, keyboard activation, failure links, sandboxed previews, and English/Japanese switching.
+
+### Fixed
+
+- Expanded the utility batch to 3,400 states and 7,646 transitions and retained the Issues Dashboard reverse `GraphSaved` rollback as a four-action minimal failure.
+
+### Changed
+
+- Bumped the package and CLI version to `0.20.0`.
+
 ## 0.19.0 - 2026-08-05
 
 ### Added

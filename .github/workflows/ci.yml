@@ -39,6 +39,9 @@ jobs:
       - name: External manifest validation
         run: python3 scripts/external_harness.py validate
 
+      - name: Utility batch unit tests
+        run: python3 -m unittest scripts/test_utility_batch.py
+
       - name: Utility batch report validation
         run: python3 scripts/utility_batch.py validate
 
@@ -58,6 +61,7 @@ jobs:
         run: |
           moon run src/cli -- schema --json > /tmp/proped-rabbita-schema.json
           moon run src/cli -- demo run all --json > /tmp/proped-rabbita-run.json
+          node scripts/test_atlas_interaction.mjs demo/out/rabbita-todo/atlas.html
           moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json > /tmp/proped-rabbita-inspection.json
           moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json > /tmp/proped-rabbita-ensenzu-inspection.json
           moon run src/cli -- external inspect signal-reader --json > /tmp/proped-rabbita-signal-inspection.json
@@ -125,7 +129,7 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.19.0'
+          assert schema['version'] == '0.20.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -414,15 +418,27 @@ jobs:
 
           utility = external_runs['rabbita-utility-batch']
           assert utility['expectationMet'] is True
-          assert utility['states'] == 1400
-          assert utility['transitions'] == 2777
-          assert utility['failures'] == 2
+          assert utility['states'] == 3400
+          assert utility['transitions'] == 7646
+          assert utility['failures'] == 3
           assert utility['diagnostics'] == 0
           assert utility['firstFailure']['property'] == (
               'Fullstack invalid titles are not submitted'
           )
           assert utility['firstFailure']['trace'] == ['FullstackSubmit']
           assert utility['firstFailure']['actionIds'] == ['fullstack-submit']
+          utility_atlas = json.loads(
+              (Path(utility['output']) / 'atlas.json').read_text()
+          )
+          utility_failures = {failure['property']: failure['trace'] for failure in utility_atlas['failures']}
+          assert utility_failures[
+              'Issues Dashboard older save replies do not roll back graph revision'
+          ] == [
+              'IssuesSave',
+              'IssuesSave',
+              'IssuesDeliver(id=2)',
+              'IssuesDeliver(id=1)',
+          ]
 
           incr = external_runs['incr-typed-spreadsheet']
           assert incr['expectationMet'] is True

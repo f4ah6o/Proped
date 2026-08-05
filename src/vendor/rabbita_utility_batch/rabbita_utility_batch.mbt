@@ -729,9 +729,9 @@ pub fn machine() -> @proped.Machine[Model, Msg] {
 ///|
 pub fn default_config() -> @proped.RunConfig {
   {
-    cases: 640,
+    cases: 1700,
     max_depth: 14,
-    max_states: 1400,
+    max_states: 3400,
     seed: 131,
     shrink_budget: 4096,
   }

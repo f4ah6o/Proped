@@ -1,0 +1,237 @@
+// The self-update flow, driven from this side: the app asks `check_update`
+// once at startup (and whenever the user asks in Settings), shows an accent
+// Update button while a release is installable, and on click walks
+// `download_update` → `apply_update` → window close, confirming first when
+// a conversation would be interrupted.
+
+///|
+/// Which release stream `check_update` asks. Derived from the server
+/// selection (`ApiProvider::update_channel`): the staging server serves
+/// staging builds.
+priv enum UpdateChannel {
+  Production
+  Staging
+} derive(Eq)
+
+///|
+fn UpdateChannel::wire(self : UpdateChannel) -> String {
+  match self {
+    Production => "production"
+    Staging => "staging"
+  }
+}
+
+///|
+/// Byte progress for the package currently being downloaded. The total is
+/// optional because HTTP permits responses without Content-Length.
+priv struct UpdateDownloadProgress {
+  downloaded_bytes : Int
+  total_bytes : Int?
+} derive(Eq)
+
+///|
+fn UpdateDownloadProgress::percentage(self : UpdateDownloadProgress) -> Int? {
+  match self.total_bytes {
+    Some(total) if total > 0 =>
+      Some(
+        @cmp.minimum(
+          100,
+          (self.downloaded_bytes.to_double() * 100.0 / total.to_double()).to_int(),
+        ),
+      )
+    _ => None
+  }
+}
+
+///|
+fn UpdateDownloadProgress::status_text(
+  self : UpdateDownloadProgress,
+  version : String,
+) -> String {
+  match (self.percentage(), self.total_bytes) {
+    (Some(percent), Some(total)) => {
+      let downloaded_mb = self.downloaded_bytes / (1024 * 1024)
+      let total_mb = @cmp.maximum(1, total / (1024 * 1024))
+      "Downloading \{version}… \{percent}% (\{downloaded_mb} / \{total_mb} MB)"
+    }
+    _ if self.downloaded_bytes > 0 =>
+      "Downloading \{version}… \{self.downloaded_bytes / (1024 * 1024)} MB"
+    _ => "Downloading \{version}…"
+  }
+}
+
+///|
+fn UpdateDownloadProgress::sidebar_label(
+  self : UpdateDownloadProgress,
+) -> String {
+  match self.percentage() {
+    Some(percent) => "Downloading \{percent}%"
+    None => "Downloading…"
+  }
+}
+
+///|
+test "update download progress labels known and unknown totals" {
+  let known : UpdateDownloadProgress = {
+    downloaded_bytes: 50 * 1024 * 1024,
+    total_bytes: Some(100 * 1024 * 1024),
+  }
+  assert_eq(known.percentage(), Some(50))
+  assert_eq(known.sidebar_label(), "Downloading 50%")
+  assert_eq(
+    known.status_text("0.2.0"),
+    "Downloading 0.2.0… 50% (50 / 100 MB)",
+  )
+  let unknown : UpdateDownloadProgress = {
+    downloaded_bytes: 3 * 1024 * 1024,
+    total_bytes: None,
+  }
+  assert_eq(unknown.percentage(), None)
+  assert_eq(unknown.sidebar_label(), "Downloading…")
+  assert_eq(unknown.status_text("0.2.0"), "Downloading 0.2.0… 3 MB")
+}
+
+///|
+/// Where the self-update flow stands. Who asked (the user from Settings or
+/// the app at startup) travels with the request instead — `explicit` on
+/// `UpdateCheckFinished` — since it is a property of the reply's routing,
+/// not of the state.
+priv enum UpdateUx {
+  UpdateUnknown
+  CheckingForUpdate
+  UpToDate
+  // A newer release; `installable` gates the accent Update button — a dev
+  // binary or a platform without a package only gets the announcement.
+  UpdateAvailable(version~ : String, installable~ : Bool)
+  // The modal asking to interrupt running conversations is up.
+  ConfirmingRestart(version~ : String)
+  DownloadingUpdate(version~ : String, progress~ : UpdateDownloadProgress)
+  // The bundle is swapped; the window is about to close.
+  RestartingForUpdate(version~ : String)
+  // What the Settings row shows when a check could not answer.
+  UpdateCheckFailed(message~ : String)
+} derive(Eq)
+
+///|
+/// A decoded `check_update` reply. Kinds mirror the wire contract; see the
+/// host's `CheckUpdateReply` for what each means and how loud it deserves
+/// to be. `unavailable_reason` is present only when this installation failed
+/// the host's replacement preflight; package-less platforms stay quiet.
+priv enum UpdateCheck {
+  CheckUpToDate
+  CheckFound(
+    version~ : String,
+    installable~ : Bool,
+    unavailable_reason~ : String?
+  )
+  CheckUnreachable(reason~ : String)
+  CheckMalformed(reason~ : String)
+  CheckBroken(version~ : String, reason~ : String)
+}
+
+///|
+fn decode_update_check(text : String) -> UpdateCheck? {
+  // Every kind's fields are unconditional on the wire; a reply missing one
+  // is malformed and reads as `None` (the caller folds that into
+  // `CheckUnreachable`).
+  let json = @json.parse(text) catch { _ => return None }
+  guard json is Object(reply) else { return None }
+  let reason = @jsonx.json_text(reply, "reason")
+  guard @jsonx.json_text(reply, "kind") is Some(kind) else { return None }
+  match kind {
+    "up_to_date" => Some(CheckUpToDate)
+    "available" => {
+      guard @jsonx.json_text(reply, "version") is Some(version) &&
+        @jsonx.json_bool(reply, "installable") is Some(installable) else {
+        return None
+      }
+      Some(
+        CheckFound(
+          version~,
+          installable~,
+          unavailable_reason=@jsonx.json_text(reply, "unavailable_reason"),
+        ),
+      )
+    }
+    "unreachable" => reason.map(reason => CheckUnreachable(reason~))
+    "malformed" => reason.map(reason => CheckMalformed(reason~))
+    "broken" => {
+      guard @jsonx.json_text(reply, "version") is Some(version) &&
+        reason is Some(reason) else {
+        return None
+      }
+      Some(CheckBroken(version~, reason~))
+    }
+    _ => None
+  }
+}
+
+///|
+/// Ask the host to check the channel's manifest. Every outcome lands in
+/// `UpdateCheckFinished`: op failures (bridge missing, host error) fold
+/// into `CheckUnreachable`, so the handler has one shape to route.
+fn check_for_updates(
+  dispatch : @cmd.Emit[Msg],
+  channel : UpdateChannel,
+  explicit~ : Bool,
+) -> @cmd.Cmd {
+  @cmd.custom_cmd(scheduler => {
+    @js.async_run(() => {
+      let payload = @js.Object::new()
+      payload["channel"] = channel.wire()
+      let result = try {
+        // Self-update always targets the page's own desktop host, never a
+        // focused remote device.
+        let reply = @interop.bridge_request(
+          Local,
+          "update.check",
+          payload.to_value(),
+        )
+        match decode_update_check(@interop.reply_json_text(reply)) {
+          Some(result) => result
+          None => CheckUnreachable(reason="the host answered unintelligibly")
+        }
+      } catch {
+        error => CheckUnreachable(reason=@interop.bridge_error_text(error))
+      }
+      scheduler.add(dispatch(UpdateCheckFinished(result~, explicit~)))
+    })
+  })
+}
+
+///|
+/// Ask the host-owned update actor to download and verify the channel's package.
+/// A successful reply only means the work was accepted; `update.downloaded`
+/// triggers `UpdateDownloaded` after staging, and `update.download_failed`
+/// carries a background failure.
+fn download_update(
+  dispatch : @cmd.Emit[Msg],
+  channel : UpdateChannel,
+) -> @cmd.Cmd {
+  @cmd.custom_cmd(scheduler => {
+    @js.async_run(() => {
+      let payload = @js.Object::new()
+      payload["channel"] = channel.wire()
+      let _ : @js.Value = @interop.bridge_request(
+        Local,
+        "update.download",
+        payload.to_value(),
+      ) catch {
+        error => {
+          scheduler.add(
+            dispatch(UpdateFailed(message=@interop.bridge_error_text(error))),
+          )
+          return
+        }
+      }
+    })
+  })
+}
+
+///|
+/// Whether restarting now would cut a conversation off mid-run.
+fn Model::any_conversation_busy(self : Model) -> Bool {
+  self.conversations
+  .iter()
+  .any(conv => conv.is_running() || !(conv.compaction is NotCompacting))
+}

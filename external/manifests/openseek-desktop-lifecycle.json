@@ -1,0 +1,27 @@
+{
+  "$schema": "../schema/manifest.schema.json",
+  "id": "openseek-desktop-lifecycle",
+  "repository": "moonbitlang/openseek",
+  "revision": "b21e078a4f3cdd11129b4d33348dcc09abf22026",
+  "license": "Apache-2.0",
+  "packages": ["desktop/frontend", "desktop/frontend/terminal", "desktop/frontend/fileeditor"],
+  "entryPoints": {
+    "model": "Model / terminal.State / fileeditor.State",
+    "message": "Msg / terminal.Msg / fileeditor.Msg",
+    "update": "update_msg / terminal.update / fileeditor.update",
+    "view": "view / terminal.view / fileeditor.view"
+  },
+  "strategy": "effect-model",
+  "effectPolicy": "record-and-inject",
+  "sourceSha256": "f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b",
+  "properties": [
+    "update check replies match the active provider channel",
+    "one opening terminal tab issues one terminal open request",
+    "older file replies do not replace newer file content",
+    "file replies from another conversation owner are ignored",
+    "closed terminals are not revived by output",
+    "pending effect IDs remain unique",
+    "rendered desktop state matches the model"
+  ],
+  "findingVisibility": "public-bug"
+}

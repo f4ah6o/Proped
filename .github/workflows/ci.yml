@@ -67,6 +67,7 @@ jobs:
           moon run src/cli -- external inspect moonclaw-job --json > /tmp/proped-rabbita-moonclaw-inspection.json
           moon run src/cli -- external inspect mooncakes-official-ui --json > /tmp/proped-rabbita-mooncakes-inspection.json
           moon run src/cli -- external inspect selene-editor-assets --json > /tmp/proped-rabbita-selene-inspection.json
+          moon run src/cli -- external inspect openseek-desktop-lifecycle --json > /tmp/proped-rabbita-openseek-inspection.json
           moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
           moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
           python3 - <<'PY'
@@ -88,6 +89,7 @@ jobs:
           moonclaw_inspection = json.loads(Path('/tmp/proped-rabbita-moonclaw-inspection.json').read_text())
           mooncakes_inspection = json.loads(Path('/tmp/proped-rabbita-mooncakes-inspection.json').read_text())
           selene_inspection = json.loads(Path('/tmp/proped-rabbita-selene-inspection.json').read_text())
+          openseek_inspection = json.loads(Path('/tmp/proped-rabbita-openseek-inspection.json').read_text())
           external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
           handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
           expected_ids = [
@@ -111,9 +113,10 @@ jobs:
               'moonclaw-job',
               'mooncakes-official-ui',
               'selene-editor-assets',
+              'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.17.0'
+          assert schema['version'] == '0.18.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(
@@ -249,6 +252,16 @@ jobs:
           assert selene_app['findingVisibility'] == 'public-bug'
           assert selene_app['expectedFailure'].startswith('Initialize -> Initialize')
           assert selene_app['upstreamWritePolicy'] == 'read-only'
+          openseek_app = openseek_inspection['application']
+          assert openseek_app['id'] == 'openseek-desktop-lifecycle'
+          assert openseek_app['strategy'] == 'effect-model'
+          assert openseek_app['effectPolicy'] == 'record-and-inject'
+          assert openseek_app['findingVisibility'] == 'public-bug'
+          assert openseek_app['expectedFailure'] == (
+              'ProviderChanged(staging) -> '
+              'UpdateCheckFinished(request=1, channel=production, result=found, explicit=false)'
+          )
+          assert openseek_app['upstreamWritePolicy'] == 'read-only'
 
           assert external['ok'] is True
           assert external['command'] == 'external run'
@@ -538,6 +551,41 @@ jobs:
               'AssetsLoaded(request=1, fixture=older)',
           ]
 
+          openseek = external_runs['openseek-desktop-lifecycle']
+          assert openseek['expectationMet'] is True
+          assert openseek['states'] == 2600
+          assert openseek['transitions'] == 5615
+          assert openseek['failures'] == 3
+          assert openseek['diagnostics'] == 0
+          assert openseek['firstFailure']['property'] == (
+              'update check replies match the active provider channel'
+          )
+          assert openseek['firstFailure']['trace'] == [
+              'ProviderChanged(staging)',
+              'UpdateCheckFinished(request=1, channel=production, result=found, explicit=false)',
+          ]
+          assert openseek['firstFailure']['actionIds'] == [
+              'provider:staging',
+              'update-check-finished:1:production:found:false',
+          ]
+          openseek_atlas = json.loads(
+              (Path(openseek['output']) / 'atlas.json').read_text()
+          )
+          openseek_failures = {
+              failure['property']: failure for failure in openseek_atlas['failures']
+          }
+          assert openseek_failures['one opening terminal tab issues one terminal open request']['trace'] == [
+              'ToggleTerminal',
+              'EmulatorReady(key=1, cols=80, rows=24)',
+              'EmulatorReady(key=1, cols=80, rows=24)',
+          ]
+          assert openseek_failures['older file replies do not replace newer file content']['trace'] == [
+              'FileSelected(\"src/main.mbt\")',
+              'FileSelected(\"src/main.mbt\")',
+              'FileLoaded(request=3, fixture=newer)',
+              'FileLoaded(request=2, fixture=older)',
+          ]
+
           for run in external_runs.values():
               for artifact in run['artifacts']:
                   assert (Path(run['output']) / artifact).is_file()
@@ -661,6 +709,22 @@ jobs:
           assert selene_manifest['sourceSha256'] == (
               '00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2'
           )
+          openseek_sources = b''.join(
+              path.read_bytes()
+              for path in sorted(
+                  Path('src/vendor/openseek_desktop_lifecycle/upstream').glob('*.txt'),
+                  key=lambda path: path.name.encode(),
+              )
+          )
+          assert hashlib.sha256(openseek_sources).hexdigest() == (
+              'f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b'
+          )
+          openseek_manifest = json.loads(
+              Path('external/manifests/openseek-desktop-lifecycle.json').read_text()
+          )
+          assert openseek_manifest['sourceSha256'] == (
+              'f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b'
+          )
           PY
   external-matrix:
     runs-on: ubuntu-latest
@@ -680,6 +744,7 @@ jobs:
           - moonclaw-job
           - mooncakes-official-ui
           - selene-editor-assets
+          - openseek-desktop-lifecycle
     steps:
       - name: Checkout
         uses: actions/checkout@v4

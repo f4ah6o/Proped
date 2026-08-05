@@ -1,2 +1,3 @@
 # Preserve byte-exact upstream fixtures, including original whitespace.
 src/vendor/mooncakes_official_ui/upstream/*.txt -whitespace
+src/vendor/openseek_desktop_lifecycle/upstream/*.txt -whitespace

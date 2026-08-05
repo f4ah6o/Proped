@@ -44,7 +44,7 @@ vendor source、revision、hash、license、adapter変更、failureの根拠は 
 
 外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。`scripts/external_harness.py` はmanifest validation、単純な`Msg` payloadの有限action scaffold生成、決定的なsource hash report、明示的revision更新のpreview、network deny環境でのinspection command実行を提供します。
 
-external campaignは12 targetです。`selene-editor-assets`は920 state・2,098 transitionを探索し、重複初期化を`Initialize -> Initialize`へ縮約し、逆順asset list responseも第2failureとして保持します。削除済み・未知entityに対するpreview selectionの正規化はpassします。`mooncakes-official-ui`のBuild Queueとtutorial response-order failureも継続検証します。
+external campaignは13 targetです。`openseek-desktop-lifecycle`はself-update、terminal、file editor境界を2,600 state・5,615 transitionで探索し、staging切替後の古いproduction update reply、重複`EmulatorReady`によるterminal二重open、逆順file readを保持します。`selene-editor-assets`の重複初期化とstale asset-list orderingも継続検証します。
 
 外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。`external handoff <id>`はissue、再現、fix plan、PR本文のローカル下書きだけを生成します。security-sensitive findingはpublic exportを拒否し、Gitでignoreされる `.private/disclosures/`へ隔離します。詳細は [docs/DISCLOSURE.ja.md](docs/DISCLOSURE.ja.md) を参照してください。
 

@@ -1,5 +1,23 @@
 # Changes
 
+## 0.18.0 - 2026-08-05
+
+### Added
+
+- Added `openseek-desktop-lifecycle` as the thirteenth external target with three bounded submodels for self-update, terminal, and file-editor behavior.
+- Preserved seven Apache-2.0 OpenSeek frontend source files at revision `b21e078a4f3cdd11129b4d33348dcc09abf22026` with combined SHA-256 provenance.
+
+### Fixed
+
+- Found that a production update-check reply can be accepted after switching the provider to staging because `UpdateCheckFinished` carries no request generation or update channel.
+- Found that repeated `EmulatorReady` messages can issue duplicate `terminal.open` requests while the tab remains `TabOpening` with no pending marker.
+- Found that reverse-ordered duplicate file reads can replace newer content because `FileLoaded` correlates only by owner and path.
+
+### Changed
+
+- Expanded the external CI matrix to thirteen targets and bumped the package and CLI version to `0.18.0`.
+- Recorded that the pinned upstream package currently fails under the active compiler in a resolved `moonbitlang/editor` dependency, while the exact source boundary remains independently reproducible.
+
 ## 0.17.0 - 2026-08-05
 
 ### Added

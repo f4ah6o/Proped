@@ -1,9 +1,9 @@
 # OpenSeekのdesktop frontend・session・terminalを探索する
 
-Status: open
+Status: closed
 Model: GPT-5.6 Thinking
 Created: 2026-08-04
-Updated: 2026-08-04
+Updated: 2026-08-05
 Priority: P1
 Depends-On: `20260804-mechanical-external-app-harness.md`
 
@@ -49,10 +49,24 @@ desktop bridge、terminal、agent eventをeffect descriptorへ置換する。roo
 
 ## 受け入れ条件
 
-- [ ] submodelを3件以上選びadapter化する。
-- [ ] session/request correlationをmanifestで宣言する。
-- [ ] stale event permutationを探索する。
-- [ ] root integrationはstate explosion計測後に実施する。
+- [x] self-update、terminal、file editorの3 submodelをadapter化した。
+- [x] update channel、terminal open request、file owner/path request correlationをmanifestで宣言した。
+- [x] provider切替後のupdate reply、duplicate EmulatorReady、file read逆順を探索した。
+- [x] bounded integrationが2,600 state上限へ到達したため、root全体統合は明示的に対象外とした。
+
+
+## 実施結果
+
+- target: `openseek-desktop-lifecycle`
+- explored: 2,600 states / 5,615 transitions
+- failures: 3
+- diagnostics: 0
+- primary failure: `ProviderChanged(staging) -> UpdateCheckFinished(request=1, channel=production, result=found, explicit=false)`
+- terminal failure: `ToggleTerminal -> EmulatorReady(key=1, cols=80, rows=24) -> EmulatorReady(key=1, cols=80, rows=24)`
+- file failure: `FileSelected("src/main.mbt") -> FileSelected("src/main.mbt") -> FileLoaded(request=3, fixture=newer) -> FileLoaded(request=2, fixture=older)`
+- combined source SHA-256: `f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b`
+
+upstream package全体は、resolved `moonbitlang/editor`の旧`Repr` constructor APIにより現在のcompilerでbuildできなかった。これはsource-level findingとは分離して記録し、固定sourceとclean-room adapterの検証は完了した。upstreamへの書き込みは行っていない。
 
 ## 共通テスト
 

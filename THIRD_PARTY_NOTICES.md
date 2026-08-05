@@ -204,3 +204,16 @@ The Apache License 2.0 text is included at `src/vendor/mooncakes_official_ui/LIC
 - Combined preserved-source SHA-256: `00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2`
 
 The upstream Apache License 2.0 text is included at `src/vendor/selene_editor_assets/LICENSE`. The adapter replaces browser DOM, WebGPU, filesystem, SSE, and preview-engine execution with deterministic effect descriptors and typed event replay while preserving initialization, asset-list replacement, entity-selection normalization, and asset-panel rendering behavior.
+
+
+## OpenSeek desktop frontend
+
+- Project: `moonbitlang/openseek`
+- Source paths: `desktop/frontend/model.mbt`, `update.mbt`, `self_update.mbt`, `terminal/state.mbt`, `terminal/update.mbt`, `fileeditor/state.mbt`, and `fileeditor/update.mbt`
+- Revision: `b21e078a4f3cdd11129b4d33348dcc09abf22026`
+- License: Apache License 2.0
+- Preserved source: `src/vendor/openseek_desktop_lifecycle/upstream/`
+- Adapted source: `src/vendor/openseek_desktop_lifecycle/openseek_desktop_lifecycle.mbt`
+- Combined preserved-source SHA-256: `f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b`
+
+The upstream Apache License 2.0 text is included at `src/vendor/openseek_desktop_lifecycle/LICENSE`. The clean-room adapter replaces desktop bridge, PTY, filesystem, DOM, and network operations with deterministic effect descriptors while preserving selected self-update, terminal-open, and file-load acceptance rules. Exact source hashes, toolchain limitations, and scope qualifications are recorded in `src/vendor/openseek_desktop_lifecycle/UPSTREAM.md`.

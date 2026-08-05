@@ -23,6 +23,7 @@ All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b
 | `rabbita-xterm-lifecycle` | `moonbit-community/rabbita_xterm` managed state | native lifecycle adapter | failure | loading, subscriptions, UTF-8 writes, disposal, dimensions |
 | `mooncakes-official-ui` | Mooncakes Build Queue + official website/tutorial | exact source fixtures | failure | HTTP response ordering, decoder corpus, website/tutorial state |
 | `selene-editor-assets` | `moonbit-community/selene` editor frontend | 8 preserved source files | failure | initialization, asset responses, preview selection, panel state |
+| `openseek-desktop-lifecycle` | `moonbitlang/openseek` desktop frontend | 7 preserved source files | failure | self-update, terminal open, file-read ordering |
 | `moonclaw-job` | `vectie/moonclaw ui/rabbita-job/main` | 2 preserved source files | failure | selected run, snapshot requests, stream events, response ordering |
 
 ## Counter
@@ -221,3 +222,28 @@ The pinned `AssetsLoaded` message also carries no request generation. A second r
 3. `AssetsLoaded(request=1, fixture=older)`
 
 The run explores 920 states and 2,098 transitions with two retained failures and zero diagnostics. Resource and entity referential integrity, stale preview selection normalization, unique effect IDs, and rendered-state properties pass. Browser DOM, WebGPU rendering, actual filesystem access, service SSE, and preview-engine execution are explicitly outside the adapter; their boundaries are represented by deterministic descriptors and typed replay events.
+
+
+## OpenSeek desktop lifecycle
+
+OpenSeek's Apache-2.0 desktop frontend is pinned at revision `b21e078a4f3cdd11129b4d33348dcc09abf22026`. Seven exact source fixtures preserve the root model/update, self-update flow, terminal state/update, and file-editor state/update. Their combined SHA-256 is `f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b`.
+
+The startup update check can remain in flight while `ProviderChanged` switches from production to staging and resets the UI. `UpdateCheckFinished` carries only `result` and `explicit`, so the old production result is accepted in the new channel's `UpdateUnknown` state:
+
+1. `ProviderChanged(staging)`
+2. `UpdateCheckFinished(request=1, channel=production, result=found, explicit=false)`
+
+The terminal submodel retains a second failure because `EmulatorReady` leaves the tab `TabOpening` until `terminal_open` replies:
+
+1. `ToggleTerminal`
+2. `EmulatorReady(key=1, cols=80, rows=24)`
+3. `EmulatorReady(key=1, cols=80, rows=24)`
+
+The file-editor submodel retains reverse-ordered reads for the same owner/path:
+
+1. `FileSelected("src/main.mbt")`
+2. `FileSelected("src/main.mbt")`
+3. `FileLoaded(request=3, fixture=newer)`
+4. `FileLoaded(request=2, fixture=older)`
+
+The run reaches the configured cap of 2,600 states and 5,615 transitions with three retained failures and zero diagnostics. Cross-owner file replies, output after terminal close, pending effect identity, and rendered-state properties pass. PTYs, filesystem access, desktop bridge calls, DOM rendering, and network access are represented as deterministic descriptors rather than executed. The pinned upstream package currently fails to compile under the active toolchain in its resolved `moonbitlang/editor` dependency (`Repr` constructor API); that toolchain limitation is recorded separately from the source-level findings.

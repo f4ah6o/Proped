@@ -1013,3 +1013,73 @@ pub fn selene_editor_assets_handoff() -> @disclosure.FindingHandoff {
     visibility: @disclosure.PublicBug,
   }
 }
+
+///|
+pub fn openseek_desktop_lifecycle_manifest() -> ExternalManifest {
+  {
+    id: "openseek-desktop-lifecycle",
+    repository: "moonbitlang/openseek",
+    revision: "b21e078a4f3cdd11129b4d33348dcc09abf22026",
+    license: "Apache-2.0",
+    packages: [
+      "desktop/frontend", "desktop/frontend/terminal", "desktop/frontend/fileeditor",
+    ],
+    model_entry: "Model / terminal.State / fileeditor.State",
+    message_entry: "Msg / terminal.Msg / fileeditor.Msg",
+    update_entry: "update_msg / terminal.update / fileeditor.update",
+    view_entry: "view / terminal.view / fileeditor.view",
+    strategy: EffectModel,
+    effect_policy: "record-and-inject",
+    source_sha256: "f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b",
+    properties: [
+      "update check replies match the active provider channel", "one opening terminal tab issues one terminal open request",
+      "older file replies do not replace newer file content", "file replies from another conversation owner are ignored",
+      "closed terminals are not revived by output", "pending effect IDs remain unique",
+      "rendered desktop state matches the model",
+    ],
+    finding_visibility: @disclosure.PublicBug,
+  }
+}
+
+///|
+pub fn openseek_desktop_lifecycle_handoff() -> @disclosure.FindingHandoff {
+  {
+    id: "openseek-desktop-lifecycle",
+    repository: "moonbitlang/openseek",
+    revision: "b21e078a4f3cdd11129b4d33348dcc09abf22026",
+    title: "Correlate OpenSeek update checks with their provider channel",
+    summary: "OpenSeek UpdateCheckFinished carries a result and explicit flag but no request or channel identity, so a production reply can be accepted after the user switches to the staging provider.",
+    impact: "The desktop can offer or describe a release from the wrong update stream after a provider change. The same exploration also retains duplicate terminal opens from repeated EmulatorReady events and stale file content from reverse-ordered duplicate reads.",
+    expected: "Only the newest update check for the active provider channel can update the self-update UI.",
+    actual: "Switching from production to staging resets the UI to UpdateUnknown, then an older production CheckFound reply is accepted as UpdateAvailable.",
+    property: "update check replies match the active provider channel",
+    minimal_trace: [
+      "ProviderChanged(staging)", "UpdateCheckFinished(request=1, channel=production, result=found, explicit=false)",
+    ],
+    action_ids: [
+      "provider:staging", "update-check-finished:1:production:found:false",
+    ],
+    evidence: [
+      "The pinned UpdateCheckFinished message contains result and explicit, but no request generation or UpdateChannel.",
+      "ProviderChanged resets update_ux to UpdateUnknown when the provider changes update channels.",
+      "UpdateCheckFinished accepts UpdateUnknown, so a pre-switch reply can populate UpdateAvailable after the switch.",
+      "The terminal adapter separately retains ToggleTerminal -> EmulatorReady -> EmulatorReady because the first terminal.open request does not mark the opening tab as pending.",
+      "The file-editor adapter separately retains two FileSelected reads followed by newer then older FileLoaded responses because replies correlate only by owner/path.",
+      "The upstream package could not be executed with the current compiler because its resolved moonbitlang/editor dependency uses an older Repr constructor API; exact source branches were preserved and modeled read-only.",
+    ],
+    suggested_fix: [
+      "Assign a monotonically increasing update-check request generation and carry both generation and UpdateChannel through UpdateCheckFinished.",
+      "Ignore a reply unless its generation is current and its channel matches model.api_provider.update_channel().",
+      "Mark a terminal tab while terminal_open is in flight so duplicate EmulatorReady reports do not create another PTY.",
+      "Carry a per-tab file-read generation through FileLoaded and ignore older same-owner/path replies.",
+    ],
+    verification: [
+      "Start a production update check, switch to staging, deliver the production reply, and confirm the UI remains unknown or waiting for staging.",
+      "Start staging and production checks in both response orders and keep only the current channel's newest result.",
+      "Dispatch EmulatorReady twice before terminal_open replies and confirm one host request is issued.",
+      "Issue two reads for one loading file, deliver newer then older content, and retain the newer content.",
+      "Switch file owner while a read is in flight and confirm the old owner's reply is ignored.",
+    ],
+    visibility: @disclosure.PublicBug,
+  }
+}

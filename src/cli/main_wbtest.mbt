@@ -145,7 +145,7 @@ test "command schema exposes external application commands" {
   assert_true(schema.contains("inspect-source"))
   assert_true(schema.contains("proton-demo-todo"))
   assert_true(schema.contains("ensenzu-app"))
-  assert_true(schema.contains("0.17.0"))
+  assert_true(schema.contains("0.18.0"))
 }
 
 ///|
@@ -202,6 +202,7 @@ test "external list exposes all pinned applications" {
   assert_true(json.contains("moonclaw-job"))
   assert_true(json.contains("mooncakes-official-ui"))
   assert_true(json.contains("selene-editor-assets"))
+  assert_true(json.contains("openseek-desktop-lifecycle"))
 }
 
 ///|
@@ -361,5 +362,24 @@ test "Selene editor inspection and handoff expose duplicate initialization" {
   let spec = handoff_spec("selene-editor-assets").unwrap()
   assert_eq(spec.minimal_trace, ["Initialize", "Initialize"])
   assert_eq(spec.action_ids, ["initialize", "initialize"])
+  assert_eq(spec.visibility, @disclosure.PublicBug)
+}
+
+///|
+test "OpenSeek desktop inspection and handoff expose provider-channel stale reply" {
+  let json = openseek_desktop_lifecycle_external_inspection_json()
+  assert_true(json.contains("moonbitlang/openseek"))
+  assert_true(json.contains("effect-model"))
+  assert_true(
+    json.contains("update check replies match the active provider channel"),
+  )
+  assert_true(json.contains("ProviderChanged(staging)"))
+  let spec = handoff_spec("openseek-desktop-lifecycle").unwrap()
+  assert_eq(spec.minimal_trace, [
+    "ProviderChanged(staging)", "UpdateCheckFinished(request=1, channel=production, result=found, explicit=false)",
+  ])
+  assert_eq(spec.action_ids, [
+    "provider:staging", "update-check-finished:1:production:found:false",
+  ])
   assert_eq(spec.visibility, @disclosure.PublicBug)
 }

@@ -20,6 +20,7 @@ import {
   "f4ah6o/proped-rabbita/vendor/moonclaw_job",
   "f4ah6o/proped-rabbita/vendor/mooncakes_official_ui" @mooncakes_ui,
   "f4ah6o/proped-rabbita/vendor/selene_editor_assets" @selene_assets,
+  "f4ah6o/proped-rabbita/vendor/openseek_desktop_lifecycle" @openseek_desktop,
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/env",

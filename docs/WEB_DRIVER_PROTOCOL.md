@@ -57,3 +57,7 @@ The bounded fixture host is `scripts/web_driver_protocol_host.mjs`. It models ne
 `protocol/dom-semantic-snapshot.mjs` normalizes framework-generated IDs, timestamps, random tokens, attribute order, form values, focus identity, relevant storage, pending effect descriptors, and optional application state. The fingerprint includes semantic state but excludes unstable request IDs and build/runtime noise. Full DOM is represented as a normalized semantic tree rather than a framework-private Fiber or VNode graph.
 
 When two observations claim the same fingerprint but differ in semantic DOM, form, focus, storage, pending work, or application state, `compareSnapshotIdentity` emits `state_identity_collision` evidence. Screenshot pixels, layout geometry, animation progress, cross-origin frame contents, and closed shadow roots are unsupported inputs and must be handled by a browser-specific diagnostic.
+
+## Accessible action discovery
+
+Drivers provide semantic element records rather than CSS selectors. The v1 discovery layer supports button/link clicks, checkbox state changes, radio/combobox/listbox selection, textbox/searchbox/spinbutton clear and bounded typing, form submit, and dialog confirm/cancel/close. Stable action IDs combine kind, role, accessible name, ancestor scope, optional stable test identity, and normalized input. Hidden or disabled elements are excluded. Duplicate identities are not executed and are emitted as `ambiguous_action` diagnostics.

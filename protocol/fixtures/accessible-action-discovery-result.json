@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "actionCount": 10,
+  "diagnosticCount": 1,
+  "semanticHash": "636d201c8f649c7ef644a65c0931cfe043210e0a4aaba08203fdd1d4259c37fd",
+  "exampleActionIds": [
+    "check|checkbox|Subscribe|within=form:Profile",
+    "clear|textbox|Email|within=form:Profile",
+    "click|button|Save",
+    "click|button|Save|within=form:Profile",
+    "select|combobox|Country|within=form:Profile|input=\"France\"",
+    "select|combobox|Country|within=form:Profile|input=\"Japan\"",
+    "submit|form|Profile",
+    "type|textbox|Email|within=form:Profile|input=\"\""
+  ],
+  "diagnostic": {
+    "kind": "ambiguous_action",
+    "actionId": "click|button|Delete|within=dialog:Confirm",
+    "count": 2,
+    "target": {
+      "role": "button",
+      "name": "Delete",
+      "within": [
+        "dialog:Confirm"
+      ]
+    },
+    "message": "multiple accessible elements share the same stable action identity"
+  }
+}

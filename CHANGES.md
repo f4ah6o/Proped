@@ -1,5 +1,16 @@
 # Changes
 
+## 0.25.0 - 2026-08-05
+
+### Added
+
+- Added framework-neutral accessible action discovery from role, accessible name, ancestor scope, stable test identity, and bounded input corpus.
+- Added fail-closed `ambiguous_action` diagnostics for duplicate semantic identities.
+
+### Changed
+
+- Bumped the package and CLI version to `0.25.0`.
+
 ## 0.24.0 - 2026-08-05
 
 ### Added

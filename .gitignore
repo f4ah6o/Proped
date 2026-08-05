@@ -23,3 +23,6 @@ web/vue-component/out/
 protocol/out/
 
 web/playwright-browser/out/
+
+web/next-ssr-hydration/.next/
+web/next-ssr-hydration/out/

@@ -1,5 +1,16 @@
 # Changes
 
+## 0.32.0 - 2026-08-06
+
+### Added
+
+- Added an actual Next.js 16.3 production fixture covering App Router and Pages Router SSR, hydration comparison, fresh Browser Context reset, and Playwright route isolation.
+- Added deterministic hydration-warning failures for both routers, a descriptor-only App Router Server Action boundary, a fail-closed Pages Router Server Action diagnostic, and generated Atlas artifacts.
+
+### Changed
+
+- Bumped the package and CLI version to `0.32.0`.
+
 ## 0.31.0 - 2026-08-06
 
 ### Added

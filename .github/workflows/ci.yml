@@ -84,6 +84,12 @@ jobs:
       - name: Component to Browser cross-mode replay
         run: node scripts/test_cross_mode_replay.mjs
 
+      - name: Next.js SSR and hydration
+        run: |
+          npm ci --prefix web/next-ssr-hydration --ignore-scripts
+          npm run build --prefix web/next-ssr-hydration
+          npm test --prefix web/next-ssr-hydration
+
       - name: Format check
         run: moon fmt --check
 
@@ -168,7 +174,7 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.31.0'
+          assert schema['version'] == '0.32.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(

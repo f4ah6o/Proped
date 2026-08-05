@@ -1,0 +1,195 @@
+{
+  "ok": true,
+  "runtime": "next-ssr-hydration",
+  "versions": {
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "reactDom": "19.2.8",
+    "playwright": "1.62.0"
+  },
+  "routers": [
+    "app",
+    "pages"
+  ],
+  "casePolicy": {
+    "freshBrowserContext": true,
+    "serviceWorkers": "block",
+    "network": "loopback-fixture-only",
+    "externalEffects": "deny-or-descriptor",
+    "readiness": "explicit-main-data-ready"
+  },
+  "cases": [
+    {
+      "router": "app",
+      "caseName": "stable",
+      "serverLabel": "stable-app",
+      "hydratedLabel": "stable-app",
+      "hydrationMismatch": false,
+      "hydrationWarningCount": 0,
+      "hydrationMessages": [],
+      "metadata": {
+        "router": "app",
+        "caseName": "stable",
+        "serverLabel": "stable-app",
+        "clientLabel": "stable-app",
+        "serverAction": "descriptor-only"
+      },
+      "serverActionResult": "{\"status\":\"idle\",\"sequence\":0,\"title\":\"\",\"effect\":null}",
+      "serverActionDiagnostic": null,
+      "storage": {
+        "local": {},
+        "session": {}
+      },
+      "fingerprint": "1dc191d698095ccbb23f437ee922b26817241a1cbdc30f6d93d58670b28e58f8",
+      "serverSemanticHash": "4d7fbaba6ae9bd1d34d8d340b0d8f263ddbb0307083ad34a8455c96b3ab79cdd",
+      "routePolicy": "loopback-fixture-only"
+    },
+    {
+      "router": "app",
+      "caseName": "mismatch",
+      "serverLabel": "server-app",
+      "hydratedLabel": "client-app",
+      "hydrationMismatch": true,
+      "hydrationWarningCount": 1,
+      "hydrationMessages": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "metadata": {
+        "router": "app",
+        "caseName": "mismatch",
+        "serverLabel": "server-app",
+        "clientLabel": "client-app",
+        "serverAction": "descriptor-only"
+      },
+      "serverActionResult": "{\"status\":\"idle\",\"sequence\":0,\"title\":\"\",\"effect\":null}",
+      "serverActionDiagnostic": null,
+      "storage": {
+        "local": {},
+        "session": {}
+      },
+      "fingerprint": "5154e6a14e6f1ea8f485c505f04af9238fc2ae285f638b1f2f097682684bbab0",
+      "serverSemanticHash": "31fa87faa1f1d256ce5ebd0f28b1ada020d95601f0464b7b74838e16ee67c41d",
+      "routePolicy": "loopback-fixture-only"
+    },
+    {
+      "router": "pages",
+      "caseName": "stable",
+      "serverLabel": "stable-pages",
+      "hydratedLabel": "stable-pages",
+      "hydrationMismatch": false,
+      "hydrationWarningCount": 0,
+      "hydrationMessages": [],
+      "metadata": {
+        "router": "pages",
+        "caseName": "stable",
+        "serverLabel": "stable-pages",
+        "clientLabel": "stable-pages",
+        "serverAction": "unsupported"
+      },
+      "serverActionResult": null,
+      "serverActionDiagnostic": "{\"kind\":\"unsupported_effect\",\"effect\":\"server-action\",\"router\":\"pages\",\"attempts\":0}",
+      "storage": {
+        "local": {},
+        "session": {}
+      },
+      "fingerprint": "8897664d728b9f3e749e8492056a1cfc6bc4b840a199fd75d1d9fcdae3c71341",
+      "serverSemanticHash": "a84d6836bac7c054d8aaa4a4a4138850f6757272eef7d19cb42aae0e59a830e3",
+      "routePolicy": "loopback-fixture-only"
+    },
+    {
+      "router": "pages",
+      "caseName": "mismatch",
+      "serverLabel": "server-pages",
+      "hydratedLabel": "client-pages",
+      "hydrationMismatch": true,
+      "hydrationWarningCount": 1,
+      "hydrationMessages": [
+        "Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+      ],
+      "metadata": {
+        "router": "pages",
+        "caseName": "mismatch",
+        "serverLabel": "server-pages",
+        "clientLabel": "client-pages",
+        "serverAction": "unsupported"
+      },
+      "serverActionResult": null,
+      "serverActionDiagnostic": "{\"kind\":\"unsupported_effect\",\"effect\":\"server-action\",\"router\":\"pages\",\"attempts\":0}",
+      "storage": {
+        "local": {},
+        "session": {}
+      },
+      "fingerprint": "303a46d5891de57d18874ddfa19af7176e9a7478e18f5db5a36d2f69f8419bbd",
+      "serverSemanticHash": "798d0a42054f9b47b194e4ba1a93fae84656819e96c7ce14c8961d7353f34c4f",
+      "routePolicy": "loopback-fixture-only"
+    }
+  ],
+  "failures": [
+    {
+      "property": "hydration_warning",
+      "failureClass": "hydration_warning",
+      "router": "app",
+      "caseName": "mismatch",
+      "evidence": {
+        "serverLabel": "server-app",
+        "hydratedLabel": "client-app",
+        "warningCount": 1,
+        "messages": [
+          "Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+        ]
+      },
+      "signature": "0a2876177d6cbdc691c8e3596d9e7885a00713e8b4cc13842b81bb9539deae52",
+      "snapshotHash": "5154e6a14e6f1ea8f485c505f04af9238fc2ae285f638b1f2f097682684bbab0",
+      "replayCount": 2,
+      "browserVersion": "151.0.7922.34"
+    },
+    {
+      "property": "hydration_warning",
+      "failureClass": "hydration_warning",
+      "router": "pages",
+      "caseName": "mismatch",
+      "evidence": {
+        "serverLabel": "server-pages",
+        "hydratedLabel": "client-pages",
+        "warningCount": 1,
+        "messages": [
+          "Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+        ]
+      },
+      "signature": "20f342e7f7ef6c3eabcf76c0dfd3e55eceaf7e8433051016583a253b780913c6",
+      "snapshotHash": "303a46d5891de57d18874ddfa19af7176e9a7478e18f5db5a36d2f69f8419bbd",
+      "replayCount": 2,
+      "browserVersion": "151.0.7922.34"
+    }
+  ],
+  "diagnostics": [
+    {
+      "kind": "server_action_boundary",
+      "router": "app",
+      "policy": "descriptor-only",
+      "externalMutation": false
+    },
+    {
+      "kind": "network_boundary",
+      "policy": "loopback-fixture-only",
+      "blockedRoutes": 1
+    },
+    {
+      "kind": "unsupported_effect",
+      "effect": "server-action",
+      "router": "pages",
+      "attempts": 1
+    }
+  ],
+  "resets": {
+    "app": {
+      "dirtyContext": 7,
+      "cleanContext": 8
+    },
+    "pages": {
+      "dirtyContext": 9,
+      "cleanContext": 10
+    }
+  },
+  "semanticHash": "bacde5ac1b7b6c858b6e9bebb1077cd7a2da7efcca7ea9cdb8122a0ac7b66f39"
+}

@@ -261,3 +261,11 @@ These dependencies are pinned by `web/vue-component/package-lock.json` and are u
 - Playwright 1.62.0 and Playwright Core 1.62.0, Microsoft Corporation, Apache License 2.0.
 
 These packages are pinned by `web/playwright-browser/package-lock.json` and are used only by the isolated Chromium Browser Mode fixture and CI test. The matching browser binary is downloaded by Playwright during local or CI setup and is not included in this repository. Transitive dependency versions are recorded in the lockfile.
+
+## Next.js SSR and hydration test runtime
+
+- Next.js 16.3.0, Vercel, Inc. and contributors, MIT License.
+- React 19.2.8 and React DOM 19.2.8, Meta Platforms, Inc. and affiliates, MIT License.
+- Playwright 1.62.0 and Playwright Core 1.62.0, Microsoft Corporation, Apache License 2.0.
+
+These packages are pinned by `web/next-ssr-hydration/package-lock.json` and are used only by the isolated App Router and Pages Router SSR/hydration fixture. The matching Chromium binary is managed by Playwright and is not included in this repository.

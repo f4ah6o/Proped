@@ -1,0 +1,16 @@
+{
+  "name": "@proped-rabbita/next-ssr-hydration-fixture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "NEXT_TELEMETRY_DISABLED=1 next build --webpack",
+    "test": "node test-next-ssr-hydration.mjs"
+  },
+  "dependencies": {
+    "next": "16.3.0",
+    "playwright": "1.62.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  }
+}

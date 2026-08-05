@@ -1,0 +1,108 @@
+{
+  "ok": true,
+  "framework": "browser",
+  "runtime": "playwright-chromium",
+  "playwrightVersion": "1.62.0",
+  "fixture": "browser-fault-form",
+  "capabilities": {
+    "chromium": true,
+    "ephemeralProfile": true,
+    "networkDeny": true,
+    "serviceWorkersBlocked": true,
+    "downloadsDenied": true,
+    "permissionsDenied": true,
+    "routeSnapshot": true,
+    "focusSnapshot": true,
+    "storageSnapshot": true,
+    "consoleSnapshot": true,
+    "explicitReadiness": true,
+    "freshReplay": true
+  },
+  "actionCount": 28,
+  "benchmark": {
+    "transitions": 128,
+    "distinctStates": 17,
+    "violationCodes": [
+      "duplicate_submit",
+      "stale_response"
+    ],
+    "blockedRoutes": 1
+  },
+  "failures": [
+    {
+      "property": "stale_response",
+      "message": "stale response changed current state",
+      "severity": "error",
+      "evidence": {
+        "generation": 1,
+        "currentGeneration": 2
+      },
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "browser-fault-form",
+        "property": "stale_response",
+        "failureClass": "stale_response",
+        "trace": [
+          "type|searchbox|Search|input=\"a\"",
+          "type|searchbox|Search|input=\"ab\"",
+          "inject|network|Search response|generation=1|query=\"a\""
+        ],
+        "snapshotHash": "ffdee45858f46163675683b0a1cbee93000e407d632f46e6a741e32cb7ddcc40",
+        "seed": 17,
+        "normalizerVersion": "1",
+        "semanticHash": "1691b88b0d8f74c7dd72ccf8435f7b2b0cb7eccfea89c6aa66b6d6af95ac644c"
+      }
+    },
+    {
+      "property": "duplicate_submit",
+      "message": "submit created a duplicate pending effect",
+      "severity": "error",
+      "evidence": {
+        "before": [
+          {
+            "kind": "submit",
+            "key": "submit:Initial",
+            "generation": 1
+          }
+        ],
+        "after": [
+          {
+            "kind": "submit",
+            "key": "submit:Initial",
+            "generation": 2
+          },
+          {
+            "kind": "submit",
+            "key": "submit:Initial",
+            "generation": 1
+          }
+        ]
+      },
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "browser-fault-form",
+        "property": "duplicate_submit",
+        "failureClass": "duplicate_submit",
+        "trace": [
+          "submit|form|Profile",
+          "submit|form|Profile"
+        ],
+        "snapshotHash": "b61ed7b8045904c8e5ee62e24fe0581848c15575cf43e1330b950819cb34ad38",
+        "seed": 17,
+        "normalizerVersion": "1",
+        "semanticHash": "8aa0bbd08a4c0558d25d48b76cd3ab8c3a50a7fcb92f853179532b82eb3d2b07"
+      }
+    },
+    {
+      "property": "invalid_input_preserves_previous_result",
+      "message": "invalid numeric input destroyed the previous valid result",
+      "trace": [
+        "type|spinbutton|Number|within=form:Profile|input=\"invalid\""
+      ],
+      "semanticHash": "e9f7b15d17fec9328b8235c3010f2fa0b46644a972f06fd65ffbc33139c25be2"
+    }
+  ],
+  "replayHash": "ffdee45858f46163675683b0a1cbee93000e407d632f46e6a741e32cb7ddcc40",
+  "diagnostics": [],
+  "semanticHash": "c726f5e4a0ba19cf839bb08d30fdd43cc911b3f8d65932957f3d1852e566add7"
+}

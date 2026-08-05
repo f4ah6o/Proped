@@ -21,3 +21,5 @@ web/react-component/out/
 web/vue-component/out/
 
 protocol/out/
+
+web/playwright-browser/out/

@@ -254,3 +254,10 @@ These dependencies are pinned by `web/react-component/package-lock.json` and are
 - jsdom 29.1.1, jsdom contributors, MIT License.
 
 These dependencies are pinned by `web/vue-component/package-lock.json` and are used only by the isolated Vue Component Mode fixture and CI benchmark. Their transitive dependency versions are recorded in that lockfile.
+
+
+## Playwright Browser Mode test runtime
+
+- Playwright 1.62.0 and Playwright Core 1.62.0, Microsoft Corporation, Apache License 2.0.
+
+These packages are pinned by `web/playwright-browser/package-lock.json` and are used only by the isolated Chromium Browser Mode fixture and CI test. The matching browser binary is downloaded by Playwright during local or CI setup and is not included in this repository. Transitive dependency versions are recorded in the lockfile.

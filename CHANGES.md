@@ -1,5 +1,17 @@
 # Changes
 
+## 0.30.0 - 2026-08-06
+
+### Added
+
+- Added Playwright Browser Mode with a real Chromium context, in-memory fixture routing, semantic action discovery, route/focus/storage/console snapshots, explicit readiness settling, and fresh-context replay.
+- Added a 128-transition bounded browser fixture that retains stale-response, duplicate-submit, and invalid-number-input failures while proving that an external fetch is aborted before network access.
+
+### Changed
+
+- Pinned the CI Node.js runtime to version 22 and added Playwright-managed headless Chromium installation.
+- Bumped the package and CLI version to `0.30.0`.
+
 ## 0.29.0 - 2026-08-06
 
 ### Added

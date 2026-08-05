@@ -1,0 +1,14 @@
+{
+  "name": "@proped-rabbita/playwright-browser-fixture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test-playwright-browser.mjs",
+    "install:chromium": "playwright install chromium",
+    "install:chromium:ci": "playwright install --with-deps --only-shell chromium"
+  },
+  "dependencies": {
+    "playwright": "1.62.0"
+  }
+}

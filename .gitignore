@@ -17,3 +17,5 @@ __pycache__/
 node_modules/
 
 web/react-component/out/
+
+web/vue-component/out/

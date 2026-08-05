@@ -1,5 +1,16 @@
 # Changes
 
+## 0.28.0 - 2026-08-06
+
+### Added
+
+- Added Vue Component Mode with an actual Vue 3.5/Pinia 4/JSDOM fixture, `nextTick` settling, Suspense, Teleport, Pinia state, semantic snapshots, generic properties, replay, shrinking, and Atlas artifacts.
+- Added a 10,000-transition bounded Vue benchmark that retains stale-response, duplicate-submit, and invalid-number-input failures.
+
+### Changed
+
+- Bumped the package and CLI version to `0.28.0`.
+
 ## 0.27.0 - 2026-08-06
 
 ### Added

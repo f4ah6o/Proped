@@ -246,3 +246,11 @@ The upstream Apache License 2.0 text is included at `src/vendor/openseek_desktop
 - jsdom 29.1.1, jsdom contributors, MIT License.
 
 These dependencies are pinned by `web/react-component/package-lock.json` and are used only by the isolated React Component Mode fixture and CI benchmark. Their transitive dependency versions are recorded in that lockfile.
+
+## Vue Component Mode test runtime
+
+- Vue 3.5.41, Evan You and Vue contributors, MIT License.
+- Pinia 4.0.2, Eduardo San Martin Morote and Pinia contributors, MIT License.
+- jsdom 29.1.1, jsdom contributors, MIT License.
+
+These dependencies are pinned by `web/vue-component/package-lock.json` and are used only by the isolated Vue Component Mode fixture and CI benchmark. Their transitive dependency versions are recorded in that lockfile.

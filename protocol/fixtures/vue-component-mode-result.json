@@ -1,0 +1,105 @@
+{
+  "ok": true,
+  "framework": "vue",
+  "runtime": "component",
+  "actionCount": 23,
+  "corpus": [
+    " ",
+    "",
+    "😀",
+    "a",
+    "ab",
+    "invalid"
+  ],
+  "boundaries": {
+    "nextTick": true,
+    "suspense": true,
+    "teleport": true,
+    "pinia": true
+  },
+  "benchmark": {
+    "transitions": 10000,
+    "distinctStates": 9838,
+    "violationCodes": [
+      "duplicate_submit",
+      "stale_response"
+    ]
+  },
+  "failures": [
+    {
+      "property": "stale_response",
+      "message": "stale response changed current state",
+      "severity": "error",
+      "evidence": {
+        "generation": 1,
+        "currentGeneration": 2
+      },
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "vue-fault-form",
+        "property": "stale_response",
+        "failureClass": "stale_response",
+        "trace": [
+          "type|searchbox|Search|within=form:Profile|input=\"a\"",
+          "type|searchbox|Search|within=form:Profile|input=\"ab\"",
+          "inject|network|Search response|generation=1|query=\"a\""
+        ],
+        "snapshotHash": "1e27de8ee5c3d2d9f10f54dfd8df00deaee4b8eaac612748d72deaa81dd209db",
+        "seed": 7,
+        "normalizerVersion": "1",
+        "semanticHash": "cc8fb0c436a2aa265088ddd8acd496078421a1f8987b5c2be30d63991844456c"
+      }
+    },
+    {
+      "property": "duplicate_submit",
+      "message": "submit created a duplicate pending effect",
+      "severity": "error",
+      "evidence": {
+        "before": [
+          {
+            "kind": "submit",
+            "key": "submit:",
+            "generation": 1
+          }
+        ],
+        "after": [
+          {
+            "kind": "submit",
+            "key": "submit:",
+            "generation": 1
+          },
+          {
+            "kind": "submit",
+            "key": "submit:",
+            "generation": 2
+          }
+        ]
+      },
+      "signature": {
+        "protocolVersion": "1.0",
+        "fixture": "vue-fault-form",
+        "property": "duplicate_submit",
+        "failureClass": "duplicate_submit",
+        "trace": [
+          "submit|form|Profile",
+          "submit|form|Profile"
+        ],
+        "snapshotHash": "592ee8d28aa666c405013a4643677a14b176e8323e3c481841a9c9ea4cd276bd",
+        "seed": 7,
+        "normalizerVersion": "1",
+        "semanticHash": "62cf81ea0d82577ac905d8f3c3e56cf54bb45cd770b4784e7e4804c8d0364d43"
+      }
+    },
+    {
+      "property": "invalid_input_preserves_previous_result",
+      "message": "invalid numeric input destroyed the previous valid result",
+      "trace": [
+        "type|spinbutton|Number|within=form:Profile|input=\"invalid\""
+      ],
+      "semanticHash": "40be503c25d1122f9918713e1196b93d6090a72193297ed72a2f8e9f9d16eecc"
+    }
+  ],
+  "replayHash": "1e27de8ee5c3d2d9f10f54dfd8df00deaee4b8eaac612748d72deaa81dd209db",
+  "diagnostics": [],
+  "semanticHash": "b62da8104a0deba511f5221a7546aeaafa51dedadc832489e9dfc72346fa7b5d"
+}

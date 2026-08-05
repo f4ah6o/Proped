@@ -62,6 +62,11 @@ jobs:
           npm ci --prefix web/react-component --ignore-scripts
           npm test --prefix web/react-component
 
+      - name: Vue Component Mode
+        run: |
+          npm ci --prefix web/vue-component --ignore-scripts
+          npm test --prefix web/vue-component
+
       - name: Format check
         run: moon fmt --check
 
@@ -146,7 +151,7 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.27.0'
+          assert schema['version'] == '0.28.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(

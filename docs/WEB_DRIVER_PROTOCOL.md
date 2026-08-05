@@ -72,3 +72,9 @@ Drivers provide semantic element records rather than CSS selectors. The v1 disco
 `web/react-component/` mounts a real React 19 component into an isolated JSDOM document. The adapter discovers actions from role, accessible name, label, and form scope; executes native DOM input, click, and submit events inside React `act`; and records semantic snapshots after bounded microtask settling. Network and submit completion are deterministic injected effect descriptors. No real network or external write is performed.
 
 The committed fixture explores 10,000 transitions and retains three signatures: stale search response in three actions, duplicate submit in two actions, and invalid numeric input destroying the previous result in one action. Generated `atlas.html`, `atlas.json`, `atlas.svg`, `atlas.dot`, and `summary.json` are written below the ignored `web/react-component/out/` directory.
+
+## Vue Component Mode
+
+`web/vue-component/` mounts a real Vue 3.5 component with a fresh Pinia store into an isolated JSDOM document. The adapter settles through bounded `nextTick` and microtask drains, observes a resolved Suspense boundary, includes Teleport output in the semantic snapshot, and verifies Pinia-backed form state. Network and submit completion remain deterministic effect descriptors; no external mutation is performed.
+
+The committed fixture explores 10,000 transitions and retains the same cross-framework signatures as React Component Mode: stale search response, duplicate submit, and invalid numeric input destroying the previous result. Generated Atlas artifacts are written below the ignored `web/vue-component/out/` directory.

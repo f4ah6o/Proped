@@ -1,5 +1,16 @@
 # Changes
 
+## 0.31.0 - 2026-08-06
+
+### Added
+
+- Added Component Mode to Browser Mode replay with stable action ID parsing, exact-first mapping, unique scope relaxation, fresh Chromium fixture replay, and cross-runtime failure signatures.
+- Added six bounded replays covering React and Vue stale-response, duplicate-submit, and invalid-number failures, plus fail-closed diagnostics for metadata mismatch, missing actions, and ambiguous mappings.
+
+### Changed
+
+- Bumped the package and CLI version to `0.31.0`.
+
 ## 0.30.0 - 2026-08-06
 
 ### Added

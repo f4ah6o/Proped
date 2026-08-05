@@ -1,0 +1,338 @@
+{
+  "ok": true,
+  "schemaVersion": 1,
+  "sources": [
+    "react-component",
+    "vue-component"
+  ],
+  "target": "playwright-chromium",
+  "fixtureContract": "fault-form-v1",
+  "metadata": {
+    "protocolVersion": "1.0",
+    "normalizerVersion": "1",
+    "actionIdentityVersion": "1",
+    "targetRuntimeVersion": "1.62.0"
+  },
+  "replayPolicy": {
+    "freshTargetFixture": true,
+    "replayCountPerFailure": 2,
+    "exactMatchPreferred": true,
+    "uniqueScopeRelaxation": true,
+    "ambiguousAction": "deny",
+    "missingAction": "deny",
+    "metadataMismatch": "deny",
+    "externalEffects": "deny-or-descriptor"
+  },
+  "replays": [
+    {
+      "framework": "react",
+      "property": "stale_response",
+      "failureClass": "stale_response",
+      "sourceTrace": [
+        "type|searchbox|Search|within=form:Profile|input=\"a\"",
+        "type|searchbox|Search|within=form:Profile|input=\"ab\"",
+        "inject|network|Search response|generation=1|query=\"a\""
+      ],
+      "sourceSignature": "48cb1d60c13a05f3949848d8f3a799dfa4975cf83ead300da6a0842713b49d50",
+      "targetTrace": [
+        "type|searchbox|Search|input=\"a\"",
+        "type|searchbox|Search|input=\"ab\"",
+        "inject|network|Search response|generation=1|query=\"a\""
+      ],
+      "mappings": [
+        {
+          "sourceId": "type|searchbox|Search|within=form:Profile|input=\"a\"",
+          "targetId": "type|searchbox|Search|input=\"a\"",
+          "mapping": "target-scope-omitted",
+          "evidence": {
+            "sourceWithin": [
+              "form:Profile"
+            ],
+            "targetWithin": []
+          }
+        },
+        {
+          "sourceId": "type|searchbox|Search|within=form:Profile|input=\"ab\"",
+          "targetId": "type|searchbox|Search|input=\"ab\"",
+          "mapping": "target-scope-omitted",
+          "evidence": {
+            "sourceWithin": [
+              "form:Profile"
+            ],
+            "targetWithin": []
+          }
+        },
+        {
+          "sourceId": "inject|network|Search response|generation=1|query=\"a\"",
+          "targetId": "inject|network|Search response|generation=1|query=\"a\"",
+          "mapping": "exact",
+          "evidence": {
+            "sourceWithin": [],
+            "targetWithin": []
+          }
+        }
+      ],
+      "finalSnapshotHash": "ffdee45858f46163675683b0a1cbee93000e407d632f46e6a741e32cb7ddcc40",
+      "targetRuntime": {
+        "name": "chromium",
+        "version": "151.0.7922.34",
+        "ephemeralProfile": true,
+        "serviceWorkers": "block",
+        "networkPolicy": "deny-except-memory-fixture"
+      },
+      "signature": "ba4a92c728d2a8f9281510df592b7d9e7da28d2178855bdeaad82a8b372f0c1a",
+      "crossModeSemanticHash": "2f564a9bf9b9e50a6e736670632d5fa50b552de361ce78174933a7b94fb62356"
+    },
+    {
+      "framework": "react",
+      "property": "duplicate_submit",
+      "failureClass": "duplicate_submit",
+      "sourceTrace": [
+        "submit|form|Profile",
+        "submit|form|Profile"
+      ],
+      "sourceSignature": "c317bc11b082dcb3f8ece51e7ccf91e11d7685f06d3ea22ff9ace5c25aab9c71",
+      "targetTrace": [
+        "submit|form|Profile",
+        "submit|form|Profile"
+      ],
+      "mappings": [
+        {
+          "sourceId": "submit|form|Profile",
+          "targetId": "submit|form|Profile",
+          "mapping": "exact",
+          "evidence": {
+            "sourceWithin": [],
+            "targetWithin": []
+          }
+        },
+        {
+          "sourceId": "submit|form|Profile",
+          "targetId": "submit|form|Profile",
+          "mapping": "exact",
+          "evidence": {
+            "sourceWithin": [],
+            "targetWithin": []
+          }
+        }
+      ],
+      "finalSnapshotHash": "b61ed7b8045904c8e5ee62e24fe0581848c15575cf43e1330b950819cb34ad38",
+      "targetRuntime": {
+        "name": "chromium",
+        "version": "151.0.7922.34",
+        "ephemeralProfile": true,
+        "serviceWorkers": "block",
+        "networkPolicy": "deny-except-memory-fixture"
+      },
+      "signature": "da540b73d406061775e5a17b674d77a9ed135736e2594fff7ec0ce44b47487be",
+      "crossModeSemanticHash": "b83f57de359c6cde4ae60f0badc08a7027b706c815f762630a3911ee4edb6e30"
+    },
+    {
+      "framework": "react",
+      "property": "invalid_input_preserves_previous_result",
+      "failureClass": "invalid_input_preserves_previous_result",
+      "sourceTrace": [
+        "type|spinbutton|Number|within=form:Profile|input=\"invalid\""
+      ],
+      "sourceSignature": "70c1570151d0b5da5e0db9606b64d81e187b10df67bc0db1271095ab07de8448",
+      "targetTrace": [
+        "type|spinbutton|Number|within=form:Profile|input=\"invalid\""
+      ],
+      "mappings": [
+        {
+          "sourceId": "type|spinbutton|Number|within=form:Profile|input=\"invalid\"",
+          "targetId": "type|spinbutton|Number|within=form:Profile|input=\"invalid\"",
+          "mapping": "exact",
+          "evidence": {
+            "sourceWithin": [
+              "form:Profile"
+            ],
+            "targetWithin": [
+              "form:Profile"
+            ]
+          }
+        }
+      ],
+      "finalSnapshotHash": "6149b1d634a5a5f8d63b05e76cbe7273e8519ddcb645df7c8065ff7b440a386a",
+      "targetRuntime": {
+        "name": "chromium",
+        "version": "151.0.7922.34",
+        "ephemeralProfile": true,
+        "serviceWorkers": "block",
+        "networkPolicy": "deny-except-memory-fixture"
+      },
+      "signature": "fc0720891a5742959f7751983f7b1b364c8455c39bf5d6da69a51ebf9a56ecc9",
+      "crossModeSemanticHash": "88c8e5ba4d32f36a55097a8bdb8a17dcf031b4e4f6e2b12cabed4537715b3c60"
+    },
+    {
+      "framework": "vue",
+      "property": "stale_response",
+      "failureClass": "stale_response",
+      "sourceTrace": [
+        "type|searchbox|Search|within=form:Profile|input=\"a\"",
+        "type|searchbox|Search|within=form:Profile|input=\"ab\"",
+        "inject|network|Search response|generation=1|query=\"a\""
+      ],
+      "sourceSignature": "cc8fb0c436a2aa265088ddd8acd496078421a1f8987b5c2be30d63991844456c",
+      "targetTrace": [
+        "type|searchbox|Search|input=\"a\"",
+        "type|searchbox|Search|input=\"ab\"",
+        "inject|network|Search response|generation=1|query=\"a\""
+      ],
+      "mappings": [
+        {
+          "sourceId": "type|searchbox|Search|within=form:Profile|input=\"a\"",
+          "targetId": "type|searchbox|Search|input=\"a\"",
+          "mapping": "target-scope-omitted",
+          "evidence": {
+            "sourceWithin": [
+              "form:Profile"
+            ],
+            "targetWithin": []
+          }
+        },
+        {
+          "sourceId": "type|searchbox|Search|within=form:Profile|input=\"ab\"",
+          "targetId": "type|searchbox|Search|input=\"ab\"",
+          "mapping": "target-scope-omitted",
+          "evidence": {
+            "sourceWithin": [
+              "form:Profile"
+            ],
+            "targetWithin": []
+          }
+        },
+        {
+          "sourceId": "inject|network|Search response|generation=1|query=\"a\"",
+          "targetId": "inject|network|Search response|generation=1|query=\"a\"",
+          "mapping": "exact",
+          "evidence": {
+            "sourceWithin": [],
+            "targetWithin": []
+          }
+        }
+      ],
+      "finalSnapshotHash": "ffdee45858f46163675683b0a1cbee93000e407d632f46e6a741e32cb7ddcc40",
+      "targetRuntime": {
+        "name": "chromium",
+        "version": "151.0.7922.34",
+        "ephemeralProfile": true,
+        "serviceWorkers": "block",
+        "networkPolicy": "deny-except-memory-fixture"
+      },
+      "signature": "ba4a92c728d2a8f9281510df592b7d9e7da28d2178855bdeaad82a8b372f0c1a",
+      "crossModeSemanticHash": "c3ef2b608a63d74133e677bb9a0fcc8f6185a096cddcd21befb67a373e271904"
+    },
+    {
+      "framework": "vue",
+      "property": "duplicate_submit",
+      "failureClass": "duplicate_submit",
+      "sourceTrace": [
+        "submit|form|Profile",
+        "submit|form|Profile"
+      ],
+      "sourceSignature": "62cf81ea0d82577ac905d8f3c3e56cf54bb45cd770b4784e7e4804c8d0364d43",
+      "targetTrace": [
+        "submit|form|Profile",
+        "submit|form|Profile"
+      ],
+      "mappings": [
+        {
+          "sourceId": "submit|form|Profile",
+          "targetId": "submit|form|Profile",
+          "mapping": "exact",
+          "evidence": {
+            "sourceWithin": [],
+            "targetWithin": []
+          }
+        },
+        {
+          "sourceId": "submit|form|Profile",
+          "targetId": "submit|form|Profile",
+          "mapping": "exact",
+          "evidence": {
+            "sourceWithin": [],
+            "targetWithin": []
+          }
+        }
+      ],
+      "finalSnapshotHash": "b61ed7b8045904c8e5ee62e24fe0581848c15575cf43e1330b950819cb34ad38",
+      "targetRuntime": {
+        "name": "chromium",
+        "version": "151.0.7922.34",
+        "ephemeralProfile": true,
+        "serviceWorkers": "block",
+        "networkPolicy": "deny-except-memory-fixture"
+      },
+      "signature": "da540b73d406061775e5a17b674d77a9ed135736e2594fff7ec0ce44b47487be",
+      "crossModeSemanticHash": "c41af3a0d35f4933743442e83830bc749d08dfb09a22a9b2b61b3f73f4cee63c"
+    },
+    {
+      "framework": "vue",
+      "property": "invalid_input_preserves_previous_result",
+      "failureClass": "invalid_input_preserves_previous_result",
+      "sourceTrace": [
+        "type|spinbutton|Number|within=form:Profile|input=\"invalid\""
+      ],
+      "sourceSignature": "40be503c25d1122f9918713e1196b93d6090a72193297ed72a2f8e9f9d16eecc",
+      "targetTrace": [
+        "type|spinbutton|Number|within=form:Profile|input=\"invalid\""
+      ],
+      "mappings": [
+        {
+          "sourceId": "type|spinbutton|Number|within=form:Profile|input=\"invalid\"",
+          "targetId": "type|spinbutton|Number|within=form:Profile|input=\"invalid\"",
+          "mapping": "exact",
+          "evidence": {
+            "sourceWithin": [
+              "form:Profile"
+            ],
+            "targetWithin": [
+              "form:Profile"
+            ]
+          }
+        }
+      ],
+      "finalSnapshotHash": "6149b1d634a5a5f8d63b05e76cbe7273e8519ddcb645df7c8065ff7b440a386a",
+      "targetRuntime": {
+        "name": "chromium",
+        "version": "151.0.7922.34",
+        "ephemeralProfile": true,
+        "serviceWorkers": "block",
+        "networkPolicy": "deny-except-memory-fixture"
+      },
+      "signature": "fc0720891a5742959f7751983f7b1b364c8455c39bf5d6da69a51ebf9a56ecc9",
+      "crossModeSemanticHash": "b95c1c951a6c9a04e4b7f0fbea3ce24e379b796aa7d727e3410d69e5fbddc514"
+    }
+  ],
+  "failClosedDiagnostics": [
+    {
+      "kind": "runtime_metadata_mismatch",
+      "field": "normalizerVersion",
+      "source": "1",
+      "target": "2",
+      "message": "normalizerVersion must match before cross-mode replay"
+    },
+    {
+      "kind": "missing_cross_mode_action",
+      "sourceId": "click|button|Missing",
+      "source": {
+        "kind": "click",
+        "role": "button",
+        "name": "Missing",
+        "attributes": {}
+      },
+      "message": "no compatible Browser Mode action exists for the Component Mode action"
+    },
+    {
+      "kind": "ambiguous_cross_mode_action",
+      "sourceId": "type|searchbox|Search|within=form:Profile|input=\"a\"",
+      "candidates": [
+        "type|searchbox|Search|input=\"a\"",
+        "type|searchbox|Search|input=\"a\""
+      ],
+      "message": "relaxed semantic action matching is ambiguous"
+    }
+  ],
+  "semanticHash": "ef3f7a3a1b1e312e591598d1d83672d40d36706222716c11579af5dfee26ba6d"
+}

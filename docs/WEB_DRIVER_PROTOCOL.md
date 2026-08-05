@@ -51,3 +51,9 @@ The bounded fixture host is `scripts/web_driver_protocol_host.mjs`. It models ne
 ## Native core host
 
 `scripts/web_native_jsonl_host.mjs` keeps JSONL, timeout, cleanup, and error mapping in Node while delegating bounded exploration and fresh-fixture replay to `src/web_native_host`, which uses the existing MoonBit Proped core. Driver-owned DOM action execution remains outside the native host; unsupported `execute` calls fail closed.
+
+## DOM semantic snapshot v1
+
+`protocol/dom-semantic-snapshot.mjs` normalizes framework-generated IDs, timestamps, random tokens, attribute order, form values, focus identity, relevant storage, pending effect descriptors, and optional application state. The fingerprint includes semantic state but excludes unstable request IDs and build/runtime noise. Full DOM is represented as a normalized semantic tree rather than a framework-private Fiber or VNode graph.
+
+When two observations claim the same fingerprint but differ in semantic DOM, form, focus, storage, pending work, or application state, `compareSnapshotIdentity` emits `state_identity_collision` evidence. Screenshot pixels, layout geometry, animation progress, cross-origin frame contents, and closed shadow roots are unsupported inputs and must be handled by a browser-specific diagnostic.

@@ -1,5 +1,16 @@
 # Changes
 
+## 0.24.0 - 2026-08-05
+
+### Added
+
+- Added framework-neutral semantic DOM snapshot normalization with stable fingerprints for URL, forms, focus, storage, pending effects, and optional application state.
+- Added machine-readable state identity collision evidence and a bounded normalization fixture covering unstable framework IDs, timestamps, request IDs, and random tokens.
+
+### Changed
+
+- Bumped the package and CLI version to `0.24.0`.
+
 ## 0.23.0 - 2026-08-05
 
 ### Added

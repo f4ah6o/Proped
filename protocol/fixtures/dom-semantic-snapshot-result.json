@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "normalizerVersion": "1",
+  "fingerprint": "5e16d58668b3ae0d8dfede680e27840d9a764af20e67440be8ecd526f092be20",
+  "semanticDomHash": "a76643698be63e335db6ffdd5a918f23f0d9a409c00a7229a13d0df29309a60d",
+  "stableAcrossUnstableIds": true,
+  "collision": {
+    "kind": "state_identity_collision",
+    "fingerprint": "5e16d58668b3ae0d8dfede680e27840d9a764af20e67440be8ecd526f092be20",
+    "evidence": {
+      "semanticDomHash": {
+        "previous": "a76643698be63e335db6ffdd5a918f23f0d9a409c00a7229a13d0df29309a60d",
+        "next": "97483e844717440b2f7cea33627256c0ea005c0cf0552474c48a8b6254cca049"
+      },
+      "forms": {
+        "previous": [
+          {
+            "identity": {
+              "role": "textbox",
+              "name": "Search"
+            },
+            "value": "moon",
+            "checked": false,
+            "selected": []
+          }
+        ],
+        "next": [
+          {
+            "identity": {
+              "role": "textbox",
+              "name": "Search"
+            },
+            "value": "new",
+            "checked": false,
+            "selected": []
+          }
+        ]
+      },
+      "applicationState": {
+        "previous": {
+          "query": "moon",
+          "revision": 2
+        },
+        "next": {
+          "query": "new",
+          "revision": 3
+        }
+      }
+    }
+  }
+}

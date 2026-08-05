@@ -138,7 +138,7 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.23.0'
+          assert schema['version'] == '0.24.0'
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(

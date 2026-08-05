@@ -47,3 +47,7 @@ Network is denied by default. External repositories are read-only. Mail, payment
 The executable protocol implementation lives in `protocol/ui-driver-v1.mjs` and `protocol/jsonl-server.mjs`. The server rejects unknown fields, unsupported versions, duplicate request IDs, non-negotiated calls, disposed-session calls, and bounded-operation timeouts. Error responses use stable machine-readable codes.
 
 The bounded fixture host is `scripts/web_driver_protocol_host.mjs`. It models network work as descriptors and explicitly reports real network, filesystem writes, mail, payment, cloud mutation, and native bridges as unsupported effects. `scripts/test_web_driver_protocol.mjs` validates negotiation, malformed requests, replay signatures, timeout mapping, disposal, shutdown, and real JSONL child-process transport.
+
+## Native core host
+
+`scripts/web_native_jsonl_host.mjs` keeps JSONL, timeout, cleanup, and error mapping in Node while delegating bounded exploration and fresh-fixture replay to `src/web_native_host`, which uses the existing MoonBit Proped core. Driver-owned DOM action execution remains outside the native host; unsupported `execute` calls fail closed.

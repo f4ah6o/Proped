@@ -1,5 +1,16 @@
 # Changes
 
+## 0.23.0 - 2026-08-05
+
+### Added
+
+- Added a MoonBit-native bounded stale-search machine and a Node JSONL host that delegates exploration and replay to the existing Proped core.
+- Added timeout, process cleanup, disposed-session handling, unsupported-effect mapping, and deterministic replay signatures.
+
+### Changed
+
+- Bumped the package and CLI version to `0.23.0`.
+
 ## 0.22.0 - 2026-08-05
 
 ### Added

@@ -1,0 +1,1 @@
+{"ok":true,"fixture":"stale-search","states":42,"transitions":119,"failures":1,"diagnostics":0,"property":"search results match latest query","message":"stale search response replaced latest query results","trace":["type:a","type:ab","deliver:1"]}

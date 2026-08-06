@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/f4ah6o/Proped-Rabbita/external/schema/web-dogfood-manifest.schema.json",
+  "title": "Proped Rabbita external Web dogfood target",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "framework",
+    "repository",
+    "revision",
+    "release",
+    "license",
+    "source",
+    "adapter",
+    "bounds",
+    "expected",
+    "upstreamWritePolicy"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "framework": {
+      "enum": ["react", "vue", "next", "nuxt"]
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "release": {
+      "type": "string",
+      "minLength": 1
+    },
+    "license": {
+      "enum": ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["upstreamPath", "snapshotPath", "snapshotKind", "sha256"],
+      "properties": {
+        "upstreamPath": { "type": "string", "minLength": 1 },
+        "snapshotPath": { "type": "string", "minLength": 1 },
+        "snapshotKind": { "const": "reviewed-reduced-boundary" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "runtime", "boundary", "unsupportedEffects"],
+      "properties": {
+        "kind": { "enum": ["counter", "static-render"] },
+        "runtime": { "enum": ["component", "ssr"] },
+        "boundary": { "type": "string", "minLength": 1 },
+        "unsupportedEffects": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxStates", "maxTransitions", "timeoutMs"],
+      "properties": {
+        "maxStates": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "maxTransitions": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 60000 }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "propertyCoverage"],
+      "properties": {
+        "outcome": { "const": "zero-failure" },
+        "propertyCoverage": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "upstreamWritePolicy": { "const": "read-only" }
+  }
+}

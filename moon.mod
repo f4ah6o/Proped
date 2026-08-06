@@ -1,6 +1,6 @@
 name = "f4ah6o/proped-rabbita"
 
-version = "0.33.0"
+version = "0.35.0"
 
 source = "src"
 

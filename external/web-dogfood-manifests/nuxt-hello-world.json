@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "nuxt-hello-world",
+  "framework": "nuxt",
+  "repository": "nuxt/nuxt",
+  "revision": "2bfc2c87a6f3bb9b17b4b6a2e9c117ef06b278d4",
+  "release": "v4.4.8",
+  "license": "MIT",
+  "source": {
+    "upstreamPath": "docs/getting-started hello-world app.vue boundary",
+    "snapshotPath": "external/web-dogfood-sources/nuxt-hello-world.vue",
+    "snapshotKind": "reviewed-reduced-boundary",
+    "sha256": "a32ccf65f2cff1c0eb8e796e5b1141f37bdb0065c59451187ce3100a90ad89c3"
+  },
+  "adapter": {
+    "kind": "static-render",
+    "runtime": "ssr",
+    "boundary": "Nuxt static semantic SSR render; Nitro, hydration scheduling, routing, async data, and server routes are excluded.",
+    "unsupportedEffects": [
+      "Nitro server execution",
+      "client hydration scheduling",
+      "route navigation",
+      "async data",
+      "server routes",
+      "asset processing"
+    ]
+  },
+  "bounds": {
+    "maxStates": 1,
+    "maxTransitions": 0,
+    "timeoutMs": 1000
+  },
+  "expected": {
+    "outcome": "zero-failure",
+    "propertyCoverage": [
+      "deterministic_replay",
+      "semantic_render_stability",
+      "unhandled_exception",
+      "pending_effect_leak"
+    ]
+  },
+  "upstreamWritePolicy": "read-only"
+}

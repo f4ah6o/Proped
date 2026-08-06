@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "vite-react-counter",
+  "framework": "react",
+  "repository": "vitejs/vite",
+  "revision": "843a47da6b93dbd3ce28c4ffae33a8ef338c6f05",
+  "release": "create-vite@9.1.2",
+  "license": "MIT",
+  "source": {
+    "upstreamPath": "packages/create-vite/template-react/src/App.jsx",
+    "snapshotPath": "external/web-dogfood-sources/vite-react-counter.jsx",
+    "snapshotKind": "reviewed-reduced-boundary",
+    "sha256": "855048227c02c05f49c55d7d142cec70850f80eb370611cf01fa0d850ac2a7c2"
+  },
+  "adapter": {
+    "kind": "counter",
+    "runtime": "component",
+    "boundary": "React state and accessible counter button; assets, styling, HMR, and dev-server behavior are excluded.",
+    "unsupportedEffects": [
+      "asset loading",
+      "CSS rendering",
+      "development HMR",
+      "browser navigation"
+    ]
+  },
+  "bounds": {
+    "maxStates": 5,
+    "maxTransitions": 4,
+    "timeoutMs": 1000
+  },
+  "expected": {
+    "outcome": "zero-failure",
+    "propertyCoverage": [
+      "deterministic_replay",
+      "stable_action_identity",
+      "unhandled_exception",
+      "pending_effect_leak"
+    ]
+  },
+  "upstreamWritePolicy": "read-only"
+}

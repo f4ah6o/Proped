@@ -1,5 +1,27 @@
 # Changes
 
+## 0.35.0 - 2026-08-06
+
+### Added
+
+- Added a manifest-driven external React, Vue, Next.js, and Nuxt dogfood campaign with pinned permissive-license revisions, reviewed reduced source boundaries, SHA-256 verification, finite exploration, deterministic replay signatures, and generated Atlas artifacts.
+- Added explicit descriptor-only diagnostics for unsupported framework effects and a committed zero-failure golden report covering four targets without upstream writes.
+
+### Changed
+
+- Bumped the package and CLI version to `0.35.0`.
+
+## 0.34.0 - 2026-08-06
+
+### Added
+
+- Added a framework-neutral Web mutation benchmark covering all eight generic Web properties with synthetic faulty runtimes and paired healthy controls.
+- Added deletion shrinking, fresh replay signatures, mutation score, false-positive rate, bounded throughput measurement, machine-readable fixtures, and generated Atlas artifacts.
+
+### Changed
+
+- Bumped the package and CLI version to `0.34.0`.
+
 ## 0.33.0 - 2026-08-06
 
 ### Added

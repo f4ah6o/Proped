@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "next-hello-world",
+  "framework": "next",
+  "repository": "vercel/next.js",
+  "revision": "d73f5622e226358dcef8cf7a8a373333ff265ae7",
+  "release": "v16.3.0",
+  "license": "MIT",
+  "source": {
+    "upstreamPath": "examples/hello-world/app/page.tsx",
+    "snapshotPath": "external/web-dogfood-sources/next-hello-world.tsx",
+    "snapshotKind": "reviewed-reduced-boundary",
+    "sha256": "0efff55e55180a842e104379cf030edf60cecacabebd0e5dd238a3995051146a"
+  },
+  "adapter": {
+    "kind": "static-render",
+    "runtime": "ssr",
+    "boundary": "App Router static semantic render; bundling, React Server Component transport, routing, and server actions are excluded.",
+    "unsupportedEffects": [
+      "React Server Component transport",
+      "server actions",
+      "route navigation",
+      "network fetch",
+      "asset optimization"
+    ]
+  },
+  "bounds": {
+    "maxStates": 1,
+    "maxTransitions": 0,
+    "timeoutMs": 1000
+  },
+  "expected": {
+    "outcome": "zero-failure",
+    "propertyCoverage": [
+      "deterministic_replay",
+      "semantic_render_stability",
+      "unhandled_exception",
+      "pending_effect_leak"
+    ]
+  },
+  "upstreamWritePolicy": "read-only"
+}

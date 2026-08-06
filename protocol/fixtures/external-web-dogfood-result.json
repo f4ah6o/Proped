@@ -1,0 +1,468 @@
+{
+  "ok": true,
+  "schemaVersion": 1,
+  "campaign": "external-web-dogfood",
+  "sourceOfTruth": "protocol/external-web-dogfood.mjs",
+  "targetCount": 4,
+  "zeroFailureCount": 4,
+  "failureCount": 0,
+  "upstreamWritesPerformed": 0,
+  "targets": [
+    {
+      "id": "next-hello-world",
+      "framework": "next",
+      "repository": "vercel/next.js",
+      "revision": "d73f5622e226358dcef8cf7a8a373333ff265ae7",
+      "release": "v16.3.0",
+      "license": "MIT",
+      "upstreamWritePolicy": "read-only",
+      "source": {
+        "upstreamPath": "examples/hello-world/app/page.tsx",
+        "snapshotPath": "external/web-dogfood-sources/next-hello-world.tsx",
+        "snapshotKind": "reviewed-reduced-boundary",
+        "sha256": "0efff55e55180a842e104379cf030edf60cecacabebd0e5dd238a3995051146a",
+        "verified": true
+      },
+      "adapter": {
+        "kind": "static-render",
+        "runtime": "ssr",
+        "boundary": "App Router static semantic render; bundling, React Server Component transport, routing, and server actions are excluded.",
+        "unsupportedEffects": [
+          "React Server Component transport",
+          "server actions",
+          "route navigation",
+          "network fetch",
+          "asset optimization"
+        ]
+      },
+      "bounds": {
+        "maxStates": 1,
+        "maxTransitions": 0,
+        "timeoutMs": 1000
+      },
+      "exploration": {
+        "states": 1,
+        "transitions": 0,
+        "frontierExhausted": true,
+        "stateFingerprints": [
+          "05d5db71c7e93cc5820527b8f657b2f7fb5d11f3a6de252ee7e1992de6f737af"
+        ],
+        "transitionGraph": []
+      },
+      "properties": [
+        {
+          "property": "deterministic_replay",
+          "status": "pass"
+        },
+        {
+          "property": "semantic_render_stability",
+          "status": "pass"
+        },
+        {
+          "property": "unhandled_exception",
+          "status": "pass"
+        },
+        {
+          "property": "pending_effect_leak",
+          "status": "pass"
+        }
+      ],
+      "failures": [],
+      "diagnostics": [
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "React Server Component transport",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "server actions",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "route navigation",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "network fetch",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "asset optimization",
+          "policy": "descriptor-only"
+        }
+      ],
+      "replay": {
+        "trace": [],
+        "deterministic": true,
+        "finalFingerprint": "05d5db71c7e93cc5820527b8f657b2f7fb5d11f3a6de252ee7e1992de6f737af",
+        "signature": "e5e0b18ccd8a1e6d253261642823370dfad655b972c00a460dcb54e2beb30a8d"
+      },
+      "zeroFailureReason": "All properties covered by the reviewed finite boundary passed; excluded effects remain explicit descriptor-only diagnostics.",
+      "semanticHash": "31b8251add16a8f5b21ddf2cb45d79a577249fa4e3aa6b5259fee72bf6e5380e"
+    },
+    {
+      "id": "nuxt-hello-world",
+      "framework": "nuxt",
+      "repository": "nuxt/nuxt",
+      "revision": "2bfc2c87a6f3bb9b17b4b6a2e9c117ef06b278d4",
+      "release": "v4.4.8",
+      "license": "MIT",
+      "upstreamWritePolicy": "read-only",
+      "source": {
+        "upstreamPath": "docs/getting-started hello-world app.vue boundary",
+        "snapshotPath": "external/web-dogfood-sources/nuxt-hello-world.vue",
+        "snapshotKind": "reviewed-reduced-boundary",
+        "sha256": "a32ccf65f2cff1c0eb8e796e5b1141f37bdb0065c59451187ce3100a90ad89c3",
+        "verified": true
+      },
+      "adapter": {
+        "kind": "static-render",
+        "runtime": "ssr",
+        "boundary": "Nuxt static semantic SSR render; Nitro, hydration scheduling, routing, async data, and server routes are excluded.",
+        "unsupportedEffects": [
+          "Nitro server execution",
+          "client hydration scheduling",
+          "route navigation",
+          "async data",
+          "server routes",
+          "asset processing"
+        ]
+      },
+      "bounds": {
+        "maxStates": 1,
+        "maxTransitions": 0,
+        "timeoutMs": 1000
+      },
+      "exploration": {
+        "states": 1,
+        "transitions": 0,
+        "frontierExhausted": true,
+        "stateFingerprints": [
+          "cd5a46cf8ea375a482afd0220c2cb4d3dfdc1c212e0c3445bfaa841d085f9821"
+        ],
+        "transitionGraph": []
+      },
+      "properties": [
+        {
+          "property": "deterministic_replay",
+          "status": "pass"
+        },
+        {
+          "property": "semantic_render_stability",
+          "status": "pass"
+        },
+        {
+          "property": "unhandled_exception",
+          "status": "pass"
+        },
+        {
+          "property": "pending_effect_leak",
+          "status": "pass"
+        }
+      ],
+      "failures": [],
+      "diagnostics": [
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "Nitro server execution",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "client hydration scheduling",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "route navigation",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "async data",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "server routes",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "asset processing",
+          "policy": "descriptor-only"
+        }
+      ],
+      "replay": {
+        "trace": [],
+        "deterministic": true,
+        "finalFingerprint": "cd5a46cf8ea375a482afd0220c2cb4d3dfdc1c212e0c3445bfaa841d085f9821",
+        "signature": "aa2ffd0666c3e172c76d7eeb26432d022d4d407fb5441ec32036f29c0b9e3e6f"
+      },
+      "zeroFailureReason": "All properties covered by the reviewed finite boundary passed; excluded effects remain explicit descriptor-only diagnostics.",
+      "semanticHash": "6aa030121840e7b8f539dc5b22e21d7b1bcdd6bb92ea7dd2cc6f1313205a0962"
+    },
+    {
+      "id": "vite-react-counter",
+      "framework": "react",
+      "repository": "vitejs/vite",
+      "revision": "843a47da6b93dbd3ce28c4ffae33a8ef338c6f05",
+      "release": "create-vite@9.1.2",
+      "license": "MIT",
+      "upstreamWritePolicy": "read-only",
+      "source": {
+        "upstreamPath": "packages/create-vite/template-react/src/App.jsx",
+        "snapshotPath": "external/web-dogfood-sources/vite-react-counter.jsx",
+        "snapshotKind": "reviewed-reduced-boundary",
+        "sha256": "855048227c02c05f49c55d7d142cec70850f80eb370611cf01fa0d850ac2a7c2",
+        "verified": true
+      },
+      "adapter": {
+        "kind": "counter",
+        "runtime": "component",
+        "boundary": "React state and accessible counter button; assets, styling, HMR, and dev-server behavior are excluded.",
+        "unsupportedEffects": [
+          "asset loading",
+          "CSS rendering",
+          "development HMR",
+          "browser navigation"
+        ]
+      },
+      "bounds": {
+        "maxStates": 5,
+        "maxTransitions": 4,
+        "timeoutMs": 1000
+      },
+      "exploration": {
+        "states": 5,
+        "transitions": 4,
+        "frontierExhausted": true,
+        "stateFingerprints": [
+          "ffb21312f10b1892a008be162209c279f817ffba650b912d1477dabd4af62698",
+          "eec960b6038b217548e9d089824ac833cb320f849ab5b79e6e6cd26101e3aadc",
+          "b8e3b62cacdae8951c18096eb29153b444c18cd462bf74fd226da70b6e79ca97",
+          "25ed45a1d6d70862920dfab4cec0c7b4b1fb151a5ec8c4fee871aafcb4832bda",
+          "b0fa9bab08157f56cbe470c9d8359eac02dddc9cc9298fe2c33547077c5c7f2d"
+        ],
+        "transitionGraph": [
+          {
+            "from": "ffb21312f10b1892a008be162209c279f817ffba650b912d1477dabd4af62698",
+            "actionId": "click:button:counter",
+            "to": "eec960b6038b217548e9d089824ac833cb320f849ab5b79e6e6cd26101e3aadc"
+          },
+          {
+            "from": "eec960b6038b217548e9d089824ac833cb320f849ab5b79e6e6cd26101e3aadc",
+            "actionId": "click:button:counter",
+            "to": "b8e3b62cacdae8951c18096eb29153b444c18cd462bf74fd226da70b6e79ca97"
+          },
+          {
+            "from": "b8e3b62cacdae8951c18096eb29153b444c18cd462bf74fd226da70b6e79ca97",
+            "actionId": "click:button:counter",
+            "to": "25ed45a1d6d70862920dfab4cec0c7b4b1fb151a5ec8c4fee871aafcb4832bda"
+          },
+          {
+            "from": "25ed45a1d6d70862920dfab4cec0c7b4b1fb151a5ec8c4fee871aafcb4832bda",
+            "actionId": "click:button:counter",
+            "to": "b0fa9bab08157f56cbe470c9d8359eac02dddc9cc9298fe2c33547077c5c7f2d"
+          }
+        ]
+      },
+      "properties": [
+        {
+          "property": "deterministic_replay",
+          "status": "pass"
+        },
+        {
+          "property": "stable_action_identity",
+          "status": "pass"
+        },
+        {
+          "property": "unhandled_exception",
+          "status": "pass"
+        },
+        {
+          "property": "pending_effect_leak",
+          "status": "pass"
+        }
+      ],
+      "failures": [],
+      "diagnostics": [
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "asset loading",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "CSS rendering",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "development HMR",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "browser navigation",
+          "policy": "descriptor-only"
+        }
+      ],
+      "replay": {
+        "trace": [
+          "click:button:counter",
+          "click:button:counter",
+          "click:button:counter"
+        ],
+        "deterministic": true,
+        "finalFingerprint": "25ed45a1d6d70862920dfab4cec0c7b4b1fb151a5ec8c4fee871aafcb4832bda",
+        "signature": "9f75c0e8c2be417c0487a626ad1bbc8efdd936dba5c33bcf407ab6a792bf9217"
+      },
+      "zeroFailureReason": "All properties covered by the reviewed finite boundary passed; excluded effects remain explicit descriptor-only diagnostics.",
+      "semanticHash": "d058f5953a010298044eddb120c28b331738d241af09be4d0c5b42ff1e72bf23"
+    },
+    {
+      "id": "vite-vue-counter",
+      "framework": "vue",
+      "repository": "vitejs/vite",
+      "revision": "843a47da6b93dbd3ce28c4ffae33a8ef338c6f05",
+      "release": "create-vite@9.1.2",
+      "license": "MIT",
+      "upstreamWritePolicy": "read-only",
+      "source": {
+        "upstreamPath": "packages/create-vite/template-vue/src/App.vue",
+        "snapshotPath": "external/web-dogfood-sources/vite-vue-counter.vue",
+        "snapshotKind": "reviewed-reduced-boundary",
+        "sha256": "34678926b1b029eb530bbcac7dd5b20fb206a9bb493f378478c10de3e9080910",
+        "verified": true
+      },
+      "adapter": {
+        "kind": "counter",
+        "runtime": "component",
+        "boundary": "Vue ref state and accessible counter button; assets, styling, HMR, and dev-server behavior are excluded.",
+        "unsupportedEffects": [
+          "asset loading",
+          "CSS rendering",
+          "development HMR",
+          "browser navigation"
+        ]
+      },
+      "bounds": {
+        "maxStates": 5,
+        "maxTransitions": 4,
+        "timeoutMs": 1000
+      },
+      "exploration": {
+        "states": 5,
+        "transitions": 4,
+        "frontierExhausted": true,
+        "stateFingerprints": [
+          "ffb21312f10b1892a008be162209c279f817ffba650b912d1477dabd4af62698",
+          "eec960b6038b217548e9d089824ac833cb320f849ab5b79e6e6cd26101e3aadc",
+          "b8e3b62cacdae8951c18096eb29153b444c18cd462bf74fd226da70b6e79ca97",
+          "25ed45a1d6d70862920dfab4cec0c7b4b1fb151a5ec8c4fee871aafcb4832bda",
+          "b0fa9bab08157f56cbe470c9d8359eac02dddc9cc9298fe2c33547077c5c7f2d"
+        ],
+        "transitionGraph": [
+          {
+            "from": "ffb21312f10b1892a008be162209c279f817ffba650b912d1477dabd4af62698",
+            "actionId": "click:button:counter",
+            "to": "eec960b6038b217548e9d089824ac833cb320f849ab5b79e6e6cd26101e3aadc"
+          },
+          {
+            "from": "eec960b6038b217548e9d089824ac833cb320f849ab5b79e6e6cd26101e3aadc",
+            "actionId": "click:button:counter",
+            "to": "b8e3b62cacdae8951c18096eb29153b444c18cd462bf74fd226da70b6e79ca97"
+          },
+          {
+            "from": "b8e3b62cacdae8951c18096eb29153b444c18cd462bf74fd226da70b6e79ca97",
+            "actionId": "click:button:counter",
+            "to": "25ed45a1d6d70862920dfab4cec0c7b4b1fb151a5ec8c4fee871aafcb4832bda"
+          },
+          {
+            "from": "25ed45a1d6d70862920dfab4cec0c7b4b1fb151a5ec8c4fee871aafcb4832bda",
+            "actionId": "click:button:counter",
+            "to": "b0fa9bab08157f56cbe470c9d8359eac02dddc9cc9298fe2c33547077c5c7f2d"
+          }
+        ]
+      },
+      "properties": [
+        {
+          "property": "deterministic_replay",
+          "status": "pass"
+        },
+        {
+          "property": "stable_action_identity",
+          "status": "pass"
+        },
+        {
+          "property": "unhandled_exception",
+          "status": "pass"
+        },
+        {
+          "property": "pending_effect_leak",
+          "status": "pass"
+        }
+      ],
+      "failures": [],
+      "diagnostics": [
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "asset loading",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "CSS rendering",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "development HMR",
+          "policy": "descriptor-only"
+        },
+        {
+          "code": "unsupported_effect",
+          "severity": "info",
+          "effect": "browser navigation",
+          "policy": "descriptor-only"
+        }
+      ],
+      "replay": {
+        "trace": [
+          "click:button:counter",
+          "click:button:counter",
+          "click:button:counter"
+        ],
+        "deterministic": true,
+        "finalFingerprint": "25ed45a1d6d70862920dfab4cec0c7b4b1fb151a5ec8c4fee871aafcb4832bda",
+        "signature": "a3ada85fc87916a86d94e580a989ea6f2ef9019b6668032845aa47989ccb09bb"
+      },
+      "zeroFailureReason": "All properties covered by the reviewed finite boundary passed; excluded effects remain explicit descriptor-only diagnostics.",
+      "semanticHash": "c6dafc01b975423066841ed7addf08dbbab95303759bd8d0c657f77dea8a6ece"
+    }
+  ],
+  "semanticHash": "ac1be39d3c995c157526ce21ba6843b4d343351aa60301ba4122af4d98685e11"
+}

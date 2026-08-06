@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "vite-vue-counter",
+  "framework": "vue",
+  "repository": "vitejs/vite",
+  "revision": "843a47da6b93dbd3ce28c4ffae33a8ef338c6f05",
+  "release": "create-vite@9.1.2",
+  "license": "MIT",
+  "source": {
+    "upstreamPath": "packages/create-vite/template-vue/src/App.vue",
+    "snapshotPath": "external/web-dogfood-sources/vite-vue-counter.vue",
+    "snapshotKind": "reviewed-reduced-boundary",
+    "sha256": "34678926b1b029eb530bbcac7dd5b20fb206a9bb493f378478c10de3e9080910"
+  },
+  "adapter": {
+    "kind": "counter",
+    "runtime": "component",
+    "boundary": "Vue ref state and accessible counter button; assets, styling, HMR, and dev-server behavior are excluded.",
+    "unsupportedEffects": [
+      "asset loading",
+      "CSS rendering",
+      "development HMR",
+      "browser navigation"
+    ]
+  },
+  "bounds": {
+    "maxStates": 5,
+    "maxTransitions": 4,
+    "timeoutMs": 1000
+  },
+  "expected": {
+    "outcome": "zero-failure",
+    "propertyCoverage": [
+      "deterministic_replay",
+      "stable_action_identity",
+      "unhandled_exception",
+      "pending_effect_leak"
+    ]
+  },
+  "upstreamWritePolicy": "read-only"
+}

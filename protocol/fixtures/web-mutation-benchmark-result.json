@@ -1,0 +1,212 @@
+{
+  "ok": true,
+  "runtime": "framework-neutral-web-mutation-benchmark",
+  "benchmarkVersion": "1",
+  "seed": 43,
+  "scope": {
+    "sourceOfTruth": "protocol/web-property-pack.mjs",
+    "externalRepositories": "read-only",
+    "realNetwork": "deny",
+    "filesystemMutation": "deny-except-generated-local-report",
+    "mailPaymentCloudNative": "deny"
+  },
+  "metrics": {
+    "mutationCount": 8,
+    "killedCount": 8,
+    "survivedCount": 0,
+    "mutationScore": 1,
+    "falsePositiveControlCount": 8,
+    "falsePositiveCount": 0,
+    "falsePositiveRate": 0,
+    "originalTraceActions": 30,
+    "minimalTraceActions": 14
+  },
+  "performanceContract": {
+    "iterations": 1000,
+    "minimumTransitionsPerSecond": 5000,
+    "maximumElapsedMs": 10000,
+    "measuredFieldsExcludedFromSemanticHash": [
+      "elapsedMs",
+      "transitionsPerSecond"
+    ]
+  },
+  "mutations": [
+    {
+      "operator": "remove_stale_generation_guard",
+      "property": "stale_response",
+      "killed": true,
+      "originalTraceLength": 5,
+      "minimalTraceLength": 3,
+      "minimalTrace": [
+        "issue|network|search|query=\"a\"",
+        "issue|network|search|query=\"ab\"",
+        "inject|network|Search response|generation=1|query=\"a\""
+      ],
+      "shrinkAttempts": 8,
+      "expectedMinimalLength": 3,
+      "signature": "f432124fd179ae47b8e69d9fa66f1a47f0d979c65de51107b3f59e86e602a24d",
+      "deterministicReplay": true,
+      "snapshotHash": "91e07c46c8e21ba09435d2e7f46024b22dfc0ebf53d52b6bb5c1767364e9ffe5"
+    },
+    {
+      "operator": "allow_duplicate_submit",
+      "property": "duplicate_submit",
+      "killed": true,
+      "originalTraceLength": 4,
+      "minimalTraceLength": 2,
+      "minimalTrace": [
+        "submit|form|Profile",
+        "submit|form|Profile"
+      ],
+      "shrinkAttempts": 6,
+      "expectedMinimalLength": 2,
+      "signature": "230bbce81395d2f5059c1c1c19816468707ec721e5d46ec5b5f376fdbc1df3c9",
+      "deterministicReplay": true,
+      "snapshotHash": "1dc6f6492823ed6a1d4215633182401f73c85fc7afffb5d631229f97eedfa0bc"
+    },
+    {
+      "operator": "skip_effect_cleanup",
+      "property": "pending_effect_leak",
+      "killed": true,
+      "originalTraceLength": 4,
+      "minimalTraceLength": 2,
+      "minimalTrace": [
+        "schedule|timer|refresh",
+        "dispose|fixture|Profile"
+      ],
+      "shrinkAttempts": 6,
+      "expectedMinimalLength": 2,
+      "signature": "355aeea527a8d74f78229a1757882c306994fdda9143e948c4d7f6a28afbd506",
+      "deterministicReplay": true,
+      "snapshotHash": "ea14a276c0f3adf31d3f100bef72d83711f4ec035b9b255d735951117dbe7ce7"
+    },
+    {
+      "operator": "retain_dialog_focus",
+      "property": "focus_integrity",
+      "killed": true,
+      "originalTraceLength": 4,
+      "minimalTraceLength": 2,
+      "minimalTrace": [
+        "open|dialog|Confirm",
+        "close|dialog|Confirm"
+      ],
+      "shrinkAttempts": 6,
+      "expectedMinimalLength": 2,
+      "signature": "ac698a76ad4802a4b3e36f417eb93036bb4c6fb7fc706f479b8a7d7466697b00",
+      "deterministicReplay": true,
+      "snapshotHash": "6d1d18fe14ae76f58de2ccc3ca5b15117ba860fe2cf70e789d584bb32007445b"
+    },
+    {
+      "operator": "retain_deleted_selection",
+      "property": "entity_consistency",
+      "killed": true,
+      "originalTraceLength": 4,
+      "minimalTraceLength": 2,
+      "minimalTrace": [
+        "select|entity|2",
+        "delete|entity|2"
+      ],
+      "shrinkAttempts": 6,
+      "expectedMinimalLength": 2,
+      "signature": "2e6e581be8902fe45ec92fa48c1f65b6467164d4a58a489b37c0946d7f8786c7",
+      "deterministicReplay": true,
+      "snapshotHash": "4d7b23727bea22f276d802353ca64c8220e65d9233a4c1720d7c161070ad60f0"
+    },
+    {
+      "operator": "render_hydration_drift",
+      "property": "hydration_warning",
+      "killed": true,
+      "originalTraceLength": 3,
+      "minimalTraceLength": 1,
+      "minimalTrace": [
+        "hydrate|document|Profile"
+      ],
+      "shrinkAttempts": 4,
+      "expectedMinimalLength": 1,
+      "signature": "662b1c09ca21481571ce5852615772d8e2532fe021cb12264ce50e9c0ccd792a",
+      "deterministicReplay": true,
+      "snapshotHash": "7ad28822b2292694b064654c3324944de429a6fb2b7f3e839e3bdb812fc64b1a"
+    },
+    {
+      "operator": "drop_exception_boundary",
+      "property": "unhandled_exception",
+      "killed": true,
+      "originalTraceLength": 3,
+      "minimalTraceLength": 1,
+      "minimalTrace": [
+        "click|button|Crash"
+      ],
+      "shrinkAttempts": 4,
+      "expectedMinimalLength": 1,
+      "signature": "c6a4b184f1d88477ac7fe4ab950797b480f9d38ba0a80a9b1e2278b5005ec91e",
+      "deterministicReplay": true,
+      "snapshotHash": "dc23a58fcbeede0b5aeac2f63241697d0aef7404239cca104d759a913283f097"
+    },
+    {
+      "operator": "randomize_replay_state",
+      "property": "deterministic_replay",
+      "killed": true,
+      "originalTraceLength": 3,
+      "minimalTraceLength": 1,
+      "minimalTrace": [
+        "replay|fixture|Profile"
+      ],
+      "shrinkAttempts": 4,
+      "expectedMinimalLength": 1,
+      "signature": "1566d2f54fd4b1fa51190ff32da734647ac965deaeef136875e6f770288100ab",
+      "deterministicReplay": true,
+      "snapshotHash": "83c1b0358dd82df88cba96da8847c4e862aa35ea597c1b755c9b7977e5ba061e"
+    }
+  ],
+  "controls": [
+    {
+      "operator": "remove_stale_generation_guard",
+      "property": "stale_response",
+      "violationCount": 0,
+      "targetedViolation": false
+    },
+    {
+      "operator": "allow_duplicate_submit",
+      "property": "duplicate_submit",
+      "violationCount": 0,
+      "targetedViolation": false
+    },
+    {
+      "operator": "skip_effect_cleanup",
+      "property": "pending_effect_leak",
+      "violationCount": 0,
+      "targetedViolation": false
+    },
+    {
+      "operator": "retain_dialog_focus",
+      "property": "focus_integrity",
+      "violationCount": 0,
+      "targetedViolation": false
+    },
+    {
+      "operator": "retain_deleted_selection",
+      "property": "entity_consistency",
+      "violationCount": 0,
+      "targetedViolation": false
+    },
+    {
+      "operator": "render_hydration_drift",
+      "property": "hydration_warning",
+      "violationCount": 0,
+      "targetedViolation": false
+    },
+    {
+      "operator": "drop_exception_boundary",
+      "property": "unhandled_exception",
+      "violationCount": 0,
+      "targetedViolation": false
+    },
+    {
+      "operator": "randomize_replay_state",
+      "property": "deterministic_replay",
+      "violationCount": 0,
+      "targetedViolation": false
+    }
+  ],
+  "semanticHash": "7746aaaaef4b8e4ebea9e24f67972a8b4755ea45bf5fd576c42dba4632cfa73c"
+}

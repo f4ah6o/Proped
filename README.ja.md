@@ -37,6 +37,18 @@ node scripts/test_web_mutation_benchmark.mjs --minimum-mutation-score 1 --maximu
 
 不正な引数は終了コード`2`、品質ゲート違反は終了コード`1`で、完全な結果をstderrへJSON出力します。default実行は`protocol/out/web-mutation-benchmark/`へ`summary.json`、`atlas.json`、`atlas.html`、`atlas.svg`、`atlas.dot`を生成します。
 
+## Web project runner
+
+厳格なWeb project manifestから、generic property pack、mutation quality gate、React/Vue Component Mode、Playwright Browser Mode、cross-mode replay、Next.js/Nuxt SSRを依存順に1つのquality graphとして実行できます。
+
+```bash
+node scripts/web_project_runner.mjs validate web/project-manifests/proped-web-quality.json
+node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json
+node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json --output .tmp/web-quality
+```
+
+runnerはshellを経由しません。manifest pathとstage cwdはrepository root外へescapeできません。stageのexit `1`はquality gate failure、exit `2`はusage error、その他のnon-zeroはexecution failureとして分類し、依存stageが失敗した後続stageはblockedになります。child processのnetwork、filesystem write、upstream write、credential制約はrunner内sandboxではなくcaller-enforcedであることを明示します。runner自身はmanifest/cwd/artifact pathをrepository内へ制限し、stage起動時にallowlist外の環境変数を引き継ぎません。
+
 ## 同梱demo
 
 | ID | 出所 | 期待結果 | 検証内容 | 最小counterexample |

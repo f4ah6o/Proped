@@ -69,6 +69,8 @@ Drivers provide semantic element records rather than CSS selectors. The v1 disco
 
 `protocol/web-mutation-benchmark.mjs` pairs each property with one synthetic faulty runtime and one healthy control. `evaluateMutationQualityGate` applies configurable mutation-score, false-positive, replay, minimized-trace, throughput, and elapsed-time contracts and returns stable failure codes instead of assertion-only errors. `scripts/test_web_mutation_benchmark.mjs --help` documents the fail-closed command-line contract.
 
+`protocol/web-project-runner.mjs` adds a manifest-driven execution boundary above the individual Web modes. A manifest declares ordered stages, explicit dependencies, bounded timeouts, relative working directories, and safety policy. The runner uses argv-only child processes with `shell: false`, rejects repository-root path escapes, blocks dependent stages after prerequisite failure, and emits one summary/Atlas set for the complete quality graph. Network, child filesystem-write, upstream-write, and credential restrictions are explicitly caller-enforced; the runner does not claim to provide an OS sandbox. It does enforce repository-root confinement for its paths and passes only an allowlisted environment to child stages.
+
 ## React Component Mode
 
 `web/react-component/` mounts a real React 19 component into an isolated JSDOM document. The adapter discovers actions from role, accessible name, label, and form scope; executes native DOM input, click, and submit events inside React `act`; and records semantic snapshots after bounded microtask settling. Network and submit completion are deterministic injected effect descriptors. No real network or external write is performed.

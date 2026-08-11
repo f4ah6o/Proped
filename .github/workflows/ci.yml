@@ -59,51 +59,26 @@ jobs:
           python3 -m json.tool spikes/web-driver/react-spike.json > /dev/null
           node spikes/web-driver/parity.mjs
 
-      - name: Generic Web property pack
-        run: node scripts/test_web_property_pack.mjs
-
-      - name: Web mutation benchmark
-        run: node scripts/test_web_mutation_benchmark.mjs
-
-      - name: External Web dogfood campaign
+      - name: Web project runner unit tests
         run: |
-          python3 -m json.tool external/schema/web-dogfood-manifest.schema.json > /dev/null
-          node scripts/test_external_web_dogfood.mjs
+          python3 -m json.tool protocol/web-project-manifest.schema.json > /dev/null
+          python3 -m json.tool web/project-manifests/proped-web-quality.json > /dev/null
+          node scripts/test_web_project_runner.mjs
 
-      - name: Network and timer schedule exploration
-        run: node scripts/test_network_timer_schedule.mjs
-
-      - name: React Component Mode
+      - name: Install Web project dependencies
         run: |
           npm ci --prefix web/react-component --ignore-scripts
-          npm test --prefix web/react-component
-
-      - name: Vue Component Mode
-        run: |
           npm ci --prefix web/vue-component --ignore-scripts
-          npm test --prefix web/vue-component
-
-      - name: Playwright Browser Mode
-        run: |
           npm ci --prefix web/playwright-browser --ignore-scripts
-          npx --prefix web/playwright-browser playwright install --with-deps --only-shell chromium
-          npm test --prefix web/playwright-browser
-
-      - name: Component to Browser cross-mode replay
-        run: node scripts/test_cross_mode_replay.mjs
-
-      - name: Next.js SSR and hydration
-        run: |
           npm ci --prefix web/next-ssr-hydration --ignore-scripts
-          npm run build --prefix web/next-ssr-hydration
-          npm test --prefix web/next-ssr-hydration
-
-      - name: Nuxt SSR and hydration
-        run: |
           npm ci --prefix web/nuxt-ssr-hydration --ignore-scripts
           npm audit --prefix web/nuxt-ssr-hydration --omit=dev
-          npm run build --prefix web/nuxt-ssr-hydration
-          npm test --prefix web/nuxt-ssr-hydration
+          npx --prefix web/playwright-browser playwright install --with-deps --only-shell chromium
+
+      - name: Web project quality manifest
+        run: |
+          node scripts/web_project_runner.mjs validate web/project-manifests/proped-web-quality.json
+          node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json --output protocol/out/web-project-runner
 
       - name: Format check
         run: moon fmt --check

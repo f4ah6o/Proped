@@ -6,6 +6,8 @@
 
 - Added a reusable Web mutation quality-gate API with machine-readable failure codes for mutation score, healthy-control false positives, deterministic replay, minimized-trace drift, throughput, and elapsed time.
 - Added fail-closed benchmark CLI options for iteration count, quality thresholds, custom artifact output, artifact suppression, and help.
+- Added a manifest-driven Web project runner with ordered dependency stages, bounded execution, fail-closed exit classification, repository-root path confinement, and unified JSON/HTML/SVG/DOT artifacts.
+- Integrated the React, Vue, Playwright, cross-mode replay, Next.js, Nuxt, external dogfood, network/timer, and mutation quality checks behind one CI Web quality manifest.
 
 ## 0.35.0 - 2026-08-06
 

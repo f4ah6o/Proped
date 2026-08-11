@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proped-rabbita.local/schema/web-project-manifest-v1.json",
+  "title": "Proped Rabbita Web Project Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "projectRoot", "safety", "stages", "artifacts"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "projectRoot": { "type": "string", "minLength": 1 },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["network", "filesystemWrites", "upstreamWrites", "credentials"],
+      "properties": {
+        "network": { "const": "caller-enforced-deny" },
+        "filesystemWrites": { "const": "caller-enforced-artifacts-and-build-output" },
+        "upstreamWrites": { "const": "caller-enforced-deny" },
+        "credentials": { "const": "caller-enforced-deny" }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "cwd", "command", "timeoutMs", "dependsOn", "required"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "kind": {
+            "enum": ["check", "component", "browser", "browser-replay", "ssr-build", "ssr", "quality"]
+          },
+          "cwd": { "type": "string", "minLength": 1 },
+          "command": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "timeoutMs": { "type": "integer", "minimum": 1 },
+          "dependsOn": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "required": { "type": "boolean" }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["output"],
+      "properties": {
+        "output": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

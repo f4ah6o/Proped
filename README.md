@@ -37,6 +37,18 @@ node scripts/test_web_mutation_benchmark.mjs --minimum-mutation-score 1 --maximu
 
 Invalid arguments exit with code `2`; a quality-gate failure exits with code `1` and writes the full result to stderr. Default runs write `summary.json`, `atlas.json`, `atlas.html`, `atlas.svg`, and `atlas.dot` below `protocol/out/web-mutation-benchmark/`.
 
+## Web project runner
+
+A strict Web project manifest can run the generic property pack, mutation quality gate, React/Vue Component Mode, Playwright Browser Mode, cross-mode replay, and Next.js/Nuxt SSR checks as one ordered quality graph.
+
+```bash
+node scripts/web_project_runner.mjs validate web/project-manifests/proped-web-quality.json
+node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json
+node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json --output .tmp/web-quality
+```
+
+The runner never invokes a shell. Manifest paths and stage working directories must remain inside the repository root. Exit `1` from a stage is classified as a quality-gate failure, exit `2` as usage error, other non-zero exits as execution failures, and dependent stages are blocked after prerequisite failure. Child-process network, filesystem-write, upstream-write, and credential restrictions are explicitly caller-enforced rather than claimed as an in-process sandbox. The runner itself confines manifest/cwd/artifact paths and strips non-allowlisted environment variables before spawning stages.
+
 ## Included demos
 
 | ID | Source | Expected | Coverage | Minimal counterexample |

@@ -779,7 +779,10 @@ Acceptance:
   - Dexie 3.xの実runtime contractに限定してnative `version = round(verno * 10)` / logical `verno = nativeVersion / 10`を適用。
   - drawDB declared `^3.2.4` / resolved `3.2.7`をinspectionからv2へ伝播し、native 670 → logical 67をgeneric browserで実確認。
   - store/index metadataからDexie-style schema descriptorを再構成し、record payloadは取得しない。未知Dexie majorはfail-open変換せずdiagnostic。
-- [ ] volatility noise miner
+- [x] volatility noise miner
+  - no-action fresh BrowserContextをmanifest既定3回samplingし、scalar/structural path volatilityを抽出。
+  - generated-id/token/timestampは`likely-noise` candidate、storage/forms/applicationState/IndexedDB/url/contentはreview-required。
+  - raw volatile valueはreportへ含めず、normalizer proposalは`applied:false`のまま。
 - [ ] canonical failure classifier
 - [ ] runner-native replay × 3
 - [ ] GitHub Actions workflow generator

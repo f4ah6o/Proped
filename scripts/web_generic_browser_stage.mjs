@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import { GenericPlaywrightBrowserDriver } from "../web/playwright-browser/generic-browser-driver.mjs";
 import { semanticHash } from "../protocol/ui-driver-v1.mjs";
 import { runGenericPropertyPacks } from "../protocol/web-generic-property-packs.mjs";
+import { mineDriverVolatility } from "../protocol/web-volatility-miner.mjs";
 
 function usage(message) {
   const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --property-packs-json <json-array>\n`;
@@ -31,6 +32,7 @@ function parseArgs(argv) {
     propertyPacks: [],
     indexedDBMode: "off",
     indexedDBAdapter: null,
+    volatilityProbeRuns: 0,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index];
@@ -54,6 +56,7 @@ function parseArgs(argv) {
     else if (key === "--property-packs-json") options.propertyPacks = JSON.parse(value);
     else if (key === "--indexeddb-mode") options.indexedDBMode = value;
     else if (key === "--indexeddb-adapter-json") options.indexedDBAdapter = JSON.parse(value);
+    else if (key === "--volatility-probe-runs") options.volatilityProbeRuns = Number(value);
     else usage(`unknown option: ${key}`);
   }
   if (!options.projectRoot) usage("--project-root is required");
@@ -64,6 +67,7 @@ function parseArgs(argv) {
   if (!Number.isSafeInteger(options.readinessTimeoutMs) || options.readinessTimeoutMs < 1) usage("--readiness-timeout must be a positive integer");
   if (!Array.isArray(options.propertyPacks) || options.propertyPacks.some((pack) => typeof pack !== "string")) usage("--property-packs-json must be a string array");
   if (!["off", "auto-metadata"].includes(options.indexedDBMode)) usage("--indexeddb-mode is invalid");
+  if (!Number.isSafeInteger(options.volatilityProbeRuns) || options.volatilityProbeRuns < 0) usage("--volatility-probe-runs must be a non-negative integer");
   return options;
 }
 
@@ -213,6 +217,9 @@ try {
   });
   const snapshot = await driver.reset();
   const inventory = await driver.actions();
+  const volatility = options.volatilityProbeRuns >= 2
+    ? await mineDriverVolatility(driver, { runs: options.volatilityProbeRuns })
+    : { ok: true, runtime: "web-volatility-miner", runs: options.volatilityProbeRuns, candidateCount: 0, likelyNoiseCount: 0, reviewRequiredCount: 0, candidates: [], appliedCount: 0, semanticHash: semanticHash({ runs: options.volatilityProbeRuns, candidates: [] }) };
   const propertyCampaign = await runGenericPropertyPacks(driver, {
     packs: options.propertyPacks,
     allowBoundedMutations: options.serverMode === "static-output",
@@ -241,6 +248,7 @@ try {
     propertyCampaign,
     failures: propertyCampaign.failures,
     advisories: propertyCampaign.advisories,
+    volatility,
     stateFingerprint: snapshot.fingerprint,
     stateSemanticHash,
     stateInventory: { indexedDB: snapshot.applicationState?.indexedDB ?? null },
@@ -254,6 +262,7 @@ try {
     metrics: result.metrics,
     propertyPacks: result.propertyPacks,
     propertyCampaignSemanticHash: propertyCampaign.semanticHash,
+    volatilitySemanticHash: volatility.semanticHash,
     stateSemanticHash,
   });
   console.log(JSON.stringify(result));

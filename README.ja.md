@@ -64,6 +64,10 @@ inspectionでDexieを検出すると、manifest v2がdeclared versionと、insta
 
 manifest v2で`state.indexedDB.mode = "auto-metadata"`を選ぶと、Generic Browser ModeはIndexedDBのdatabase名、native version、object store keyPath、auto-increment、index定義、record countを取得します。record payload自体は**読みません**。実drawDB dogfoodではdrawDB固有adapterなしで`drawDB` native version 670と`diagrams`/`templates` storeを検出できています。
 
+## Volatility mining
+
+manifest v2はgeneric campaign前にboundedなno-action fresh-context probeを実行できます。run間で変化するpathを抽出し、generated ID/token/timestampと、storage/form/domain stateの揺れを分離してnormalizer candidateを提案します。**candidateは自動適用せず**、raw volatile valueもreportへ出しません。state-bearing volatilityは必ずreview-requiredです。
+
 ## Generic browser inventory
 
 起動済みアプリに対して、project-specificなPlaywright codeなしでgeneric browser adapterがaction discoveryとsemantic state captureを行えます。

@@ -64,6 +64,10 @@ Real drawDB declares `^3.2.4`, resolves `3.2.7`, and is automatically reported a
 
 When manifest v2 selects `state.indexedDB.mode = "auto-metadata"`, Generic Browser Mode records IndexedDB database names, native versions, object-store key paths, auto-increment flags, index definitions, and record counts. It intentionally does **not** read record payloads. In real drawDB dogfood this detects the `drawDB` native version 670 database and its `diagrams`/`templates` stores without a drawDB-specific adapter.
 
+## Volatility mining
+
+Manifest v2 runs bounded no-action fresh-context probes before a generic campaign. The miner reports paths that vary across runs, classifies generated IDs/tokens/timestamps separately from state-bearing storage/form/domain paths, and may propose a replacement rule. **No candidate is applied automatically** and raw volatile values are not included in the report. State-bearing volatility remains review-required.
+
 ## Generic browser inventory
 
 For an already-running app, the generic browser adapter can discover actions and capture semantic state without project-specific Playwright code:

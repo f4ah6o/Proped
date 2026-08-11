@@ -36,6 +36,17 @@ node scripts/web_project_inspect.mjs . --json
 
 現在の実装入口はNode scriptで、配布CLIでは`proped web inspect`を予定しています。
 
+## Generated GitHub Actions quality gate
+
+review済みmanifest v2からGitHub Actions workflowを生成できます。`--output`を明示しない限りrepositoryは変更せずstdoutだけに出します。
+
+```bash
+node scripts/web_project_ci.mjs proped.web.json > proped-web.yml
+node scripts/web_project_ci.mjs proped.web.json --output .github/workflows/proped-web.yml
+```
+
+generated workflowはProped Rabbitaを**full commit SHA**でpinし、repository permissionをread-onlyに保ち、project dependency bootstrapをstrict executionから分離します。その後Proped-managed Playwright/Chromium、bubblewrap、`web_project_run_v2.mjs`を実行し、quality gate失敗時も`.proped/out`をuploadします。
+
 ## Low-config Web project manifest v2
 
 read-only inspection結果からhigh-level manifest v2を生成し、既存のv1 stage graphへcompileします。現時点のcanonical formatはJSONで、`--output`を明示しない限りstdout-onlyです。

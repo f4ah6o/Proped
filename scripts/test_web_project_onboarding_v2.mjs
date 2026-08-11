@@ -102,6 +102,21 @@ try {
   assert.equal(report.stages[0].payload.replayGate.deterministic, true);
   assert.equal(report.stages[0].payload.replayGate.stableFailureCount, 0);
 
+  const runnableFile = path.join(TMP, "runnable.web.json");
+  fs.writeFileSync(runnableFile, `${JSON.stringify(runnable, null, 2)}\n`);
+  const v2Run = cli(path.join(ROOT, "scripts/web_project_run_v2.mjs"), [
+    runnableFile,
+    "--repository-root", ROOT,
+    "--sandbox-mode", "caller-enforced",
+    "--no-artifacts",
+  ]);
+  assert.equal(v2Run.status, 0, v2Run.stderr);
+  const v2Report = JSON.parse(v2Run.stdout);
+  assert.equal(v2Report.ok, true);
+  assert.equal(v2Report.manifestVersion, 2);
+  assert.equal(v2Report.sandboxRequested, "caller-enforced");
+  assert.equal(v2Report.stages[0].payload.replayGate.attempts, 3);
+
   console.log(JSON.stringify({
     ok: true,
     runtime: "web-project-onboarding-v2-test",
@@ -112,6 +127,7 @@ try {
     verticalSliceStages: report.stages.map((stage) => stage.status),
     locatorUniqueness: report.stages[0].payload.metrics.locatorUniqueness,
     replayAttempts: report.stages[0].payload.replayGate.attempts,
+    v2RunnerCli: v2Report.ok,
   }));
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });

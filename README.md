@@ -36,6 +36,17 @@ node scripts/web_project_inspect.mjs . --json
 
 The current implementation entry point is the Node script; the planned packaged CLI surface is `proped web inspect`.
 
+## Generated GitHub Actions quality gate
+
+A reviewed v2 manifest can generate a GitHub Actions workflow without modifying the repository unless `--output` is explicit:
+
+```bash
+node scripts/web_project_ci.mjs proped.web.json > proped-web.yml
+node scripts/web_project_ci.mjs proped.web.json --output .github/workflows/proped-web.yml
+```
+
+The generated workflow checks out Proped Rabbita at a **full commit SHA**, uses read-only repository permissions, runs project dependency bootstrap separately, installs the Proped-managed Playwright/Chromium runtime, installs bubblewrap for strict execution, runs `web_project_run_v2.mjs`, and uploads `.proped/out` even when the quality gate fails.
+
 ## Low-config Web project manifest v2
 
 The high-level v2 manifest is generated from read-only inspection and compiles to the existing v1 stage graph. The current canonical format is JSON; generation is stdout-only unless `--output` is explicit.

@@ -791,7 +791,7 @@ Acceptance:
   - manifest v2既定`replay.attempts=3`をGeneric Browser stageへ伝播。
   - canonical failure classが全attemptで再現したものだけstable quality failureへ昇格。
   - 一部attemptだけのcandidateは`nondeterministic_failure_candidate` diagnosticへ降格しCI failureにしない。
-- [ ] GitHub Actions workflow generator
+- [x] GitHub Actions workflow generator
 
 ### P1 generic pack evidence
 
@@ -804,7 +804,7 @@ Acceptance:
 
 - [ ] TodoMVC known failure 3/3 再検出
 - [ ] drawDB known failure 3/3 再検出
-- [ ] candidate failure deterministic replay 3/3
+- [x] candidate failure deterministic replay 3/3
 - [ ] generic healthy transition false positive < 1 / 1000 transitions を目標
 
 ## P2 — Exploration Depth

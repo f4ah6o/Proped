@@ -802,10 +802,25 @@ Acceptance:
 
 Acceptance:
 
-- [ ] TodoMVC known failure 3/3 再検出
-- [ ] drawDB known failure 3/3 再検出
+- [x] TodoMVC known failure 3/3 再検出
+
+  - `tastejs/todomvc@ff43b02e59dfa604386bb382034b2cd07c2bcd8a` React production distをChromium 151.0.7922.34でreal browser実行し、`toggle_all_reflects_all_todos` / `escape_cancels_edit` / `reload_persists_todos`を3/3再検出。contract内repeatもdeterministic。semantic hash `4f295e5297d45027a663f72db406a904337ac3e8989b56681c2bf95f60b36d20`。
+- [x] drawDB known failure 3/3 再検出
+
+  - `drawdb-io/drawdb@f15453be0b9a0a8ca99d040256c2d2edf7155510` production distをChromium 151.0.7922.34でreal browser実行し、`add_table_redo_preserves_order` / `delete_table_undo_preserves_order` / `sql_ui_import_rejects_valid_mysql`を3/3再検出。contract内repeatもdeterministic。semantic hash `6f2e8ed1340f1b6ac64bc94ba3624996b6f70d0eba34e08aced8cebc570bc293`。
 - [x] candidate failure deterministic replay 3/3
-- [ ] generic healthy transition false positive < 1 / 1000 transitions を目標
+- [x] generic healthy transition false positive < 1 / 1000 transitions を目標
+
+  - generic `evaluateWebProperties()`を10 family・10,000 healthy transitionsへ通しfalse positive 0件（0 / 1000）。invalid entity / duplicate submit sensitivity controlsは期待どおり発火し、2回実行のsemantic hashも一致。
+
+### Final P1 acceptance evidence
+
+- known failure recall: **6/6**（TodoMVC 3/3 + drawDB 3/3）
+- deterministic real-browser repeat: **pass**
+- healthy generic transitions: **10,000**
+- generic false positives: **0**（0 / 1000）
+- acceptance fixture: `protocol/fixtures/unknown-web-onboarding-real-dogfood.json`
+- executable acceptance check: `node scripts/test_unknown_web_onboarding_acceptance.mjs`
 
 ## P2 — Exploration Depth
 

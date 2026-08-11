@@ -103,6 +103,15 @@ exploration frontierはdeterministicなsemantic novelty scoreで順位付けで�
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Unknown-project onboarding acceptance
+
+commit済みonboarding regression corpusには、TodoMVC React 3件 + drawDB 3件のreal-browser failure classを記録しています。pinした実runで**6/6**をmanaged Chromium上でdeterministicに再検出しました。別のgeneric-property benchmarkでは10,000 healthy semantic transitionsを実行して**false positive 0件**（0 / 1000）で、duplicate-submit / invalid-entity sensitivity controlは正常に検出します。
+
+```bash
+node scripts/test_web_healthy_transition_benchmark.mjs
+node scripts/test_unknown_web_onboarding_acceptance.mjs
+```
+
 ## Human semantic approval workflow
 
 semantic suggestionは人間が明示decisionを記録するまでinertです。approval planはsemantic review hashをpinし、stable candidate refごとに`approve`/`reject`/`defer`を保持します。high-risk approveは明示risk acknowledgement必須で、stale/tampered planは拒否します。compileして得られるのはhuman-approved hintsだけで、自動activationは行いません。

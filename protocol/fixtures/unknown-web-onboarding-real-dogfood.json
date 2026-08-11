@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "browser": {
+    "name": "chromium",
+    "version": "151.0.7922.34"
+  },
+  "targets": [
+    {
+      "id": "todomvc-react",
+      "repository": "tastejs/todomvc",
+      "revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "deterministicReplay": true,
+      "knownFailureClasses": [
+        "toggle_all_reflects_all_todos",
+        "escape_cancels_edit",
+        "reload_persists_todos"
+      ],
+      "semanticHash": "4f295e5297d45027a663f72db406a904337ac3e8989b56681c2bf95f60b36d20"
+    },
+    {
+      "id": "drawdb",
+      "repository": "drawdb-io/drawdb",
+      "revision": "f15453be0b9a0a8ca99d040256c2d2edf7155510",
+      "deterministicReplay": true,
+      "knownFailureClasses": [
+        "add_table_redo_preserves_order",
+        "delete_table_undo_preserves_order",
+        "sql_ui_import_rejects_valid_mysql"
+      ],
+      "semanticHash": "6f2e8ed1340f1b6ac64bc94ba3624996b6f70d0eba34e08aced8cebc570bc293"
+    }
+  ]
+}

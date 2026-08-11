@@ -103,6 +103,15 @@ Exploration can rank frontier states with a deterministic semantic novelty score
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Unknown-project onboarding acceptance
+
+The committed onboarding regression corpus records six real-browser failure classes: three from TodoMVC React and three from drawDB. The pinned real runs reproduce all **6/6** classes deterministically on managed Chromium. A separate generic-property benchmark executes 10,000 healthy semantic transitions and records **0 false positives** (0 / 1000), while sensitivity controls still detect duplicate-submit and invalid-entity faults.
+
+```bash
+node scripts/test_web_healthy_transition_benchmark.mjs
+node scripts/test_unknown_web_onboarding_acceptance.mjs
+```
+
 ## Human semantic approval workflow
 
 Semantic suggestions remain inert until a human records an explicit decision. An approval plan pins the semantic review hash, tracks `approve`/`reject`/`defer` per stable candidate ref, requires explicit acknowledgement for high-risk approvals, and rejects stale or tampered plans. Compiling a plan yields human-approved hints only; it never performs automatic activation.

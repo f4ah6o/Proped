@@ -103,6 +103,14 @@ exploration frontierはdeterministicなsemantic novelty scoreで順位付けで�
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Review-only semantic projection candidates
+
+project-specificなPlaywright codeを生成する代わりに、小さなdeclarative state projection候補を提案できます。現在はselected entity identity、entity collection count、undo/redo history position、persistence metadata、normalized route identity、graph/domain summaryを候補化します。各提案にはoutput shape・source kind・confidence・evidenceを付け、実行projection codeは生成も自動activationもしません。
+
+```bash
+node scripts/web_projection_candidates.mjs . --json
+```
+
 ## Review-only semantic property candidates
 
 boundedなread-only static analyzerで、repository source snippet・既存test title・UI vocabularyの3系統から高価値なsemantic property候補を提案できます。現在はundo/redo inverse、import/export roundtrip、Escapeによるedit cancel、delete後のselection consistency、save後reload persistence、filter/source consistencyなどを候補化します。候補は**review-only**で、confidence/evidenceを表示し、自動activationは常に無効です。

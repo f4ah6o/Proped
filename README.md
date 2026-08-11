@@ -103,6 +103,14 @@ Exploration can rank frontier states with a deterministic semantic novelty score
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Review-only semantic projection candidates
+
+Proped can also propose small declarative state projections instead of generating project-specific Playwright code. Current candidates cover selected-entity identity, entity collection counts, undo/redo history position, persistence metadata, normalized route identity, and graph/domain summaries. Each suggestion includes an output shape, source kind, confidence, and evidence; executable projection code is never generated or activated automatically.
+
+```bash
+node scripts/web_projection_candidates.mjs . --json
+```
+
 ## Review-only semantic property candidates
 
 A bounded read-only static analyzer can propose higher-value semantic properties from three independent evidence sources: repository source snippets, existing test titles, and UI vocabulary. Current candidates include undo/redo inverse behavior, import/export roundtrips, Escape-cancels-edit, selection consistency after delete, saved-state reload persistence, and filter/source consistency. Candidates are **review-only**: confidence and evidence are reported, and automatic activation is always disabled.

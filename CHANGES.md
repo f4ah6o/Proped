@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added review-only semantic state-projection candidates for selection identity, collection counts, history position, persistence metadata, route identity, and graph summaries, without generating executable project-specific code.
 - Added review-only semantic property candidate mining from bounded repository source snippets, existing test titles, and UI vocabulary, with confidence/evidence and zero automatic activation.
 - Added a deterministic multi-context scheduler prototype for shared-state interleavings, including replayable context-tagged traces and a synthetic lost-update race regression.
 - Added manifest v2 server reset/read-only API hooks with same-origin enforcement, GET/HEAD-only observation, bounded response hashing/JSON-shape evidence, redirect denial, and fresh-reset browser integration.

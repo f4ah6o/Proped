@@ -830,7 +830,9 @@ Acceptance:
 - [x] repository source / existing tests / UI vocabulary から property candidate 提案
 
   - bounded read-only static scanでsource snippet / test title / UI vocabularyを別evidenceとして収集し、reversible/roundtrip/reload/entity consistency等のproperty候補をreview-onlyで提案。自動activationは0件に固定。drawDB/TodoMVCでも候補抽出をdogfood済み。
-- [ ] projection candidate 提案
+- [x] projection candidate 提案
+
+  - selection identity / entity count / undo-redo history / persistence metadata / route identity / graph summaryをdeclarative state projection候補としてreview-only提案。実行コードは生成せず、自動activation=0。drawDB/TodoMVC dogfoodでgraph語彙の過検出も修正済み。
 - [ ] normalizer candidate 提案
 - [ ] confidence / evidence 表示
 - [ ] human approval workflow

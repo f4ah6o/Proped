@@ -103,6 +103,14 @@ exploration frontierはdeterministicなsemantic novelty scoreで順位付けで�
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Review-only normalizer candidates
+
+volatility findingをそのまま適用せず、説明付きnormalizer候補へ昇格できます。fresh-context volatilityとsource evidenceを組み合わせ、semantic riskと推奨判断を付けます。DOM generated ID/timestamp/tokenはlow-risk replacement候補にできますが、storage/form/application-state/IndexedDB pathはhigh-riskのまま保持し、自動replacementは出しません。
+
+```bash
+node scripts/web_normalizer_candidates.mjs . --volatility volatility.json --json
+```
+
 ## Review-only semantic projection candidates
 
 project-specificなPlaywright codeを生成する代わりに、小さなdeclarative state projection候補を提案できます。現在はselected entity identity、entity collection count、undo/redo history position、persistence metadata、normalized route identity、graph/domain summaryを候補化します。各提案にはoutput shape・source kind・confidence・evidenceを付け、実行projection codeは生成も自動activationもしません。

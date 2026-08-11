@@ -103,6 +103,14 @@ Exploration can rank frontier states with a deterministic semantic novelty score
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Review-only normalizer candidates
+
+Volatility findings can be promoted into explained normalizer candidates without applying them. The explainer combines fresh-context volatility with source-level evidence, assigns semantic risk, and recommends whether to review a replacement rule or keep the value observed. Generated DOM IDs, timestamps, and token-like values may receive low-risk replacement suggestions; storage, form, application-state, and IndexedDB paths remain high-risk and never receive an automatic replacement.
+
+```bash
+node scripts/web_normalizer_candidates.mjs . --volatility volatility.json --json
+```
+
 ## Review-only semantic projection candidates
 
 Proped can also propose small declarative state projections instead of generating project-specific Playwright code. Current candidates cover selected-entity identity, entity collection counts, undo/redo history position, persistence metadata, normalized route identity, and graph/domain summaries. Each suggestion includes an output shape, source kind, confidence, and evidence; executable projection code is never generated or activated automatically.

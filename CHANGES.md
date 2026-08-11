@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added review-only normalizer candidate explanations that combine fresh-run volatility with source corroboration, semantic-risk classification, and guarded replacement suggestions while keeping state-bearing paths non-automatic.
 - Added review-only semantic state-projection candidates for selection identity, collection counts, history position, persistence metadata, route identity, and graph summaries, without generating executable project-specific code.
 - Added review-only semantic property candidate mining from bounded repository source snippets, existing test titles, and UI vocabulary, with confidence/evidence and zero automatic activation.
 - Added a deterministic multi-context scheduler prototype for shared-state interleavings, including replayable context-tagged traces and a synthetic lost-update race regression.

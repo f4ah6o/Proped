@@ -99,6 +99,7 @@ jobs:
           node scripts/test_web_multi_context_scheduler.mjs
           node scripts/test_web_semantic_property_candidates.mjs
           node scripts/test_web_semantic_projection_candidates.mjs
+          node scripts/test_web_normalizer_candidates.mjs
           node scripts/test_web_generic_property_packs.mjs
           node scripts/test_web_project_onboarding_v2.mjs
 

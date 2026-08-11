@@ -833,7 +833,9 @@ Acceptance:
 - [x] projection candidate 提案
 
   - selection identity / entity count / undo-redo history / persistence metadata / route identity / graph summaryをdeclarative state projection候補としてreview-only提案。実行コードは生成せず、自動activation=0。drawDB/TodoMVC dogfoodでgraph語彙の過検出も修正済み。
-- [ ] normalizer candidate 提案
+- [x] normalizer candidate 提案
+
+  - fresh-run volatility候補へsource corroboration / semantic risk / recommended decisionを付与するreview-only normalizer layerを追加。DOM generated-id/timestamp/tokenはreplacement候補にできるが、storage/forms/applicationState/IndexedDBは常にhigh-risk reviewへ倒し、自動適用=0。
 - [ ] confidence / evidence 表示
 - [ ] human approval workflow
 

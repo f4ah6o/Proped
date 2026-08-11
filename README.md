@@ -103,6 +103,14 @@ Exploration can rank frontier states with a deterministic semantic novelty score
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Review-only semantic property candidates
+
+A bounded read-only static analyzer can propose higher-value semantic properties from three independent evidence sources: repository source snippets, existing test titles, and UI vocabulary. Current candidates include undo/redo inverse behavior, import/export roundtrips, Escape-cancels-edit, selection consistency after delete, saved-state reload persistence, and filter/source consistency. Candidates are **review-only**: confidence and evidence are reported, and automatic activation is always disabled.
+
+```bash
+node scripts/web_property_candidates.mjs . --json
+```
+
 ## Multi-context scheduler prototype
 
 A deterministic multi-context scheduler explores interleavings over shared state and per-context state using context-tagged semantic actions. It records the transition graph and replays failure traces without relying on wall-clock concurrency. The synthetic regression finds a two-context lost-update race and reproduces the same failure signature from the recorded four-step interleaving.

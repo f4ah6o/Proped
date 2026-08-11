@@ -827,7 +827,9 @@ Acceptance:
 
 ## P3 — AI Semantic Assistance
 
-- [ ] repository source / existing tests / UI vocabulary から property candidate 提案
+- [x] repository source / existing tests / UI vocabulary から property candidate 提案
+
+  - bounded read-only static scanでsource snippet / test title / UI vocabularyを別evidenceとして収集し、reversible/roundtrip/reload/entity consistency等のproperty候補をreview-onlyで提案。自動activationは0件に固定。drawDB/TodoMVCでも候補抽出をdogfood済み。
 - [ ] projection candidate 提案
 - [ ] normalizer candidate 提案
 - [ ] confidence / evidence 表示

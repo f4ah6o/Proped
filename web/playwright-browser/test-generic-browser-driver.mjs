@@ -90,6 +90,10 @@ const driver = new GenericPlaywrightBrowserDriver({ url: server.url, timeoutMs: 
 try {
   const initial = await driver.reset();
   assert.equal(initial.browser.networkPolicy, "same-origin-only");
+  assert.equal(initial.browser.managedRuntime.provider, "proped-rabbita");
+  assert.equal(initial.browser.managedRuntime.playwrightVersion, "1.62.0");
+  assert.equal(initial.browser.managedRuntime.chromiumRevision, "1234");
+  assert.equal(initial.browser.managedRuntime.targetProjectDependencyRequired, false);
   assert.deepEqual(initial.storage, { local: {}, session: {} });
 
   const inventory = await driver.actions();

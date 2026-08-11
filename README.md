@@ -50,6 +50,10 @@ Action resolution is fail-closed: ambiguous locators become diagnostics rather t
 
 Generic Browser Mode does not use `networkidle` as its readiness oracle. After each action it advances two animation frames, samples a semantic DOM/form/URL/storage fingerprint, tracks observable same-origin requests, and requires repeated stable samples with zero pending requests. A page that never stabilizes returns a `semantic_quiescence_timeout` diagnostic instead of an opaque wait failure.
 
+## Managed Chromium runtime
+
+Generic Browser Mode owns its browser runtime instead of inheriting one from the target project. The current pinned runtime is Playwright 1.62.0 with Chromium revision 1234 (Chromium 151.0.7922.34). Target applications do not need a Playwright dependency; runtime metadata is included in browser snapshots for reproducibility.
+
 ## Web mutation quality gate
 
 The framework-neutral Web mutation benchmark kills one reviewed mutation for each generic Web property and runs paired healthy controls. Its quality gate reports mutation score, false-positive rate, deterministic replay, minimized-trace drift, throughput, and elapsed-time violations as machine-readable codes.

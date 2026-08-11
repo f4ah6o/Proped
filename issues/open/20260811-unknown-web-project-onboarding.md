@@ -754,8 +754,8 @@ Acceptance:
 
 ### P0.4 Managed Chromium
 
-- [ ] target project に Playwright dependency を要求しない
-- [ ] Proped 側で Playwright/browser revision を pin
+- [x] target project に Playwright dependency を要求しない
+- [x] Proped 側で Playwright/browser revision を pin
 
 ### P0.5 Strict Sandbox Integration
 

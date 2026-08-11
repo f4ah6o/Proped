@@ -80,6 +80,7 @@ jobs:
 
       - name: Generic browser adapter tests
         run: |
+          node scripts/test_managed_browser_runtime.mjs
           node scripts/test_semantic_quiescence.mjs
           node web/playwright-browser/test-generic-browser-driver.mjs
 

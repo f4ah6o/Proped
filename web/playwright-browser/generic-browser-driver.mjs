@@ -1,4 +1,4 @@
-import { chromium } from "playwright";
+import { launchManagedChromium, managedBrowserRuntimeDetails } from "./managed-browser-runtime.mjs";
 import { discoverAccessibleActions } from "../../protocol/accessible-action-discovery.mjs";
 import { createSemanticSnapshot } from "../../protocol/dom-semantic-snapshot.mjs";
 import { evaluateWebProperties } from "../../protocol/web-property-pack.mjs";
@@ -79,8 +79,9 @@ export class GenericPlaywrightBrowserDriver {
 
   async launch() {
     if (this.browser) return;
-    this.browser = await chromium.launch({ headless: this.headless });
+    this.browser = await launchManagedChromium({ headless: this.headless });
     this.browserVersion = this.browser.version();
+    this.managedRuntime = managedBrowserRuntimeDetails();
   }
 
   async createContext() {
@@ -531,6 +532,7 @@ export class GenericPlaywrightBrowserDriver {
         ephemeralProfile: true,
         serviceWorkers: "block",
         networkPolicy: "same-origin-only",
+        managedRuntime: { ...this.managedRuntime },
       },
       capture: { visitedNodes: raw.visitedNodes, maximumNodes: 2_000 },
       settle: this.lastSettle ? { ...this.lastSettle } : null,

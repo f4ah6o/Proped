@@ -103,6 +103,19 @@ exploration frontierはdeterministicなsemantic novelty scoreで順位付けで�
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Server reset / read-only API hooks
+
+manifest v2ではdeterministic campaign向けにsame-origin server hookを任意宣言できます。reset hookはcredentialなしの明示`POST` relative pathで、fresh browser resetの直前に毎回呼びます。read-only hookは`GET`/`HEAD`だけに制限し、redirect/cross-originを拒否、responseはbyte上限を設け、artifactにはraw bodyではなくstatus/content hash/JSON shapeだけを残します。server-backed appでもproject-specific adapterなしでfresh replayへ参加できます。
+
+```json
+{
+  "hooks": {
+    "reset": { "method": "POST", "path": "/__test/reset", "expectedStatus": [204], "timeoutMs": 1000 },
+    "readOnly": [{ "id": "state", "method": "GET", "path": "/api/state", "expectedStatus": [200], "timeoutMs": 1000, "maxBytes": 65536 }]
+  }
+}
+```
+
 ## Coverage-guided Web exploration
 
 bounded explorerはsemantic traceをfresh browser contextへreplayしてfrontier stateを再構成し、discovery noveltyと未実行semantic actionを優先します。browser state cloneへ依存せずreproducibleに探索できます。synthetic regressionでは3 transitionsで新route上のfailureへ到達し、2回目も同一transition graph/semantic hashを再現します。

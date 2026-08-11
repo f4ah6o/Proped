@@ -13,7 +13,7 @@ const manifest = validateWebProjectManifestV2({
   id: "workflow-fixture",
   project: { root: ".", framework: "react-vite", packageManager: "pnpm" },
   bootstrap: { install: ["pnpm", "install", "--frozen-lockfile"], build: ["pnpm", "run", "build"] },
-  server: { mode: "static-output", outputDir: "dist", start: null, url: null, readiness: { strategy: "semantic-quiescence", timeoutMs: 30000 } },
+  server: { mode: "static-output", outputDir: "dist", start: null, url: null, readiness: { strategy: "semantic-quiescence", timeoutMs: 30000 }, hooks: { reset: null, readOnly: [] } },
   browser: { engine: "chromium", headless: true, viewport: [1280, 900], locale: "en-US", timezone: "UTC", serviceWorkers: "block" },
   discovery: { actions: "accessibility", selectorPolicy: "role-first", ambiguity: "fail-closed" },
   state: { sources: ["dom", "forms", "url", "localStorage"], indexedDB: { mode: "off", adapter: null } },

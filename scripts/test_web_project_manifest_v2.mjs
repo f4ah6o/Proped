@@ -16,6 +16,7 @@ assert.equal(generated.schemaVersion, 2);
 assert.equal(generated.project.framework, "next");
 assert.equal(generated.server.mode, "review-required");
 assert.equal(generated.server.start, null);
+assert.deepEqual(generated.server.hooks, { reset: null, readOnly: [] });
 assert.equal(generated.replay.attempts, 3);
 assert.equal(generated.sandbox.mode, "strict");
 assert.ok(generated.properties.packs.includes("browser-safety"));
@@ -32,6 +33,11 @@ assert.deepEqual(compiled.manifest.stages.map((stage) => stage.id), ["project-bu
 assert.equal(compiled.manifest.stages[1].dependsOn[0], "project-build");
 assert.equal(compiled.execution.strictSandbox, true);
 assert.deepEqual(compiled.execution.bootstrapInstall, inspection.commands.install.argv);
+const browserArgv = compiled.manifest.stages[1].command;
+const hookArgIndex = browserArgv.indexOf("--server-hooks-json");
+assert.ok(hookArgIndex > 0);
+assert.deepEqual(JSON.parse(browserArgv[hookArgIndex + 1]), { reset: null, readOnly: [] });
+assert.throws(() => validateWebProjectManifestV2({ ...generated, server: { ...generated.server, hooks: { reset: null, readOnly: [{ id: "bad", method: "POST", path: "/x", expectedStatus: [200], timeoutMs: 1, maxBytes: 1 }] } } }), /GET or HEAD/);
 
 const optional = [
   [".tmp/todomvc/examples/react", "static-output", "react-webpack"],

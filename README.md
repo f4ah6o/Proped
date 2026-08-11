@@ -103,6 +103,19 @@ Exploration can rank frontier states with a deterministic semantic novelty score
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Server reset and read-only API hooks
+
+Manifest v2 can declare optional same-origin server hooks for deterministic campaigns. A reset hook is an explicit credential-free `POST` relative path invoked before every fresh browser reset. Read-only hooks are limited to `GET`/`HEAD`; redirects and cross-origin URLs are denied, responses are byte-bounded, and artifacts keep only status, content hash, and JSON shape rather than raw bodies. This lets server-backed apps participate in fresh replay without a project-specific adapter.
+
+```json
+{
+  "hooks": {
+    "reset": { "method": "POST", "path": "/__test/reset", "expectedStatus": [204], "timeoutMs": 1000 },
+    "readOnly": [{ "id": "state", "method": "GET", "path": "/api/state", "expectedStatus": [200], "timeoutMs": 1000, "maxBytes": 65536 }]
+  }
+}
+```
+
 ## Coverage-guided Web exploration
 
 A bounded explorer reconstructs frontier states by replaying semantic traces into fresh browser contexts, then prioritizes states with discovery novelty and globally unexecuted semantic actions. This avoids relying on browser-state cloning and keeps exploration reproducible. The synthetic regression reaches a new-route failure in three transitions and reproduces the same transition graph and semantic hash on a second run.

@@ -56,6 +56,8 @@ export class GenericPlaywrightBrowserDriver {
     readyCheck = null,
     indexedDBMode = "off",
     indexedDBAdapter = null,
+    beforeReset = null,
+    readOnlyStateProbe = null,
   } = {}) {
     if (!url) throw new Error("GenericPlaywrightBrowserDriver requires url");
     this.url = new URL(url).href;
@@ -78,6 +80,10 @@ export class GenericPlaywrightBrowserDriver {
     this.indexedDBMode = indexedDBMode;
     if (indexedDBAdapter !== null && indexedDBAdapter?.kind !== "dexie") throw new Error(`unsupported IndexedDB adapter: ${indexedDBAdapter?.kind}`);
     this.indexedDBAdapter = indexedDBAdapter;
+    if (beforeReset !== null && typeof beforeReset !== "function") throw new Error("beforeReset must be a function or null");
+    if (readOnlyStateProbe !== null && typeof readOnlyStateProbe !== "function") throw new Error("readOnlyStateProbe must be a function or null");
+    this.beforeReset = beforeReset;
+    this.readOnlyStateProbe = readOnlyStateProbe;
     this.consoleEntries = [];
     this.routeEntries = [];
     this.targetResolvers = new Map();
@@ -172,6 +178,7 @@ export class GenericPlaywrightBrowserDriver {
   }
 
   async reset() {
+    if (this.beforeReset) await this.beforeReset();
     if (this.context) await this.context.close();
     await this.createContext();
     await this.page.goto(this.url, { waitUntil: "domcontentloaded" });
@@ -200,6 +207,8 @@ export class GenericPlaywrightBrowserDriver {
   async quiescenceFingerprint() {
     const raw = await this.rawSnapshot();
     const indexedDB = await this.indexedDbInventory();
+    const serverHooks = this.readOnlyStateProbe ? await this.readOnlyStateProbe() : null;
+    const applicationState = indexedDB || serverHooks ? { ...(indexedDB ? { indexedDB } : {}), ...(serverHooks ? { serverHooks } : {}) } : null;
     return createSemanticSnapshot({
       url: raw.url,
       semanticDom: raw.semanticDom,
@@ -209,7 +218,7 @@ export class GenericPlaywrightBrowserDriver {
       pending: [],
       effects: [],
       console: [],
-      applicationState: indexedDB ? { indexedDB } : null,
+      applicationState,
     }).fingerprint;
   }
 
@@ -558,6 +567,8 @@ export class GenericPlaywrightBrowserDriver {
   async snapshot() {
     const raw = await this.rawSnapshot();
     const indexedDB = await this.indexedDbInventory();
+    const serverHooks = this.readOnlyStateProbe ? await this.readOnlyStateProbe() : null;
+    const applicationState = indexedDB || serverHooks ? { ...(indexedDB ? { indexedDB } : {}), ...(serverHooks ? { serverHooks } : {}) } : null;
     const snapshot = createSemanticSnapshot({
       url: raw.url,
       semanticDom: raw.semanticDom,
@@ -567,7 +578,7 @@ export class GenericPlaywrightBrowserDriver {
       pending: [],
       effects: [],
       console: this.consoleEntries,
-      applicationState: indexedDB ? { indexedDB } : null,
+      applicationState,
     });
     return {
       ...snapshot,

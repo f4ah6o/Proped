@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added manifest v2 server reset/read-only API hooks with same-origin enforcement, GET/HEAD-only observation, bounded response hashing/JSON-shape evidence, redirect denial, and fresh-reset browser integration.
 - Added deterministic coverage-guided Web exploration that reconstructs frontier states by fresh-context trace replay and prioritizes discovery novelty plus globally unexecuted semantic actions.
 - Added deterministic Web state-novelty weighting across fingerprint, route family, storage-key shape, IndexedDB schema shape, and accessible action frontier, while ignoring volatile values and dynamic route IDs.
 - Added a semantic selector-survival benchmark that compares discovered locator contracts across minor DOM revisions; wrapper/class/generated-ID changes retain 100% survival in the fixture while deliberate accessibility-contract breakage is detected below the 95% target.

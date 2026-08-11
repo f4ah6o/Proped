@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateWebProjectManifest } from "./web-project-runner.mjs";
+import { validateWebServerHooks } from "./web-server-hooks.mjs";
 
 export const WEB_PROJECT_MANIFEST_V2 = 2;
 const TOOL_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -77,7 +78,7 @@ export function validateWebProjectManifestV2(manifest) {
   command(manifest.bootstrap.install, "bootstrap.install");
   command(manifest.bootstrap.build, "bootstrap.build");
 
-  exactKeys(manifest.server, new Set(["mode", "outputDir", "start", "url", "readiness"]), "server");
+  exactKeys(manifest.server, new Set(["mode", "outputDir", "start", "url", "readiness", "hooks"]), "server");
   if (!["static-output", "command", "external", "review-required"].includes(manifest.server.mode)) fail("server.mode is invalid");
   string(manifest.server.outputDir, "server.outputDir", { nullable: true });
   command(manifest.server.start, "server.start");
@@ -85,6 +86,7 @@ export function validateWebProjectManifestV2(manifest) {
   exactKeys(manifest.server.readiness, new Set(["strategy", "timeoutMs"]), "server.readiness");
   if (manifest.server.readiness.strategy !== "semantic-quiescence") fail("server.readiness.strategy must be semantic-quiescence");
   positiveInt(manifest.server.readiness.timeoutMs, "server.readiness.timeoutMs");
+  validateWebServerHooks(manifest.server.hooks);
   if (manifest.server.mode === "static-output" && !manifest.server.outputDir) fail("static-output server requires outputDir");
   if (manifest.server.mode === "command" && !manifest.server.start) fail("command server requires start argv");
   if (manifest.server.mode === "external" && !manifest.server.url) fail("external server requires url");
@@ -189,6 +191,7 @@ export function createWebProjectManifestV2FromInspection(inspection, { projectRo
       start,
       url: null,
       readiness: { strategy: "semantic-quiescence", timeoutMs: 30_000 },
+      hooks: { reset: null, readOnly: [] },
     },
     browser: {
       engine: "chromium",
@@ -255,6 +258,7 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
     "--locale", manifest.browser.locale,
     "--timezone", manifest.browser.timezone,
     "--readiness-timeout", String(manifest.server.readiness.timeoutMs),
+    "--server-hooks-json", JSON.stringify(manifest.server.hooks),
     "--property-packs-json", JSON.stringify(manifest.properties.packs),
     "--indexeddb-mode", manifest.state.indexedDB.mode,
     "--indexeddb-adapter-json", JSON.stringify(manifest.state.indexedDB.adapter),

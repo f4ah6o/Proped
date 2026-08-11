@@ -9,9 +9,10 @@ import { semanticHash } from "../protocol/ui-driver-v1.mjs";
 import { runGenericPropertyPacks } from "../protocol/web-generic-property-packs.mjs";
 import { mineDriverVolatility } from "../protocol/web-volatility-miner.mjs";
 import { runFailureReplayGate } from "../protocol/web-replay-gate.mjs";
+import { createWebServerHookClient, validateWebServerHooks } from "../protocol/web-server-hooks.mjs";
 
 function usage(message) {
-  const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --property-packs-json <json-array>\n`;
+  const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --server-hooks-json <json-object>\n  --property-packs-json <json-array>\n`;
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
   else console.log(help);
   process.exit(message ? 2 : 0);
@@ -31,6 +32,7 @@ function parseArgs(argv) {
     timezone: "UTC",
     readinessTimeoutMs: 30_000,
     propertyPacks: [],
+    serverHooks: { reset: null, readOnly: [] },
     indexedDBMode: "off",
     indexedDBAdapter: null,
     volatilityProbeRuns: 0,
@@ -55,6 +57,7 @@ function parseArgs(argv) {
     } else if (key === "--locale") options.locale = value;
     else if (key === "--timezone") options.timezone = value;
     else if (key === "--readiness-timeout") options.readinessTimeoutMs = Number(value);
+    else if (key === "--server-hooks-json") options.serverHooks = JSON.parse(value);
     else if (key === "--property-packs-json") options.propertyPacks = JSON.parse(value);
     else if (key === "--indexeddb-mode") options.indexedDBMode = value;
     else if (key === "--indexeddb-adapter-json") options.indexedDBAdapter = JSON.parse(value);
@@ -68,6 +71,7 @@ function parseArgs(argv) {
   if (options.serverMode === "command" && (!Array.isArray(options.start) || options.start.length === 0)) usage("command mode requires --start-json");
   if (options.serverMode === "external" && !options.url) usage("external mode requires --url");
   if (!Number.isSafeInteger(options.readinessTimeoutMs) || options.readinessTimeoutMs < 1) usage("--readiness-timeout must be a positive integer");
+  try { options.serverHooks = validateWebServerHooks(options.serverHooks); } catch (error) { usage(error.message); }
   if (!Array.isArray(options.propertyPacks) || options.propertyPacks.some((pack) => typeof pack !== "string")) usage("--property-packs-json must be a string array");
   if (!["off", "auto-metadata"].includes(options.indexedDBMode)) usage("--indexeddb-mode is invalid");
   if (!Number.isSafeInteger(options.volatilityProbeRuns) || options.volatilityProbeRuns < 0) usage("--volatility-probe-runs must be a non-negative integer");
@@ -208,6 +212,7 @@ try {
   else if (options.serverMode === "command") server = await startCommandServer(projectRoot, options.start, options.readinessTimeoutMs);
   else server = { url: options.url, stop: async () => {}, diagnostics: [{ kind: "external-server" }] };
 
+  const hookClient = createWebServerHookClient(server.url, options.serverHooks);
   driver = new GenericPlaywrightBrowserDriver({
     url: server.url,
     headless: options.headless,
@@ -218,6 +223,8 @@ try {
     quiescence: { timeoutMs: options.readinessTimeoutMs, stableSamples: 3, sampleIntervalMs: 25 },
     indexedDBMode: options.indexedDBMode,
     indexedDBAdapter: options.indexedDBAdapter,
+    beforeReset: options.serverHooks.reset ? async () => { await hookClient.reset(); } : null,
+    readOnlyStateProbe: options.serverHooks.readOnly.length ? async () => hookClient.readOnlyState() : null,
   });
   const snapshot = await driver.reset();
   const inventory = await driver.actions();
@@ -272,7 +279,7 @@ try {
     volatility,
     stateFingerprint: snapshot.fingerprint,
     stateSemanticHash,
-    stateInventory: { indexedDB: snapshot.applicationState?.indexedDB ?? null },
+    stateInventory: { indexedDB: snapshot.applicationState?.indexedDB ?? null, serverHooks: snapshot.applicationState?.serverHooks ?? null },
   };
   result.semanticHash = semanticHash({
     runtime: result.runtime,

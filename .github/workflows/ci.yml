@@ -91,6 +91,7 @@ jobs:
           node scripts/test_web_volatility_miner.mjs
           node scripts/test_web_failure_classifier.mjs
           node scripts/test_web_replay_gate.mjs
+          node scripts/test_web_server_hooks.mjs
           node scripts/test_github_actions_workflow.mjs
           node scripts/test_web_selector_survival.mjs
           node scripts/test_web_state_novelty.mjs

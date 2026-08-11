@@ -77,7 +77,8 @@
         "outputDir",
         "start",
         "url",
-        "readiness"
+        "readiness",
+        "hooks"
       ],
       "properties": {
         "mode": {
@@ -117,6 +118,106 @@
             "timeoutMs": {
               "type": "integer",
               "minimum": 1
+            }
+          }
+        },
+        "hooks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reset",
+            "readOnly"
+          ],
+          "properties": {
+            "reset": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "method",
+                    "path",
+                    "expectedStatus",
+                    "timeoutMs"
+                  ],
+                  "properties": {
+                    "method": {
+                      "const": "POST"
+                    },
+                    "path": {
+                      "type": "string",
+                      "pattern": "^/(?!/).*"
+                    },
+                    "expectedStatus": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "integer",
+                        "minimum": 100,
+                        "maximum": 599
+                      }
+                    },
+                    "timeoutMs": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              ]
+            },
+            "readOnly": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "method",
+                  "path",
+                  "expectedStatus",
+                  "timeoutMs",
+                  "maxBytes"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]*$"
+                  },
+                  "method": {
+                    "enum": [
+                      "GET",
+                      "HEAD"
+                    ]
+                  },
+                  "path": {
+                    "type": "string",
+                    "pattern": "^/(?!/).*"
+                  },
+                  "expectedStatus": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 100,
+                      "maximum": 599
+                    }
+                  },
+                  "timeoutMs": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "maxBytes": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
             }
           }
         }

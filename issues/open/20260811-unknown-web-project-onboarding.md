@@ -818,7 +818,9 @@ Acceptance:
 - [x] coverage-guided exploration
 
   - traceをfresh contextへreplayしてstateを再構成するbounded explorerを追加。未実行semantic actionとdiscovery noveltyを優先し、synthetic fixtureでは3 transitionsで新route上のfailureへ決定的に到達。
-- [ ] server reset/read-only API hooks
+- [x] server reset/read-only API hooks
+
+  - manifest v2 `server.hooks`でsame-origin reset POSTとGET/HEAD read-only probeを宣言可能。redirect/credentials/body送信を拒否し、read-only responseはbounded hash/JSON shapeだけをsnapshot evidenceへ入れる。
 - [ ] multi-context scheduler prototype
 
 ## P3 — AI Semantic Assistance

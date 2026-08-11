@@ -259,6 +259,7 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
     "--indexeddb-mode", manifest.state.indexedDB.mode,
     "--indexeddb-adapter-json", JSON.stringify(manifest.state.indexedDB.adapter),
     "--volatility-probe-runs", String(manifest.normalization.volatilityProbeRuns),
+    "--replay-attempts", String(manifest.replay.attempts),
   ];
   if (manifest.server.outputDir) browserCommand.push("--output-dir", manifest.server.outputDir);
   if (manifest.server.start) browserCommand.push("--start-json", JSON.stringify(manifest.server.start));

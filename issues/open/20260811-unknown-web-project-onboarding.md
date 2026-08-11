@@ -787,7 +787,10 @@ Acceptance:
   - oracle family + normalized action pattern + semantic evidence paths + route family + exception kindからcanonical IDを生成。
   - generated ID / generation / input value違いをnormalizeし、元failure codeを保持したままcluster。
   - generic property packだけでなくrunner summary/Atlas上の既存TodoMVC/drawDB style failureにも共通適用。
-- [ ] runner-native replay × 3
+- [x] runner-native replay × 3
+  - manifest v2既定`replay.attempts=3`をGeneric Browser stageへ伝播。
+  - canonical failure classが全attemptで再現したものだけstable quality failureへ昇格。
+  - 一部attemptだけのcandidateは`nondeterministic_failure_candidate` diagnosticへ降格しCI failureにしない。
 - [ ] GitHub Actions workflow generator
 
 ### P1 generic pack evidence

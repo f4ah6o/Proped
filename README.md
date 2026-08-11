@@ -48,6 +48,10 @@ node scripts/web_project_compile.mjs proped.web.json
 
 `web doctor` checks project/runtime/server/browser/sandbox readiness without running install, build, or start commands. Static output and managed command servers are executed by a Proped-owned browser stage after compilation.
 
+## Fresh-campaign replay gate
+
+Manifest v2 defaults to three fresh campaign attempts. A candidate error is promoted to a quality failure only when the same canonical failure class appears in every attempt. A class that appears in only some runs becomes a `nondeterministic_failure_candidate` diagnostic instead of failing CI. This makes fresh-browser determinism part of the quality gate rather than a separate manual check.
+
 ## Canonical failure classes
 
 Every Web failure can be assigned a stable canonical class in addition to its human-facing code. Classification uses the oracle family, normalized action pattern, semantic evidence paths, route family, and exception kind. Generated IDs, runtime generations, and concrete input values are normalized before hashing, so repeated occurrences cluster without losing the original failure code. Runner summaries and Atlas artifacts expose these canonical IDs.

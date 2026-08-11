@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a fresh-campaign replay gate that promotes a candidate Web failure to a quality failure only when the same canonical failure class reproduces across the configured replay attempts (v2 defaults to 3); unstable candidates become nondeterminism diagnostics.
 - Added canonical Web failure classification and clustering from oracle family, normalized action pattern, semantic evidence paths, route family, and exception kind; runner summaries and Atlas now retain stable canonical failure-class IDs alongside human-facing failure codes.
 - Added no-action fresh-context volatility mining that proposes reviewable normalization candidates by semantic path and confidence without emitting raw volatile values or automatically applying any rule; storage/form/domain-state volatility is always review-required.
 - Added a conservative Dexie 3.x IndexedDB adapter that links declared/resolved Dexie versions to generic browser inventory, translates verified native version scaling (`verno * 10`) back to logical versions, and reconstructs Dexie-style store schema descriptors without reading records; real drawDB resolves `670 -> 67`.

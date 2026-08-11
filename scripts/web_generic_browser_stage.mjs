@@ -8,6 +8,7 @@ import { GenericPlaywrightBrowserDriver } from "../web/playwright-browser/generi
 import { semanticHash } from "../protocol/ui-driver-v1.mjs";
 import { runGenericPropertyPacks } from "../protocol/web-generic-property-packs.mjs";
 import { mineDriverVolatility } from "../protocol/web-volatility-miner.mjs";
+import { runFailureReplayGate } from "../protocol/web-replay-gate.mjs";
 
 function usage(message) {
   const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --property-packs-json <json-array>\n`;
@@ -33,6 +34,7 @@ function parseArgs(argv) {
     indexedDBMode: "off",
     indexedDBAdapter: null,
     volatilityProbeRuns: 0,
+    replayAttempts: 1,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index];
@@ -57,6 +59,7 @@ function parseArgs(argv) {
     else if (key === "--indexeddb-mode") options.indexedDBMode = value;
     else if (key === "--indexeddb-adapter-json") options.indexedDBAdapter = JSON.parse(value);
     else if (key === "--volatility-probe-runs") options.volatilityProbeRuns = Number(value);
+    else if (key === "--replay-attempts") options.replayAttempts = Number(value);
     else usage(`unknown option: ${key}`);
   }
   if (!options.projectRoot) usage("--project-root is required");
@@ -68,6 +71,7 @@ function parseArgs(argv) {
   if (!Array.isArray(options.propertyPacks) || options.propertyPacks.some((pack) => typeof pack !== "string")) usage("--property-packs-json must be a string array");
   if (!["off", "auto-metadata"].includes(options.indexedDBMode)) usage("--indexeddb-mode is invalid");
   if (!Number.isSafeInteger(options.volatilityProbeRuns) || options.volatilityProbeRuns < 0) usage("--volatility-probe-runs must be a non-negative integer");
+  if (!Number.isSafeInteger(options.replayAttempts) || options.replayAttempts < 1) usage("--replay-attempts must be a positive integer");
   return options;
 }
 
@@ -220,10 +224,16 @@ try {
   const volatility = options.volatilityProbeRuns >= 2
     ? await mineDriverVolatility(driver, { runs: options.volatilityProbeRuns })
     : { ok: true, runtime: "web-volatility-miner", runs: options.volatilityProbeRuns, candidateCount: 0, likelyNoiseCount: 0, reviewRequiredCount: 0, candidates: [], appliedCount: 0, semanticHash: semanticHash({ runs: options.volatilityProbeRuns, candidates: [] }) };
-  const propertyCampaign = await runGenericPropertyPacks(driver, {
+  const campaignOptions = {
     packs: options.propertyPacks,
     allowBoundedMutations: options.serverMode === "static-output",
     maxProbes: 12,
+  };
+  const propertyCampaign = await runGenericPropertyPacks(driver, campaignOptions);
+  const replayGate = await runFailureReplayGate({
+    initialCampaign: propertyCampaign,
+    attempts: options.replayAttempts,
+    runCampaign: async () => runGenericPropertyPacks(driver, campaignOptions),
   });
   const riskCounts = inventory.actions.reduce((counts, action) => {
     counts[action.destructiveRisk] = (counts[action.destructiveRisk] ?? 0) + 1;
@@ -236,7 +246,7 @@ try {
     storage: snapshot.storage,
   });
   const result = {
-    ok: propertyCampaign.ok,
+    ok: replayGate.ok,
     runtime: "generic-web-browser-stage",
     server: { mode: options.serverMode, url: server.url },
     browser: snapshot.browser,
@@ -246,8 +256,19 @@ try {
     metrics: { ...inventory.metrics, riskCounts },
     propertyPacks: options.propertyPacks,
     propertyCampaign,
-    failures: propertyCampaign.failures,
-    advisories: propertyCampaign.advisories,
+    replayGate: {
+      ...replayGate,
+      stableFailures: undefined,
+    },
+    candidateFailures: propertyCampaign.failures,
+    failures: replayGate.stableFailures,
+    advisories: [
+      ...propertyCampaign.advisories,
+      ...replayGate.unstableCandidates.map((candidate) => ({
+        ...candidate,
+        message: `candidate failure reproduced ${candidate.occurrenceCount}/${candidate.requiredCount} fresh campaigns and was not promoted to a quality failure`,
+      })),
+    ],
     volatility,
     stateFingerprint: snapshot.fingerprint,
     stateSemanticHash,
@@ -262,6 +283,7 @@ try {
     metrics: result.metrics,
     propertyPacks: result.propertyPacks,
     propertyCampaignSemanticHash: propertyCampaign.semanticHash,
+    replayGateSemanticHash: replayGate.semanticHash,
     volatilitySemanticHash: volatility.semanticHash,
     stateSemanticHash,
   });

@@ -98,6 +98,9 @@ try {
   assert.equal(report.passedStageCount, 1);
   assert.equal(report.stages[0].payload.runtime, "generic-web-browser-stage");
   assert.equal(report.stages[0].payload.metrics.locatorUniqueness, 1);
+  assert.equal(report.stages[0].payload.replayGate.attempts, 3);
+  assert.equal(report.stages[0].payload.replayGate.deterministic, true);
+  assert.equal(report.stages[0].payload.replayGate.stableFailureCount, 0);
 
   console.log(JSON.stringify({
     ok: true,
@@ -108,6 +111,7 @@ try {
     compiledStages: compiledReport.manifest.stages.map((stage) => stage.id),
     verticalSliceStages: report.stages.map((stage) => stage.status),
     locatorUniqueness: report.stages[0].payload.metrics.locatorUniqueness,
+    replayAttempts: report.stages[0].payload.replayGate.attempts,
   }));
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });

@@ -95,6 +95,14 @@ Manifest v2 runs bounded no-action fresh-context probes before a generic campaig
 node scripts/test_web_selector_survival.mjs
 ```
 
+## State novelty weighting
+
+Exploration can rank frontier states with a deterministic semantic novelty score. The scorer treats a new state fingerprint, route family, storage-key shape, IndexedDB schema shape, and accessible action-target frontier as separate novelty signals. Dynamic route IDs and storage values are not treated as novelty by themselves, reducing sensitivity to volatile data.
+
+```bash
+node scripts/test_web_state_novelty.mjs
+```
+
 ## Generic browser inventory
 
 For an already-running app, the generic browser adapter can discover actions and capture semantic state without project-specific Playwright code:

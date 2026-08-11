@@ -812,7 +812,9 @@ Acceptance:
 - [x] selector survival benchmark
 
   - semantic target contractをbaseline化し、class/id/wrapper/orderだけを変えたminor revision 2種でsurvival 100%。accessible name/test-id等のsemantic contractを破壊したrevisionでは0%まで低下し、95% targetを判別できる。
-- [ ] state novelty weighting
+- [x] state novelty weighting
+
+  - fingerprint / route family / storage key shape / IndexedDB schema shape / action target frontierを別軸でscore化。再訪stateは0、新構造を含むstateを決定的に優先し、volatile valueそのものはweightingに使わない。
 - [ ] coverage-guided exploration
 - [ ] server reset/read-only API hooks
 - [ ] multi-context scheduler prototype

@@ -95,6 +95,14 @@ manifest v2はgeneric campaign前にboundedなno-action fresh-context probeを�
 node scripts/test_web_selector_survival.mjs
 ```
 
+## State novelty weighting
+
+exploration frontierはdeterministicなsemantic novelty scoreで順位付けできます。新しいstate fingerprint、route family、storage key shape、IndexedDB schema shape、accessible action target frontierを別々のnovelty signalとして扱います。動的route IDやstorage valueそのものはnoveltyにしないため、volatile dataへの過剰反応を抑えます。
+
+```bash
+node scripts/test_web_state_novelty.mjs
+```
+
 ## Generic browser inventory
 
 起動済みアプリに対して、project-specificなPlaywright codeなしでgeneric browser adapterがaction discoveryとsemantic state captureを行えます。

@@ -9,6 +9,7 @@
 - Added a manifest-driven Web project runner with ordered dependency stages, bounded execution, fail-closed exit classification, repository-root path confinement, and unified JSON/HTML/SVG/DOT artifacts.
 - Integrated the React, Vue, Playwright, cross-mode replay, Next.js, Nuxt, external dogfood, network/timer, and mutation quality checks behind one CI Web quality manifest.
 - Dogfooded the Web project runner against pinned `drawdb-io/drawdb` production code with deterministic IndexedDB fixtures and real-browser undo/redo, selection, relationship, and autosave contracts, detecting two reproducible table-order reversibility defects.
+- Extended drawDB dogfood with DBML/MySQL semantic round-trips, real UI import/export coverage, and repeated drag undo/redo coordinate checks; detected a production-browser valid-MySQL import failure while confirming zero drag position drift.
 - Added a framework-neutral real-browser TodoMVC contract and dogfooded pinned `tastejs/todomvc` React/Vue production builds, producing deterministic machine-readable specification failures without upstream writes.
 
 ### Changed

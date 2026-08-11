@@ -3,10 +3,11 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { chromium } from "playwright";
 import { semanticHash } from "../../protocol/ui-driver-v1.mjs";
 
-const CONTRACT_VERSION = "1";
+const CONTRACT_VERSION = "2";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "../..");
 const PRIMARY_MODIFIER = process.platform === "darwin" ? "Meta" : "Control";
@@ -14,28 +15,34 @@ const FIXTURE_DIAGRAM_ID = "proped-drawdb-fixture";
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
-  else console.log("Usage: node web/playwright-browser/test-real-drawdb.mjs --dist <directory> --revision <git-sha>");
+  else console.log("Usage: node web/playwright-browser/test-real-drawdb.mjs --dist <directory> --source <directory> --revision <git-sha>");
   process.exit(message ? 2 : 0);
 }
 
 function parseArgs(argv) {
-  const options = { dist: null, revision: null };
+  const options = { dist: null, source: null, revision: null };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--help") usage();
-    if (!["--dist", "--revision"].includes(arg)) usage(`unknown argument: ${arg}`);
+    if (!["--dist", "--source", "--revision"].includes(arg)) usage(`unknown argument: ${arg}`);
     const value = argv[++i];
     if (!value || value.startsWith("--")) usage(`missing value for ${arg}`);
     if (arg === "--dist") options.dist = value;
+    if (arg === "--source") options.source = value;
     if (arg === "--revision") options.revision = value;
   }
   if (!options.dist) usage("--dist is required");
+  if (!options.source) usage("--source is required");
   if (!options.revision || !/^[0-9a-f]{40}$/.test(options.revision)) usage("--revision must be a 40-character git SHA");
   const dist = path.resolve(ROOT, options.dist);
   const relative = path.relative(ROOT, dist);
   if (relative.startsWith("..") || path.isAbsolute(relative)) usage("--dist must stay inside the repository root");
   if (!fs.existsSync(path.join(dist, "index.html"))) usage(`index.html not found in ${options.dist}`);
-  return { ...options, dist };
+  const source = path.resolve(ROOT, options.source);
+  const sourceRelative = path.relative(ROOT, source);
+  if (sourceRelative.startsWith("..") || path.isAbsolute(sourceRelative)) usage("--source must stay inside the repository root");
+  if (!fs.existsSync(path.join(source, "package.json"))) usage(`package.json not found in ${options.source}`);
+  return { ...options, dist, source };
 }
 
 function contentType(filePath) {
@@ -169,6 +176,10 @@ function initialDiagram() {
   };
 }
 
+function emptyDiagram() {
+  return { ...initialDiagram(), tables: [], references: [] };
+}
+
 async function seedIndexedDb(page, diagram) {
   await page.evaluate(async ({ diagram }) => {
     await new Promise((resolve) => {
@@ -226,7 +237,10 @@ async function savedDiagram(page) {
             name: t.name,
             x: t.x,
             y: t.y,
-            fields: (t.fields ?? []).map((f) => ({ id: f.id, name: f.name, type: f.type })),
+            fields: (t.fields ?? []).map((f) => ({
+              id: f.id, name: f.name, type: f.type, primary: Boolean(f.primary),
+              unique: Boolean(f.unique), notNull: Boolean(f.notNull), increment: Boolean(f.increment),
+            })),
           })),
           references: (diagram.references ?? []).map((r) => ({
             id: r.id,
@@ -294,6 +308,126 @@ function createFailure(property, trace, expected, actual) {
   };
 }
 
+function semanticDiagram(diagram) {
+  const tables = diagram?.tables ?? [];
+  const relationships = diagram?.relationships ?? diagram?.references ?? [];
+  const tableById = new Map(tables.map((table) => [table.id, table]));
+  const fieldName = (tableId, fieldId) =>
+    tableById.get(tableId)?.fields?.find((field) => field.id === fieldId)?.name ?? null;
+  return {
+    tables: tables
+      .map((table) => ({
+        name: table.name,
+        fields: (table.fields ?? [])
+          .map((field) => ({
+            name: field.name,
+            type: String(field.type ?? "").toUpperCase(),
+            primary: Boolean(field.primary),
+            unique: Boolean(field.unique),
+            notNull: Boolean(field.notNull),
+            increment: Boolean(field.increment),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    relationships: relationships
+      .map((relationship) => ({
+        startTable: tableById.get(relationship.startTableId)?.name ?? null,
+        startField: fieldName(relationship.startTableId, relationship.startFieldId),
+        endTable: tableById.get(relationship.endTableId)?.name ?? null,
+        endField: fieldName(relationship.endTableId, relationship.endFieldId),
+      }))
+      .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+  };
+}
+
+function editImportedDiagram(diagram) {
+  const edited = structuredClone(diagram);
+  const posts = edited.tables.find((table) => table.name === "posts");
+  if (!posts) throw new Error("round-trip fixture is missing posts table");
+  posts.name = "articles";
+  const userId = posts.fields.find((field) => field.name === "user_id");
+  if (!userId) throw new Error("round-trip fixture is missing posts.user_id");
+  userId.name = "author_id";
+  return edited;
+}
+
+function mysqlSemanticFromSource(source, sql) {
+  const require = createRequire(import.meta.url);
+  const { createJiti } = require(path.join(source, "node_modules/jiti"));
+  const jiti = createJiti(import.meta.url);
+  const { importSQL } = jiti(path.join(source, "src/utils/importSQL/index.js"));
+  const { Parser } = require(path.join(source, "node_modules/node-sql-parser"));
+  const parser = new Parser();
+  return semanticDiagram(importSQL(parser.astify(sql, { database: "mysql" }), "mysql", "generic"));
+}
+
+function runSourceRoundTrips(source) {
+  const failures = [];
+  const scenarios = [];
+  const require = createRequire(import.meta.url);
+  const { createJiti } = require(path.join(source, "node_modules/jiti"));
+  const jiti = createJiti(import.meta.url);
+  const { toDBML } = jiti(path.join(source, "src/utils/exportAs/dbml.js"));
+  const { fromDBML } = jiti(path.join(source, "src/utils/importFrom/dbml.js"));
+  const { jsonToMySQL } = jiti(path.join(source, "src/utils/exportSQL/generic.js"));
+  const { importSQL } = jiti(path.join(source, "src/utils/importSQL/index.js"));
+  const { Parser } = require(path.join(source, "node_modules/node-sql-parser"));
+
+  const dbmlInput = `Table users {
+  id int [pk, increment, not null]
+}
+
+Table posts {
+  id int [pk, increment, not null]
+  user_id int [not null]
+}
+
+Ref posts_user_id_fk {
+  posts.user_id > users.id [delete: no action, update: no action]
+}`;
+  const dbmlTrace = ["import:dbml", "edit:posts->articles", "edit:user_id->author_id", "export:dbml", "reimport:dbml"];
+  const dbmlImported = fromDBML(dbmlInput, "generic");
+  const dbmlEdited = editImportedDiagram(dbmlImported);
+  const dbmlExpected = semanticDiagram(dbmlEdited);
+  const dbmlExport = toDBML({ ...dbmlEdited, database: "generic", enums: dbmlEdited.enums ?? [] });
+  const dbmlActual = semanticDiagram(fromDBML(dbmlExport, "generic"));
+  if (JSON.stringify(dbmlActual) !== JSON.stringify(dbmlExpected)) {
+    failures.push(createFailure("dbml_roundtrip_semantic_equivalence", dbmlTrace, dbmlExpected, dbmlActual));
+  }
+  if (!dbmlExport.includes("articles") || !dbmlExport.includes("author_id")) {
+    failures.push(createFailure("dbml_export_reflects_edit", dbmlTrace, { articles: true, author_id: true }, { articles: dbmlExport.includes("articles"), author_id: dbmlExport.includes("author_id") }));
+  }
+  scenarios.push({ id: "dbml-import-edit-export-reimport", trace: dbmlTrace, semantic: dbmlActual });
+
+  const sqlInput = `CREATE TABLE users (
+  id INT NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (id)
+);
+CREATE TABLE posts (
+  id INT NOT NULL AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  PRIMARY KEY (id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);`;
+  const sqlTrace = ["import:mysql", "edit:posts->articles", "edit:user_id->author_id", "export:mysql", "reimport:mysql"];
+  const parser = new Parser();
+  const sqlImported = importSQL(parser.astify(sqlInput, { database: "mysql" }), "mysql", "generic");
+  const sqlEdited = editImportedDiagram(sqlImported);
+  const sqlExpected = semanticDiagram(sqlEdited);
+  const sqlExport = jsonToMySQL({ tables: sqlEdited.tables, references: sqlEdited.relationships, types: sqlEdited.types ?? [], database: "generic" });
+  const sqlActual = semanticDiagram(importSQL(parser.astify(sqlExport, { database: "mysql" }), "mysql", "generic"));
+  if (JSON.stringify(sqlActual) !== JSON.stringify(sqlExpected)) {
+    failures.push(createFailure("sql_roundtrip_semantic_equivalence", sqlTrace, sqlExpected, sqlActual));
+  }
+  if (!sqlExport.includes("articles") || !sqlExport.includes("author_id")) {
+    failures.push(createFailure("sql_export_reflects_edit", sqlTrace, { articles: true, author_id: true }, { articles: sqlExport.includes("articles"), author_id: sqlExport.includes("author_id") }));
+  }
+  scenarios.push({ id: "sql-import-edit-export-reimport", trace: sqlTrace, semantic: sqlActual });
+
+  return { scenarios, failures };
+}
+
 function tableNames(snapshot) {
   return snapshot.tables.map((table) => table.name);
 }
@@ -340,20 +474,26 @@ async function waitForSavedTableNames(page, names) {
   }), { diagramId: FIXTURE_DIAGRAM_ID, expected: names });
 }
 
-async function withFreshPage(browser, origin, run) {
+async function withFreshPage(browser, origin, run, { acceptDownloads = false, seed = initialDiagram() } = {}) {
   const context = await browser.newContext({
     serviceWorkers: "block",
-    acceptDownloads: false,
+    acceptDownloads,
     permissions: [],
     locale: "en-US",
     viewport: { width: 1440, height: 1000 },
   });
   const errors = [];
   const blockedRequests = [];
+  let monacoNetworkFailure = false;
   const page = await context.newPage();
-  page.on("pageerror", (error) => errors.push(`pageerror:${error.message}`));
+  page.on("pageerror", (error) => {
+    if (monacoNetworkFailure && error.message === "Event") return;
+    errors.push(`pageerror:${error.message}`);
+  });
   page.on("console", (message) => {
-    if (message.type() === "error" && !message.text().includes("Failed to load resource")) errors.push(`console:${message.text()}`);
+    if (message.type() !== "error" || message.text().includes("Failed to load resource")) return;
+    if (message.text().includes("Monaco initialization: error")) { monacoNetworkFailure = true; return; }
+    errors.push(`console:${message.text()}`);
   });
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url());
@@ -364,11 +504,12 @@ async function withFreshPage(browser, origin, run) {
     }
   });
   await page.goto(`${origin}/__proped_seed__`, { waitUntil: "domcontentloaded" });
-  await seedIndexedDb(page, initialDiagram());
+  await seedIndexedDb(page, seed);
   await page.goto(`${origin}/editor/diagrams/${FIXTURE_DIAGRAM_ID}`, { waitUntil: "domcontentloaded" });
-  await page.locator("#scroll_table_t_users").waitFor();
-  await page.locator("#scroll_table_t_posts").waitFor();
-  await waitForRelationshipCount(page, 1);
+  await page.locator("#canvas").waitFor();
+  if (seed.tables.some((table) => table.id === "t_users")) await page.locator("#scroll_table_t_users").waitFor();
+  if (seed.tables.some((table) => table.id === "t_posts")) await page.locator("#scroll_table_t_posts").waitFor();
+  await waitForRelationshipCount(page, seed.references.length);
   try {
     return await run(page, errors, [...new Set(blockedRequests)].sort());
   } finally {
@@ -395,9 +536,136 @@ async function redo(page) {
   await page.keyboard.press(`${PRIMARY_MODIFIER}+y`);
 }
 
-async function runContractOnce(browser, origin) {
-  const failures = [];
-  const scenarios = [];
+async function visibleDropdownItem(page, text) {
+  const items = page.locator(".semi-dropdown-item:visible");
+  for (let i = 0; i < await items.count(); i += 1) {
+    const item = items.nth(i);
+    if ((await item.textContent())?.trim() === text) return item;
+  }
+  throw new Error(`visible dropdown item not found: ${text}`);
+}
+
+async function chooseFileMenuChild(page, parentText, childText) {
+  await page.getByText("File", { exact: true }).first().hover();
+  await page.waitForTimeout(120);
+  const parent = await visibleDropdownItem(page, parentText);
+  await parent.hover();
+  await page.waitForTimeout(120);
+  const child = await visibleDropdownItem(page, childText);
+  await child.click();
+}
+
+async function renameSidebarTable(page, from, to) {
+  const wrappers = page.locator('div[id^="scroll_table_"]:not([id*="_input_"])');
+  let wrapper = null;
+  for (let i = 0; i < await wrappers.count(); i += 1) {
+    const candidate = wrappers.nth(i);
+    const header = candidate.locator(".semi-collapse-header");
+    if ((await header.textContent())?.trim() === from) { wrapper = candidate; break; }
+  }
+  if (!wrapper) throw new Error(`sidebar table not found: ${from}`);
+  await wrapper.locator(".semi-collapse-header").click();
+  const input = wrapper.locator('input[placeholder="Name"]').first();
+  await input.waitFor();
+  await input.fill(to);
+  await input.press("Tab");
+  await page.waitForFunction(({ from, to }) => {
+    const nodes = [...document.querySelectorAll('div[id^="scroll_table_"]:not([id*="_input_"]) .semi-collapse-header')];
+    return nodes.some((node) => node.textContent?.trim() === to) && !nodes.some((node) => node.textContent?.trim() === from);
+  }, { from, to });
+}
+
+async function importDbmlViaUi(page, source) {
+  await chooseFileMenuChild(page, "Import from", "DBML");
+  const input = page.locator('.semi-modal:visible input[type="file"]').first();
+  await input.setInputFiles({ name: "proped.dbml", mimeType: "text/plain", buffer: Buffer.from(source) });
+  await page.locator('.semi-modal:visible .semi-modal-footer button').last().click();
+  await page.locator('.semi-modal:visible').waitFor({ state: "hidden" });
+}
+
+async function importMysqlViaUi(page, source) {
+  await chooseFileMenuChild(page, "Import from SQL", "MySQL");
+  await page.getByText("Upload file", { exact: true }).last().click();
+  const input = page.locator('.semi-modal:visible input[type="file"]').first();
+  await input.setInputFiles({ name: "proped.sql", mimeType: "text/plain", buffer: Buffer.from(source) });
+  const primary = page.locator('.semi-modal:visible .semi-modal-footer button').last();
+  await primary.waitFor();
+  for (let attempt = 0; attempt < 100 && await primary.isDisabled(); attempt += 1) await page.waitForTimeout(25);
+  if (await primary.isDisabled()) return { ok: false, diagnostic: "import_action_disabled" };
+  await primary.click();
+  try {
+    await page.locator('.semi-modal:visible').waitFor({ state: "hidden", timeout: 5000 });
+    return { ok: true };
+  } catch {
+    const modal = page.locator('.semi-modal:visible');
+    const diagnostic = (await modal.innerText()).trim();
+    await modal.locator('.semi-modal-footer button').first().click({ force: true });
+    await modal.waitFor({ state: "hidden" });
+    return { ok: false, diagnostic };
+  }
+}
+
+async function exportedSourceViaUi(page, parentText, childText) {
+  await chooseFileMenuChild(page, parentText, childText);
+  const modal = page.locator('.semi-modal:visible');
+  await modal.waitFor();
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator('.semi-modal:visible .semi-modal-footer button').last().click();
+  const download = await downloadPromise;
+  const downloadedPath = await download.path();
+  const source = fs.readFileSync(downloadedPath, "utf8");
+  await page.locator('.semi-modal:visible .semi-modal-footer button').first().click();
+  await modal.waitFor({ state: "hidden" });
+  return source;
+}
+
+async function canvasTablePosition(page, name) {
+  const target = page.locator("svg foreignObject").filter({ hasText: name }).first();
+  return {
+    x: Number(await target.getAttribute("x")),
+    y: Number(await target.getAttribute("y")),
+  };
+}
+
+async function savedTablePosition(page, name) {
+  const saved = await savedDiagram(page);
+  const table = saved?.tables.find((candidate) => candidate.name === name);
+  return table ? { x: table.x, y: table.y } : null;
+}
+
+async function waitForSavedTablePosition(page, name, expected) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const position = await savedTablePosition(page, name);
+    if (position && position.x === expected.x && position.y === expected.y) return position;
+    await page.waitForTimeout(50);
+  }
+  throw new Error(`timed out waiting for saved position ${name}=${expected.x},${expected.y}`);
+}
+
+async function waitForSavedTablePositionChange(page, name, before) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const position = await savedTablePosition(page, name);
+    if (position && (position.x !== before.x || position.y !== before.y)) return position;
+    await page.waitForTimeout(50);
+  }
+  throw new Error(`timed out waiting for saved position change for ${name}`);
+}
+
+async function dragCanvasTable(page, name, delta) {
+  const target = page.locator("svg foreignObject").filter({ hasText: name }).first();
+  const box = await target.boundingBox();
+  if (!box) throw new Error(`table ${name} has no bounding box`);
+  const start = { x: box.x + 40, y: box.y + 24 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + delta.x, start.y + delta.y, { steps: 8 });
+  await page.mouse.up();
+}
+
+async function runContractOnce(browser, origin, source) {
+  const sourceRoundTrips = runSourceRoundTrips(source);
+  const failures = [...sourceRoundTrips.failures];
+  const scenarios = [...sourceRoundTrips.scenarios];
 
   scenarios.push(await withFreshPage(browser, origin, async (page, errors, blockedRequests) => {
     const trace = [];
@@ -517,6 +785,98 @@ async function runContractOnce(browser, origin) {
     return { id: "add-persistence", trace, snapshot, blockedRequests };
   }));
 
+  scenarios.push(await withFreshPage(browser, origin, async (page, errors, blockedRequests) => {
+    const trace = [];
+    const source = `Table users {
+  id int [pk, increment, not null]
+}
+
+Table posts {
+  id int [pk, increment, not null]
+  user_id int [not null]
+}
+
+Ref posts_user_id_fk {
+  posts.user_id > users.id [delete: no action, update: no action]
+}`;
+    await importDbmlViaUi(page, source); trace.push("ui-import:dbml");
+    await waitForTableCount(page, 2);
+    await renameSidebarTable(page, "posts", "articles"); trace.push("ui-edit:posts->articles");
+    await waitForSavedTableNames(page, ["users", "articles"]);
+    const before = semanticDiagram(await savedDiagram(page));
+    const exported = await exportedSourceViaUi(page, "Export as", "DBML"); trace.push("ui-export:dbml");
+    if (!exported.includes("articles")) failures.push(createFailure("dbml_ui_export_reflects_edit", [...trace], true, exported.includes("articles")));
+    await importDbmlViaUi(page, exported); trace.push("ui-reimport:dbml");
+    await waitForTableCount(page, 2);
+    await waitForSavedTableNames(page, ["users", "articles"]);
+    const after = semanticDiagram(await savedDiagram(page));
+    if (JSON.stringify(after) !== JSON.stringify(before)) failures.push(createFailure("dbml_ui_roundtrip_semantic_equivalence", [...trace], before, after));
+    if (errors.length) failures.push(createFailure("unhandled_browser_error", [...trace], [], errors));
+    return { id: "dbml-ui-roundtrip", trace, semantic: after, blockedRequests };
+  }, { acceptDownloads: true }));
+
+  scenarios.push(await withFreshPage(browser, origin, async (page, errors, blockedRequests) => {
+    const trace = [];
+    const source = `CREATE TABLE users (id INT);`;
+    const result = await importMysqlViaUi(page, source); trace.push("ui-import:mysql:minimal-valid");
+    if (!result.ok) {
+      failures.push(createFailure("sql_ui_import_rejects_valid_mysql", [...trace], { imported: true }, { imported: false, diagnostic: result.diagnostic }));
+    } else {
+      await waitForTableCount(page, 1);
+    }
+    if (errors.length) failures.push(createFailure("unhandled_browser_error", [...trace], [], errors));
+    return { id: "sql-ui-import-valid", trace, imported: result.ok, blockedRequests };
+  }, { seed: emptyDiagram() }));
+
+  scenarios.push(await withFreshPage(browser, origin, async (page, errors, blockedRequests) => {
+    const trace = [];
+    const expected = semanticDiagram(await savedDiagram(page));
+    const exported = await exportedSourceViaUi(page, "Export SQL", "MySQL"); trace.push("ui-export:mysql");
+    const actual = mysqlSemanticFromSource(source, exported); trace.push("source-reimport:mysql");
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) failures.push(createFailure("sql_ui_export_semantic_equivalence", [...trace], expected, actual));
+    if (errors.length) failures.push(createFailure("unhandled_browser_error", [...trace], [], errors));
+    return { id: "sql-ui-export-semantic", trace, semantic: actual, blockedRequests };
+  }, { acceptDownloads: true }));
+
+  scenarios.push(await withFreshPage(browser, origin, async (page, errors, blockedRequests) => {
+    const trace = [];
+    const original = await savedTablePosition(page, "users");
+    if (!original) throw new Error("users table missing from saved fixture");
+    const originalCanvas = await canvasTablePosition(page, "users");
+    if (originalCanvas.x !== original.x || originalCanvas.y !== original.y) {
+      failures.push(createFailure("drag_initial_dom_saved_position_match", [...trace], original, originalCanvas));
+    }
+    await dragCanvasTable(page, "users", { x: 120, y: 96 }); trace.push("drag:users:+120,+96");
+    const moved = await waitForSavedTablePositionChange(page, "users", original);
+    const movedCanvas = await canvasTablePosition(page, "users");
+    if (movedCanvas.x !== moved.x || movedCanvas.y !== moved.y) {
+      failures.push(createFailure("drag_dom_saved_position_match", [...trace], moved, movedCanvas));
+    }
+    for (let cycle = 1; cycle <= 3; cycle += 1) {
+      await undo(page); trace.push(`undo:drag:${cycle}`);
+      await waitForSavedTablePosition(page, "users", original);
+      const undoCanvas = await canvasTablePosition(page, "users");
+      if (undoCanvas.x !== original.x || undoCanvas.y !== original.y) {
+        failures.push(createFailure("drag_undo_restores_exact_position", [...trace], original, undoCanvas));
+      }
+      await redo(page); trace.push(`redo:drag:${cycle}`);
+      await waitForSavedTablePosition(page, "users", moved);
+      const redoCanvas = await canvasTablePosition(page, "users");
+      if (redoCanvas.x !== moved.x || redoCanvas.y !== moved.y) {
+        failures.push(createFailure("drag_redo_restores_exact_position", [...trace], moved, redoCanvas));
+      }
+    }
+    await page.reload({ waitUntil: "domcontentloaded" }); trace.push("reload");
+    await page.locator("#scroll_table_t_users").waitFor();
+    const reloaded = await canvasTablePosition(page, "users");
+    if (reloaded.x !== moved.x || reloaded.y !== moved.y) {
+      failures.push(createFailure("drag_position_persists_reload", [...trace], moved, reloaded));
+    }
+    const snapshot = await browserSnapshot(page);
+    if (errors.length) failures.push(createFailure("unhandled_browser_error", [...trace], [], errors));
+    return { id: "drag-undo-redo-drift", trace, original, moved, snapshot, blockedRequests };
+  }));
+
   return { scenarios, failures };
 }
 
@@ -528,8 +888,8 @@ const options = parseArgs(process.argv.slice(2));
 const server = await startStaticServer(options.dist);
 const browser = await chromium.launch({ headless: true });
 try {
-  const first = await runContractOnce(browser, server.origin);
-  const second = await runContractOnce(browser, server.origin);
+  const first = await runContractOnce(browser, server.origin, options.source);
+  const second = await runContractOnce(browser, server.origin, options.source);
   const deterministic = semanticHash(normalizeRun(first)) === semanticHash(normalizeRun(second));
   if (!deterministic) first.failures.push(createFailure("deterministic_replay", ["repeat-contract"], semanticHash(normalizeRun(first)), semanticHash(normalizeRun(second))));
   const result = {

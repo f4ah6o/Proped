@@ -163,11 +163,14 @@ try {
     genericQuality.stages[0].payload.qualityFailureCodes,
     ["reload_persists_todos", "escape_cancels_edit"],
   );
+  assert.equal(genericQuality.stages[0].payload.canonicalFailureClusterCount, 2);
+  assert.equal(genericQuality.stages[0].payload.canonicalFailureClassIds.length, 2);
   const genericAtlas = JSON.parse(fs.readFileSync(path.join(TMP, "generic-quality-out/atlas.json"), "utf8"));
   assert.deepEqual(
     genericAtlas.stages[0].qualityFailureCodes,
     ["reload_persists_todos", "escape_cancels_edit"],
   );
+  assert.equal(genericAtlas.stages[0].canonicalFailureClassIds.length, 2);
 
   const custom = runWebProject(
     ROOT,

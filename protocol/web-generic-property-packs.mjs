@@ -1,4 +1,5 @@
 import { semanticHash } from "./ui-driver-v1.mjs";
+import { clusterWebFailures } from "./web-failure-classifier.mjs";
 
 export const GENERIC_PROPERTY_PACKS = Object.freeze([
   "browser-safety",
@@ -273,6 +274,7 @@ export async function runGenericPropertyPacks(driver, {
     failures,
     advisories,
     diagnostics,
+    canonicalFailures: clusterWebFailures(failures),
     metrics: {
       probeCount: results.reduce((sum, result) => sum + result.probes, 0),
       failureCount: failures.length,

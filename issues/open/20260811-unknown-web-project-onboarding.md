@@ -783,7 +783,10 @@ Acceptance:
   - no-action fresh BrowserContextをmanifest既定3回samplingし、scalar/structural path volatilityを抽出。
   - generated-id/token/timestampは`likely-noise` candidate、storage/forms/applicationState/IndexedDB/url/contentはreview-required。
   - raw volatile valueはreportへ含めず、normalizer proposalは`applied:false`のまま。
-- [ ] canonical failure classifier
+- [x] canonical failure classifier
+  - oracle family + normalized action pattern + semantic evidence paths + route family + exception kindからcanonical IDを生成。
+  - generated ID / generation / input value違いをnormalizeし、元failure codeを保持したままcluster。
+  - generic property packだけでなくrunner summary/Atlas上の既存TodoMVC/drawDB style failureにも共通適用。
 - [ ] runner-native replay × 3
 - [ ] GitHub Actions workflow generator
 

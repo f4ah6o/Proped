@@ -3,6 +3,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { buildStrictSandboxInvocation, safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
 import { semanticHash } from "./ui-driver-v1.mjs";
+import { clusterWebFailures } from "./web-failure-classifier.mjs";
 
 export const WEB_PROJECT_MANIFEST_VERSION = 1;
 export const WEB_PROJECT_RUNNER_VERSION = "1";
@@ -185,12 +186,16 @@ function stageStatus(child) {
   return "execution_failed";
 }
 
-function qualityFailureCodes(payload) {
+function qualityFailures(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return [];
-  const failures = [
+  return [
     ...(Array.isArray(payload.qualityGate?.failures) ? payload.qualityGate.failures : []),
     ...(Array.isArray(payload.failures) ? payload.failures : []),
   ];
+}
+
+function qualityFailureCodes(payload) {
+  const failures = qualityFailures(payload);
   const codes = failures
     .map((failure) => failure?.code ?? failure?.property ?? failure?.failureClass ?? null)
     .filter((code) => typeof code === "string" && code.length > 0);
@@ -216,7 +221,12 @@ function payloadSummary(payload) {
     if (key in payload) summary[key] = payload[key];
   }
   const failures = qualityFailureCodes(payload);
-  if (failures.length > 0) summary.qualityFailureCodes = failures;
+  if (failures.length > 0) {
+    summary.qualityFailureCodes = failures;
+    const canonical = clusterWebFailures(qualityFailures(payload));
+    summary.canonicalFailureClassIds = canonical.clusters.map((cluster) => cluster.id);
+    summary.canonicalFailureClusterCount = canonical.clusterCount;
+  }
   return summary;
 }
 
@@ -230,6 +240,10 @@ function stableStage(stageResult) {
     exitCode: stageResult.exitCode,
     resultSemanticHash: stageResult.payload?.semanticHash ?? null,
     qualityFailureCodes: stageResult.payload?.qualityFailureCodes ?? qualityFailureCodes(stageResult.payload),
+    canonicalFailureClassIds: stageResult.payload?.canonicalFailureClassIds ?? (() => {
+      const failures = qualityFailures(stageResult.payload);
+      return failures.length ? clusterWebFailures(failures).clusters.map((cluster) => cluster.id) : [];
+    })(),
   };
 }
 

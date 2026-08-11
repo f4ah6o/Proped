@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added canonical Web failure classification and clustering from oracle family, normalized action pattern, semantic evidence paths, route family, and exception kind; runner summaries and Atlas now retain stable canonical failure-class IDs alongside human-facing failure codes.
 - Added no-action fresh-context volatility mining that proposes reviewable normalization candidates by semantic path and confidence without emitting raw volatile values or automatically applying any rule; storage/form/domain-state volatility is always review-required.
 - Added a conservative Dexie 3.x IndexedDB adapter that links declared/resolved Dexie versions to generic browser inventory, translates verified native version scaling (`verno * 10`) back to logical versions, and reconstructs Dexie-style store schema descriptors without reading records; real drawDB resolves `670 -> 67`.
 - Added read-only IndexedDB metadata inventory for Generic Browser Mode, capturing database/native-version/store/keyPath/index/count metadata without record payloads; real drawDB dogfood automatically identifies the `drawDB` version-670 schema.

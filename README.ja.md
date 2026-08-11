@@ -48,6 +48,10 @@ node scripts/web_project_compile.mjs proped.web.json
 
 `web doctor`はinstall/build/start commandを実行せず、project/runtime/server/browser/sandbox readinessを検査します。static outputやmanaged command serverはcompile後にProped-owned browser stageが扱います。
 
+## Canonical failure classes
+
+Web failureには人間向けfailure codeとは別にstableなcanonical classを付与できます。oracle family、normalized action pattern、semantic evidence path、route family、exception kindを使い、generated ID、runtime generation、具体的input valueを正規化してからhashします。元failure codeは保持したまま反復発生をclusterし、runner summary/Atlasにもcanonical IDを出します。
+
 ## Generic Web property packs
 
 Low-config Generic Browser Modeでは現在`browser-safety`、`navigation`、`reload-persistence`を提供します。false positive抑制のため保守的に判定し、uncaught exceptionや観測可能なlocal/session storage driftだけをquality failureにします。storage evidenceなしでreload後にvisible stateが消える場合は自動CI failureではなくadvisory candidateに留めます。

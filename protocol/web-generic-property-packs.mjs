@@ -19,6 +19,7 @@ function stateProjection(snapshot) {
     dom: snapshot.dom,
     forms: snapshot.forms,
     storage: snapshot.storage,
+    applicationState: snapshot.applicationState ?? null,
   };
 }
 

@@ -54,6 +54,10 @@ Low-config Generic Browser Modeでは現在`browser-safety`、`navigation`、`re
 
 このgeneric discoveryだけで、TodoMVC React/Vueのreload state lossをTodoMVC固有Playwright adapter/semantic contractなしにsurfaceできています。
 
+## IndexedDB metadata inventory
+
+manifest v2で`state.indexedDB.mode = "auto-metadata"`を選ぶと、Generic Browser ModeはIndexedDBのdatabase名、native version、object store keyPath、auto-increment、index定義、record countを取得します。record payload自体は**読みません**。実drawDB dogfoodではdrawDB固有adapterなしで`drawDB` native version 670と`diagrams`/`templates` storeを検出できています。
+
 ## Generic browser inventory
 
 起動済みアプリに対して、project-specificなPlaywright codeなしでgeneric browser adapterがaction discoveryとsemantic state captureを行えます。

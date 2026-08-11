@@ -1,4 +1,5 @@
 import { launchManagedChromium, managedBrowserRuntimeDetails } from "./managed-browser-runtime.mjs";
+import { captureIndexedDbInventory } from "./indexeddb-inventory.mjs";
 import { discoverAccessibleActions } from "../../protocol/accessible-action-discovery.mjs";
 import { createSemanticSnapshot } from "../../protocol/dom-semantic-snapshot.mjs";
 import { evaluateWebProperties } from "../../protocol/web-property-pack.mjs";
@@ -52,6 +53,7 @@ export class GenericPlaywrightBrowserDriver {
     allowOrigins = [],
     quiescence = {},
     readyCheck = null,
+    indexedDBMode = "off",
   } = {}) {
     if (!url) throw new Error("GenericPlaywrightBrowserDriver requires url");
     this.url = new URL(url).href;
@@ -70,6 +72,8 @@ export class GenericPlaywrightBrowserDriver {
       ...quiescence,
     };
     this.readyCheck = readyCheck;
+    if (!["off", "auto-metadata"].includes(indexedDBMode)) throw new Error(`unsupported indexedDBMode: ${indexedDBMode}`);
+    this.indexedDBMode = indexedDBMode;
     this.consoleEntries = [];
     this.routeEntries = [];
     this.targetResolvers = new Map();
@@ -184,6 +188,7 @@ export class GenericPlaywrightBrowserDriver {
 
   async quiescenceFingerprint() {
     const raw = await this.rawSnapshot();
+    const indexedDB = this.indexedDBMode === "auto-metadata" ? await captureIndexedDbInventory(this.page) : null;
     return createSemanticSnapshot({
       url: raw.url,
       semanticDom: raw.semanticDom,
@@ -193,7 +198,7 @@ export class GenericPlaywrightBrowserDriver {
       pending: [],
       effects: [],
       console: [],
-      applicationState: null,
+      applicationState: indexedDB ? { indexedDB } : null,
     }).fingerprint;
   }
 
@@ -541,6 +546,7 @@ export class GenericPlaywrightBrowserDriver {
 
   async snapshot() {
     const raw = await this.rawSnapshot();
+    const indexedDB = this.indexedDBMode === "auto-metadata" ? await captureIndexedDbInventory(this.page) : null;
     const snapshot = createSemanticSnapshot({
       url: raw.url,
       semanticDom: raw.semanticDom,
@@ -550,7 +556,7 @@ export class GenericPlaywrightBrowserDriver {
       pending: [],
       effects: [],
       console: this.consoleEntries,
-      applicationState: null,
+      applicationState: indexedDB ? { indexedDB } : null,
     });
     return {
       ...snapshot,

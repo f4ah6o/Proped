@@ -772,7 +772,9 @@ Acceptance:
 - [x] `proped web doctor`
 - [x] generic property packs
 - [x] local/session persistence pack
-- [ ] IndexedDB inventory
+- [x] IndexedDB inventory
+  - record payloadを読まずDB/version/store/keyPath/index/countのみ取得。
+  - drawDB editor routeで`drawDB` native version 670、`diagrams`/`templates`と全indexをgeneric inventoryだけで検出済み。
 - [ ] Dexie adapter
 - [ ] volatility noise miner
 - [ ] canonical failure classifier

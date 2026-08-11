@@ -54,6 +54,10 @@ Low-config Generic Browser Mode currently ships `browser-safety`, `navigation`, 
 
 This already surfaces TodoMVC React and Vue reload-state loss from generic discovery alone, with no TodoMVC-specific Playwright adapter or semantic contract.
 
+## IndexedDB metadata inventory
+
+When manifest v2 selects `state.indexedDB.mode = "auto-metadata"`, Generic Browser Mode records IndexedDB database names, native versions, object-store key paths, auto-increment flags, index definitions, and record counts. It intentionally does **not** read record payloads. In real drawDB dogfood this detects the `drawDB` native version 670 database and its `diagrams`/`templates` stores without a drawDB-specific adapter.
+
 ## Generic browser inventory
 
 For an already-running app, the generic browser adapter can discover actions and capture semantic state without project-specific Playwright code:

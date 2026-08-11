@@ -29,6 +29,7 @@ function parseArgs(argv) {
     timezone: "UTC",
     readinessTimeoutMs: 30_000,
     propertyPacks: [],
+    indexedDBMode: "off",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index];
@@ -50,6 +51,7 @@ function parseArgs(argv) {
     else if (key === "--timezone") options.timezone = value;
     else if (key === "--readiness-timeout") options.readinessTimeoutMs = Number(value);
     else if (key === "--property-packs-json") options.propertyPacks = JSON.parse(value);
+    else if (key === "--indexeddb-mode") options.indexedDBMode = value;
     else usage(`unknown option: ${key}`);
   }
   if (!options.projectRoot) usage("--project-root is required");
@@ -59,6 +61,7 @@ function parseArgs(argv) {
   if (options.serverMode === "external" && !options.url) usage("external mode requires --url");
   if (!Number.isSafeInteger(options.readinessTimeoutMs) || options.readinessTimeoutMs < 1) usage("--readiness-timeout must be a positive integer");
   if (!Array.isArray(options.propertyPacks) || options.propertyPacks.some((pack) => typeof pack !== "string")) usage("--property-packs-json must be a string array");
+  if (!["off", "auto-metadata"].includes(options.indexedDBMode)) usage("--indexeddb-mode is invalid");
   return options;
 }
 
@@ -203,6 +206,7 @@ try {
     timezoneId: options.timezone,
     timeoutMs: Math.min(10_000, options.readinessTimeoutMs),
     quiescence: { timeoutMs: options.readinessTimeoutMs, stableSamples: 3, sampleIntervalMs: 25 },
+    indexedDBMode: options.indexedDBMode,
   });
   const snapshot = await driver.reset();
   const inventory = await driver.actions();
@@ -236,6 +240,7 @@ try {
     advisories: propertyCampaign.advisories,
     stateFingerprint: snapshot.fingerprint,
     stateSemanticHash,
+    stateInventory: { indexedDB: snapshot.applicationState?.indexedDB ?? null },
   };
   result.semanticHash = semanticHash({
     runtime: result.runtime,

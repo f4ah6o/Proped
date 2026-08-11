@@ -1,5 +1,12 @@
 # Changes
 
+## Unreleased
+
+### Added
+
+- Added a reusable Web mutation quality-gate API with machine-readable failure codes for mutation score, healthy-control false positives, deterministic replay, minimized-trace drift, throughput, and elapsed time.
+- Added fail-closed benchmark CLI options for iteration count, quality thresholds, custom artifact output, artifact suppression, and help.
+
 ## 0.35.0 - 2026-08-06
 
 ### Added

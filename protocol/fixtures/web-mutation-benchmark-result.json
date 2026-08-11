@@ -21,6 +21,14 @@
     "originalTraceActions": 30,
     "minimalTraceActions": 14
   },
+  "qualityContract": {
+    "minimumMutationScore": 1,
+    "maximumFalsePositiveRate": 0,
+    "requireDeterministicReplay": true,
+    "requireExpectedMinimalTraceLength": true,
+    "minimumTransitionsPerSecond": 5000,
+    "maximumElapsedMs": 10000
+  },
   "performanceContract": {
     "iterations": 1000,
     "minimumTransitionsPerSecond": 5000,
@@ -208,5 +216,5 @@
       "targetedViolation": false
     }
   ],
-  "semanticHash": "7746aaaaef4b8e4ebea9e24f67972a8b4755ea45bf5fd576c42dba4632cfa73c"
+  "semanticHash": "405986949c4c97aa85432d61435a1eb50096f9b9868536a6348054c2e74ffe85"
 }

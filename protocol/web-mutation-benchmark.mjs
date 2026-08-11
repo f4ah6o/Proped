@@ -340,3 +340,129 @@ export function measureMutationThroughput({ iterations = DEFAULT_BENCHMARK_ITERA
     transitionsPerSecond: transitionCount / (elapsedMs / 1_000),
   };
 }
+
+
+export const DEFAULT_MUTATION_QUALITY_CONTRACT = Object.freeze({
+  minimumMutationScore: 1,
+  maximumFalsePositiveRate: 0,
+  requireDeterministicReplay: true,
+  requireExpectedMinimalTraceLength: true,
+  minimumTransitionsPerSecond: 5_000,
+  maximumElapsedMs: 10_000,
+});
+
+function requireFiniteNumber(value, name) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new TypeError(`${name} must be a finite number`);
+  }
+}
+
+function validateQualityContract(contract) {
+  requireFiniteNumber(contract.minimumMutationScore, "minimumMutationScore");
+  requireFiniteNumber(contract.maximumFalsePositiveRate, "maximumFalsePositiveRate");
+  requireFiniteNumber(contract.minimumTransitionsPerSecond, "minimumTransitionsPerSecond");
+  requireFiniteNumber(contract.maximumElapsedMs, "maximumElapsedMs");
+  if (contract.minimumMutationScore < 0 || contract.minimumMutationScore > 1) {
+    throw new RangeError("minimumMutationScore must be between 0 and 1");
+  }
+  if (contract.maximumFalsePositiveRate < 0 || contract.maximumFalsePositiveRate > 1) {
+    throw new RangeError("maximumFalsePositiveRate must be between 0 and 1");
+  }
+  if (contract.minimumTransitionsPerSecond < 0) {
+    throw new RangeError("minimumTransitionsPerSecond must be non-negative");
+  }
+  if (contract.maximumElapsedMs < 0) {
+    throw new RangeError("maximumElapsedMs must be non-negative");
+  }
+  if (typeof contract.requireDeterministicReplay !== "boolean") {
+    throw new TypeError("requireDeterministicReplay must be boolean");
+  }
+  if (typeof contract.requireExpectedMinimalTraceLength !== "boolean") {
+    throw new TypeError("requireExpectedMinimalTraceLength must be boolean");
+  }
+}
+
+export function evaluateMutationQualityGate({ catalog, performance, contract = {} }) {
+  if (!catalog || typeof catalog !== "object") throw new TypeError("catalog is required");
+  if (!performance || typeof performance !== "object") throw new TypeError("performance is required");
+  const resolved = { ...DEFAULT_MUTATION_QUALITY_CONTRACT, ...contract };
+  validateQualityContract(resolved);
+  requireFiniteNumber(catalog.mutationScore, "catalog.mutationScore");
+  requireFiniteNumber(catalog.falsePositiveRate, "catalog.falsePositiveRate");
+  requireFiniteNumber(performance.transitionsPerSecond, "performance.transitionsPerSecond");
+  requireFiniteNumber(performance.elapsedMs, "performance.elapsedMs");
+
+  const failures = [];
+  const fail = (code, message, actual, expected, operators = []) => {
+    failures.push({ code, message, actual, expected, operators });
+  };
+
+  if (catalog.mutationScore < resolved.minimumMutationScore) {
+    fail(
+      "mutation_score_below_minimum",
+      "mutation score is below the configured minimum",
+      catalog.mutationScore,
+      resolved.minimumMutationScore,
+      (catalog.mutations ?? []).filter((mutation) => !mutation.killed).map((mutation) => mutation.operator),
+    );
+  }
+  if (catalog.falsePositiveRate > resolved.maximumFalsePositiveRate) {
+    fail(
+      "false_positive_rate_above_maximum",
+      "false-positive rate exceeds the configured maximum",
+      catalog.falsePositiveRate,
+      resolved.maximumFalsePositiveRate,
+      (catalog.controls ?? []).filter((control) => control.violationCount > 0).map((control) => control.operator),
+    );
+  }
+
+  const nondeterministic = (catalog.mutations ?? [])
+    .filter((mutation) => !mutation.deterministicReplay)
+    .map((mutation) => mutation.operator);
+  if (resolved.requireDeterministicReplay && nondeterministic.length > 0) {
+    fail(
+      "nondeterministic_replay",
+      "one or more killed mutations do not replay deterministically",
+      nondeterministic.length,
+      0,
+      nondeterministic,
+    );
+  }
+
+  const nonminimal = (catalog.mutations ?? [])
+    .filter((mutation) => mutation.minimalTraceLength !== mutation.expectedMinimalLength)
+    .map((mutation) => mutation.operator);
+  if (resolved.requireExpectedMinimalTraceLength && nonminimal.length > 0) {
+    fail(
+      "unexpected_minimal_trace_length",
+      "one or more minimized traces differ from the reviewed contract",
+      nonminimal.length,
+      0,
+      nonminimal,
+    );
+  }
+
+  if (performance.transitionsPerSecond < resolved.minimumTransitionsPerSecond) {
+    fail(
+      "throughput_below_minimum",
+      "measured transition throughput is below the configured minimum",
+      performance.transitionsPerSecond,
+      resolved.minimumTransitionsPerSecond,
+    );
+  }
+  if (performance.elapsedMs > resolved.maximumElapsedMs) {
+    fail(
+      "elapsed_time_above_maximum",
+      "benchmark elapsed time exceeds the configured maximum",
+      performance.elapsedMs,
+      resolved.maximumElapsedMs,
+    );
+  }
+
+  return {
+    ok: failures.length === 0,
+    contract: resolved,
+    failureCount: failures.length,
+    failures,
+  };
+}

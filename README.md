@@ -25,6 +25,18 @@ CLI exit codes are `0` when each demo matches its declared expected outcome, `2`
 
 See [docs/CLI.md](docs/CLI.md) for the complete command and output contract.
 
+## Web mutation quality gate
+
+The framework-neutral Web mutation benchmark kills one reviewed mutation for each generic Web property and runs paired healthy controls. Its quality gate reports mutation score, false-positive rate, deterministic replay, minimized-trace drift, throughput, and elapsed-time violations as machine-readable codes.
+
+```bash
+node scripts/test_web_mutation_benchmark.mjs
+node scripts/test_web_mutation_benchmark.mjs --iterations 2000 --output .tmp/web-mutation
+node scripts/test_web_mutation_benchmark.mjs --minimum-mutation-score 1 --maximum-false-positive-rate 0 --no-artifacts
+```
+
+Invalid arguments exit with code `2`; a quality-gate failure exits with code `1` and writes the full result to stderr. Default runs write `summary.json`, `atlas.json`, `atlas.html`, `atlas.svg`, and `atlas.dot` below `protocol/out/web-mutation-benchmark/`.
+
 ## Included demos
 
 | ID | Source | Expected | Coverage | Minimal counterexample |

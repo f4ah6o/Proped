@@ -25,6 +25,18 @@ moon run src/cli -- schema --json
 
 完全なcommand・output契約は [docs/CLI.ja.md](docs/CLI.ja.md) にあります。
 
+## Web mutation品質ゲート
+
+framework-neutralなWeb mutation benchmarkは、generic Web propertyごとにレビュー済みmutationを1件実行し、対応するhealthy controlも検証します。品質ゲートはmutation score、false-positive rate、deterministic replay、最小traceのずれ、throughput、elapsed timeの違反を機械可読codeで返します。
+
+```bash
+node scripts/test_web_mutation_benchmark.mjs
+node scripts/test_web_mutation_benchmark.mjs --iterations 2000 --output .tmp/web-mutation
+node scripts/test_web_mutation_benchmark.mjs --minimum-mutation-score 1 --maximum-false-positive-rate 0 --no-artifacts
+```
+
+不正な引数は終了コード`2`、品質ゲート違反は終了コード`1`で、完全な結果をstderrへJSON出力します。default実行は`protocol/out/web-mutation-benchmark/`へ`summary.json`、`atlas.json`、`atlas.html`、`atlas.svg`、`atlas.dot`を生成します。
+
 ## 同梱demo
 
 | ID | 出所 | 期待結果 | 検証内容 | 最小counterexample |

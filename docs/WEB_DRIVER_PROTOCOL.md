@@ -67,6 +67,8 @@ Drivers provide semantic element records rather than CSS selectors. The v1 disco
 
 `protocol/web-property-pack.mjs` evaluates stale responses, duplicate submits, pending-effect leaks, focus integrity, entity consistency, hydration warnings, unhandled runtime failures, and deterministic replay. Each property has an error/warning/off policy and produces a replayable failure signature. Framework adapters supply normalized snapshots; the pack does not read React Fiber, Vue VNodes, or other private runtime state.
 
+`protocol/web-mutation-benchmark.mjs` pairs each property with one synthetic faulty runtime and one healthy control. `evaluateMutationQualityGate` applies configurable mutation-score, false-positive, replay, minimized-trace, throughput, and elapsed-time contracts and returns stable failure codes instead of assertion-only errors. `scripts/test_web_mutation_benchmark.mjs --help` documents the fail-closed command-line contract.
+
 ## React Component Mode
 
 `web/react-component/` mounts a real React 19 component into an isolated JSDOM document. The adapter discovers actions from role, accessible name, label, and form scope; executes native DOM input, click, and submit events inside React `act`; and records semantic snapshots after bounded microtask settling. Network and submit completion are deterministic injected effect descriptors. No real network or external write is performed.

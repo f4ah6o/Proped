@@ -25,6 +25,17 @@ CLI exit codes are `0` when each demo matches its declared expected outcome, `2`
 
 See [docs/CLI.md](docs/CLI.md) for the complete command and output contract.
 
+## Unknown Web project inspection
+
+Proped Rabbita can inspect an unknown Web project without running install, build, or start scripts. The read-only inspector infers package manager, framework, build/serve commands, render mode, output directory, routing, storage/IndexedDB, WebSocket, service-worker, and authentication hints, and reports confidence plus ambiguities instead of silently guessing.
+
+```bash
+node scripts/web_project_inspect.mjs .
+node scripts/web_project_inspect.mjs . --json
+```
+
+The current implementation entry point is the Node script; the planned packaged CLI surface is `proped web inspect`.
+
 ## Web mutation quality gate
 
 The framework-neutral Web mutation benchmark kills one reviewed mutation for each generic Web property and runs paired healthy controls. Its quality gate reports mutation score, false-positive rate, deterministic replay, minimized-trace drift, throughput, and elapsed-time violations as machine-readable codes.

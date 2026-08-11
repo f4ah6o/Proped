@@ -25,6 +25,17 @@ moon run src/cli -- schema --json
 
 完全なcommand・output契約は [docs/CLI.ja.md](docs/CLI.ja.md) にあります。
 
+## 未知Webプロジェクトのinspection
+
+Proped Rabbitaは未知のWebプロジェクトに対して、install/build/start scriptを実行せずread-only inspectionできます。package manager、framework、build/serve command、render mode、output directory、routing、storage/IndexedDB、WebSocket、service worker、authenticationのhintを推定し、無言で断定せずconfidenceとambiguityを返します。
+
+```bash
+node scripts/web_project_inspect.mjs .
+node scripts/web_project_inspect.mjs . --json
+```
+
+現在の実装入口はNode scriptで、配布CLIでは`proped web inspect`を予定しています。
+
 ## Web mutation品質ゲート
 
 framework-neutralなWeb mutation benchmarkは、generic Web propertyごとにレビュー済みmutationを1件実行し、対応するhealthy controlも検証します。品質ゲートはmutation score、false-positive rate、deterministic replay、最小traceのずれ、throughput、elapsed timeの違反を機械可読codeで返します。

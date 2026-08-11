@@ -65,6 +65,9 @@ jobs:
           python3 -m json.tool web/project-manifests/proped-web-quality.json > /dev/null
           node scripts/test_web_project_runner.mjs
 
+      - name: Web project inspect unit tests
+        run: node scripts/test_web_project_inspect.mjs
+
       - name: Install Web project dependencies
         run: |
           npm ci --prefix web/react-component --ignore-scripts

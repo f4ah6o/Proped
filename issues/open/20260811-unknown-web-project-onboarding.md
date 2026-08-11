@@ -711,22 +711,22 @@ LLM は P3 以降で:
 
 ### P0.1 `proped web inspect`
 
-- [ ] package manager inference
-- [ ] framework inference
-- [ ] build/start/static output inference
-- [ ] SSR/static/SPA mode classification
-- [ ] Node requirement inference
-- [ ] storage / IndexedDB / Dexie hints
-- [ ] auth / WebSocket hints
-- [ ] confidence + ambiguities
-- [ ] JSON output
+- [x] package manager inference
+- [x] framework inference
+- [x] build/start/static output inference
+- [x] SSR/static/SPA mode classification
+- [x] Node requirement inference
+- [x] storage / IndexedDB / Dexie hints
+- [x] auth / WebSocket hints
+- [x] confidence + ambiguities
+- [x] JSON output
 
 Acceptance:
 
-- [ ] TodoMVC React / Vue を正しく分類
-- [ ] drawDB を Vite SPA + IndexedDB/Dexie として分類
-- [ ] existing Next fixture を Next SSR/static config に応じて分類
-- [ ] existing Nuxt fixture を Nuxt server/static config に応じて分類
+- [x] TodoMVC React / Vue を正しく分類
+- [x] drawDB を Vite SPA + IndexedDB/Dexie として分類
+- [x] existing Next fixture を Next SSR/static config に応じて分類
+- [x] existing Nuxt fixture を Nuxt server/static config に応じて分類
 
 ### P0.2 Generic Playwright Adapter
 

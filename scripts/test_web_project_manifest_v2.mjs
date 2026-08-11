@@ -48,7 +48,15 @@ for (const [relative, expectedServer, expectedFramework] of optional) {
     assert.equal(manifest.server.mode, expectedServer);
     assert.equal(manifest.project.framework, expectedFramework);
     assert.equal(result.manifest.stages.at(-1).id, "generic-browser");
-    dogfood.push({ target: relative, framework: manifest.project.framework, server: manifest.server.mode, packs: manifest.properties.packs });
+    if (relative === ".tmp/drawdb") {
+      assert.equal(manifest.state.indexedDB.adapter.kind, "dexie");
+      assert.equal(manifest.state.indexedDB.adapter.declaredVersion, "^3.2.4");
+      assert.equal(manifest.state.indexedDB.adapter.resolvedVersion, "3.2.7");
+    }
+    dogfood.push({
+      target: relative, framework: manifest.project.framework, server: manifest.server.mode, packs: manifest.properties.packs,
+      indexedDBAdapter: manifest.state.indexedDB.adapter?.kind ?? null,
+    });
   } catch (error) {
     if (error.code === "ENOENT") continue;
     throw error;

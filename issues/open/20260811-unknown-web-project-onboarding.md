@@ -775,7 +775,10 @@ Acceptance:
 - [x] IndexedDB inventory
   - record payloadを読まずDB/version/store/keyPath/index/countのみ取得。
   - drawDB editor routeで`drawDB` native version 670、`diagrams`/`templates`と全indexをgeneric inventoryだけで検出済み。
-- [ ] Dexie adapter
+- [x] Dexie adapter
+  - Dexie 3.xの実runtime contractに限定してnative `version = round(verno * 10)` / logical `verno = nativeVersion / 10`を適用。
+  - drawDB declared `^3.2.4` / resolved `3.2.7`をinspectionからv2へ伝播し、native 670 → logical 67をgeneric browserで実確認。
+  - store/index metadataからDexie-style schema descriptorを再構成し、record payloadは取得しない。未知Dexie majorはfail-open変換せずdiagnostic。
 - [ ] volatility noise miner
 - [ ] canonical failure classifier
 - [ ] runner-native replay × 3

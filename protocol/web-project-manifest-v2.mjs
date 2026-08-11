@@ -106,8 +106,14 @@ export function validateWebProjectManifestV2(manifest) {
 
   exactKeys(manifest.state, new Set(["sources", "indexedDB"]), "state");
   uniqueStrings(manifest.state.sources, "state.sources");
-  exactKeys(manifest.state.indexedDB, new Set(["mode"]), "state.indexedDB");
+  exactKeys(manifest.state.indexedDB, new Set(["mode", "adapter"]), "state.indexedDB");
   if (!["off", "auto-metadata"].includes(manifest.state.indexedDB.mode)) fail("state.indexedDB.mode is invalid");
+  if (manifest.state.indexedDB.adapter !== null) {
+    exactKeys(manifest.state.indexedDB.adapter, new Set(["kind", "declaredVersion", "resolvedVersion"]), "state.indexedDB.adapter");
+    if (manifest.state.indexedDB.adapter.kind !== "dexie") fail("state.indexedDB.adapter.kind must be dexie");
+    string(manifest.state.indexedDB.adapter.declaredVersion, "state.indexedDB.adapter.declaredVersion", { nullable: true });
+    string(manifest.state.indexedDB.adapter.resolvedVersion, "state.indexedDB.adapter.resolvedVersion", { nullable: true });
+  }
 
   exactKeys(manifest.normalization, new Set(["builtin", "volatilityProbeRuns"]), "normalization");
   bool(manifest.normalization.builtin, "normalization.builtin");
@@ -199,7 +205,14 @@ export function createWebProjectManifestV2FromInspection(inspection, { projectRo
     },
     state: {
       sources: clone(inspection.runtime.stateSources),
-      indexedDB: { mode: inspection.runtime.indexedDB.detected ? "auto-metadata" : "off" },
+      indexedDB: {
+        mode: inspection.runtime.indexedDB.detected ? "auto-metadata" : "off",
+        adapter: inspection.runtime.indexedDB.dexie ? {
+          kind: "dexie",
+          declaredVersion: inspection.runtime.indexedDB.dexieDeclaredVersion ?? null,
+          resolvedVersion: inspection.runtime.indexedDB.dexieResolvedVersion ?? null,
+        } : null,
+      },
     },
     normalization: { builtin: true, volatilityProbeRuns: 3 },
     properties: { packs },
@@ -244,6 +257,7 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
     "--readiness-timeout", String(manifest.server.readiness.timeoutMs),
     "--property-packs-json", JSON.stringify(manifest.properties.packs),
     "--indexeddb-mode", manifest.state.indexedDB.mode,
+    "--indexeddb-adapter-json", JSON.stringify(manifest.state.indexedDB.adapter),
   ];
   if (manifest.server.outputDir) browserCommand.push("--output-dir", manifest.server.outputDir);
   if (manifest.server.start) browserCommand.push("--start-json", JSON.stringify(manifest.server.start));

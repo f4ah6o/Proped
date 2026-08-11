@@ -343,6 +343,17 @@ function detectRuntimeHints(root, pkg, evidence) {
   if (/\bsessionStorage\b/.test(source)) add("sessionStorage");
   if (/\bindexedDB\b/.test(source) || hasDep("dexie") || hasDep("idb")) add("indexedDB");
   const dexie = hasDep("dexie") || /\bnew\s+Dexie\s*\(/.test(source);
+  const dexieDeclaredVersion = typeof dependencies.dexie === "string" ? dependencies.dexie : null;
+  let dexieResolvedVersion = null;
+  if (dexie) {
+    const dexiePackage = path.join(root, "node_modules", "dexie", "package.json");
+    try {
+      const installed = JSON.parse(fs.readFileSync(dexiePackage, "utf8"));
+      if (typeof installed.version === "string") dexieResolvedVersion = installed.version;
+    } catch {
+      // node_modules is optional during read-only inspection.
+    }
+  }
   const websocket = /\bnew\s+WebSocket\s*\(/.test(source) || ["socket.io-client", "sockjs-client", "ws"].some(hasDep);
   const serviceWorker = /\bserviceWorker\b/.test(source) || hasDep("workbox-window") || hasDep("vite-plugin-pwa");
   const authDependencies = [
@@ -360,7 +371,13 @@ function detectRuntimeHints(root, pkg, evidence) {
   else evidence.push(`source-scan:${scan.files.length}-files:${scan.bytes}-bytes`);
   return {
     stateSources,
-    indexedDB: { detected: stateSources.includes("indexedDB"), dexie, confidence: dexie ? 0.99 : stateSources.includes("indexedDB") ? 0.9 : 0 },
+    indexedDB: {
+      detected: stateSources.includes("indexedDB"),
+      dexie,
+      dexieDeclaredVersion,
+      dexieResolvedVersion,
+      confidence: dexie ? 0.99 : stateSources.includes("indexedDB") ? 0.9 : 0,
+    },
     routing: { model: routeModel, confidence: routeModel === "unknown" ? 0 : 0.95 },
     websocket: { detected: websocket, confidence: websocket ? 0.9 : 0 },
     serviceWorker: { detected: serviceWorker, confidence: serviceWorker ? 0.85 : 0 },

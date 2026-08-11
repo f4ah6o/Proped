@@ -87,6 +87,7 @@ jobs:
           node scripts/test_semantic_quiescence.mjs
           node web/playwright-browser/test-generic-browser-driver.mjs
           node scripts/test_indexeddb_inventory.mjs
+          node scripts/test_dexie_inventory_adapter.mjs
           node scripts/test_web_generic_property_packs.mjs
           node scripts/test_web_project_onboarding_v2.mjs
 

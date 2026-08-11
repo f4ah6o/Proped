@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a conservative Dexie 3.x IndexedDB adapter that links declared/resolved Dexie versions to generic browser inventory, translates verified native version scaling (`verno * 10`) back to logical versions, and reconstructs Dexie-style store schema descriptors without reading records; real drawDB resolves `670 -> 67`.
 - Added read-only IndexedDB metadata inventory for Generic Browser Mode, capturing database/native-version/store/keyPath/index/count metadata without record payloads; real drawDB dogfood automatically identifies the `drawDB` version-670 schema.
 - Added conservative generic Browser property packs for uncaught-exception safety, navigation restoration, and reload persistence; TodoMVC React/Vue now surface the known reload-state loss as a generated advisory with zero project-specific contract code.
 - Added high-level Web project manifest v2 with read-only `web init`, `web doctor`, v2-to-v1 compilation, managed static/command server lifecycle, and an end-to-end unknown-Vite onboarding vertical slice with zero project-specific executable JS.

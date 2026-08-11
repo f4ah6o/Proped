@@ -54,6 +54,12 @@ Low-config Generic Browser Modeでは現在`browser-safety`、`navigation`、`re
 
 このgeneric discoveryだけで、TodoMVC React/Vueのreload state lossをTodoMVC固有Playwright adapter/semantic contractなしにsurfaceできています。
 
+## Dexie-aware metadata
+
+inspectionでDexieを検出すると、manifest v2がdeclared versionと、install済みならresolved versionをGeneric Browser Modeへ渡します。初版adapterはversion-boundedで、実依存から`indexedDB.open(name, Math.round(db.verno * 10))`と`idbdb.version / 10`を確認できたDexie 3.xだけを自動変換します。未知majorは推測せずdiagnosticを出してnative IndexedDB versionを保持します。
+
+実drawDBは`^3.2.4`を宣言し`3.2.7`へresolveされ、native IndexedDB version `670` / Dexie logical version `67`として自動認識されます。`++id,diagramId,lastModified,loadedFromGistId`のようなstore schema descriptorも再構成します。
+
 ## IndexedDB metadata inventory
 
 manifest v2で`state.indexedDB.mode = "auto-metadata"`を選ぶと、Generic Browser ModeはIndexedDBのdatabase名、native version、object store keyPath、auto-increment、index定義、record countを取得します。record payload自体は**読みません**。実drawDB dogfoodではdrawDB固有adapterなしで`drawDB` native version 670と`diagrams`/`templates` storeを検出できています。

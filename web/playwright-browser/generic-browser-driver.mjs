@@ -1,5 +1,6 @@
 import { launchManagedChromium, managedBrowserRuntimeDetails } from "./managed-browser-runtime.mjs";
 import { captureIndexedDbInventory } from "./indexeddb-inventory.mjs";
+import { enrichIndexedDbInventoryWithDexie } from "./dexie-inventory-adapter.mjs";
 import { discoverAccessibleActions } from "../../protocol/accessible-action-discovery.mjs";
 import { createSemanticSnapshot } from "../../protocol/dom-semantic-snapshot.mjs";
 import { evaluateWebProperties } from "../../protocol/web-property-pack.mjs";
@@ -54,6 +55,7 @@ export class GenericPlaywrightBrowserDriver {
     quiescence = {},
     readyCheck = null,
     indexedDBMode = "off",
+    indexedDBAdapter = null,
   } = {}) {
     if (!url) throw new Error("GenericPlaywrightBrowserDriver requires url");
     this.url = new URL(url).href;
@@ -74,6 +76,8 @@ export class GenericPlaywrightBrowserDriver {
     this.readyCheck = readyCheck;
     if (!["off", "auto-metadata"].includes(indexedDBMode)) throw new Error(`unsupported indexedDBMode: ${indexedDBMode}`);
     this.indexedDBMode = indexedDBMode;
+    if (indexedDBAdapter !== null && indexedDBAdapter?.kind !== "dexie") throw new Error(`unsupported IndexedDB adapter: ${indexedDBAdapter?.kind}`);
+    this.indexedDBAdapter = indexedDBAdapter;
     this.consoleEntries = [];
     this.routeEntries = [];
     this.targetResolvers = new Map();
@@ -186,9 +190,16 @@ export class GenericPlaywrightBrowserDriver {
     return this.pendingRequests.size;
   }
 
+  async indexedDbInventory() {
+    if (this.indexedDBMode !== "auto-metadata") return null;
+    const inventory = await captureIndexedDbInventory(this.page);
+    if (this.indexedDBAdapter?.kind === "dexie") return enrichIndexedDbInventoryWithDexie(inventory, this.indexedDBAdapter);
+    return inventory;
+  }
+
   async quiescenceFingerprint() {
     const raw = await this.rawSnapshot();
-    const indexedDB = this.indexedDBMode === "auto-metadata" ? await captureIndexedDbInventory(this.page) : null;
+    const indexedDB = await this.indexedDbInventory();
     return createSemanticSnapshot({
       url: raw.url,
       semanticDom: raw.semanticDom,
@@ -546,7 +557,7 @@ export class GenericPlaywrightBrowserDriver {
 
   async snapshot() {
     const raw = await this.rawSnapshot();
-    const indexedDB = this.indexedDBMode === "auto-metadata" ? await captureIndexedDbInventory(this.page) : null;
+    const indexedDB = await this.indexedDbInventory();
     const snapshot = createSemanticSnapshot({
       url: raw.url,
       semanticDom: raw.semanticDom,

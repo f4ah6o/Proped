@@ -30,6 +30,7 @@ function parseArgs(argv) {
     readinessTimeoutMs: 30_000,
     propertyPacks: [],
     indexedDBMode: "off",
+    indexedDBAdapter: null,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index];
@@ -52,6 +53,7 @@ function parseArgs(argv) {
     else if (key === "--readiness-timeout") options.readinessTimeoutMs = Number(value);
     else if (key === "--property-packs-json") options.propertyPacks = JSON.parse(value);
     else if (key === "--indexeddb-mode") options.indexedDBMode = value;
+    else if (key === "--indexeddb-adapter-json") options.indexedDBAdapter = JSON.parse(value);
     else usage(`unknown option: ${key}`);
   }
   if (!options.projectRoot) usage("--project-root is required");
@@ -207,6 +209,7 @@ try {
     timeoutMs: Math.min(10_000, options.readinessTimeoutMs),
     quiescence: { timeoutMs: options.readinessTimeoutMs, stableSamples: 3, sampleIntervalMs: 25 },
     indexedDBMode: options.indexedDBMode,
+    indexedDBAdapter: options.indexedDBAdapter,
   });
   const snapshot = await driver.reset();
   const inventory = await driver.actions();

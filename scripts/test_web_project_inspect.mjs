@@ -114,7 +114,19 @@ for (const [relative, expected] of optionalDogfood) {
   if (!fs.existsSync(path.join(absolute, "package.json"))) continue;
   const report = inspectWebProject(absolute);
   assert.equal(report.framework.name, expected, `${relative}: ${report.framework.name}`);
-  real.push({ target: relative, framework: report.framework.name, stateSources: report.runtime.stateSources, dexie: report.runtime.indexedDB.dexie });
+  if (relative === ".tmp/drawdb") {
+    assert.equal(report.runtime.indexedDB.dexie, true);
+    assert.equal(report.runtime.indexedDB.dexieDeclaredVersion, "^3.2.4");
+    assert.equal(report.runtime.indexedDB.dexieResolvedVersion, "3.2.7");
+  }
+  real.push({
+    target: relative,
+    framework: report.framework.name,
+    stateSources: report.runtime.stateSources,
+    dexie: report.runtime.indexedDB.dexie,
+    dexieDeclaredVersion: report.runtime.indexedDB.dexieDeclaredVersion,
+    dexieResolvedVersion: report.runtime.indexedDB.dexieResolvedVersion,
+  });
 }
 
 console.log(JSON.stringify({

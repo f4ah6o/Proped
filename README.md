@@ -54,6 +54,12 @@ Low-config Generic Browser Mode currently ships `browser-safety`, `navigation`, 
 
 This already surfaces TodoMVC React and Vue reload-state loss from generic discovery alone, with no TodoMVC-specific Playwright adapter or semantic contract.
 
+## Dexie-aware metadata
+
+When inspection detects Dexie, manifest v2 carries the declared and—when already installed—the resolved Dexie version into Generic Browser Mode. The first adapter is intentionally version-bounded: Dexie 3.x is supported because the pinned real dependency verifies `indexedDB.open(name, Math.round(db.verno * 10))` and reads existing native versions as `idbdb.version / 10`. Unknown Dexie majors are not guessed; they produce a diagnostic and keep the native IndexedDB version.
+
+Real drawDB declares `^3.2.4`, resolves `3.2.7`, and is automatically reported as native IndexedDB version `670` / Dexie logical version `67`, including reconstructed schemas such as `++id,diagramId,lastModified,loadedFromGistId`.
+
 ## IndexedDB metadata inventory
 
 When manifest v2 selects `state.indexedDB.mode = "auto-metadata"`, Generic Browser Mode records IndexedDB database names, native versions, object-store key paths, auto-increment flags, index definitions, and record counts. It intentionally does **not** read record payloads. In real drawDB dogfood this detects the `drawDB` native version 670 database and its `diagrams`/`templates` stores without a drawDB-specific adapter.

@@ -87,6 +87,14 @@ When manifest v2 selects `state.indexedDB.mode = "auto-metadata"`, Generic Brows
 
 Manifest v2 runs bounded no-action fresh-context probes before a generic campaign. The miner reports paths that vary across runs, classifies generated IDs/tokens/timestamps separately from state-bearing storage/form/domain paths, and may propose a replacement rule. **No candidate is applied automatically** and raw volatile values are not included in the report. State-bearing volatility remains review-required.
 
+## Selector survival benchmark
+
+`web-selector-survival` turns a discovered action inventory into a semantic locator contract and compares it across minor UI revisions. Class names, generated DOM IDs, wrapper nodes, and element ordering can change without reducing survival when role/name/scope/test identity remain stable. The committed benchmark requires at least 95% survival for minor revisions and separately verifies that deliberately breaking the semantic accessibility contract is detected.
+
+```bash
+node scripts/test_web_selector_survival.mjs
+```
+
 ## Generic browser inventory
 
 For an already-running app, the generic browser adapter can discover actions and capture semantic state without project-specific Playwright code:

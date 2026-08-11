@@ -87,6 +87,14 @@ manifest v2で`state.indexedDB.mode = "auto-metadata"`を選ぶと、Generic Bro
 
 manifest v2はgeneric campaign前にboundedなno-action fresh-context probeを実行できます。run間で変化するpathを抽出し、generated ID/token/timestampと、storage/form/domain stateの揺れを分離してnormalizer candidateを提案します。**candidateは自動適用せず**、raw volatile valueもreportへ出しません。state-bearing volatilityは必ずreview-requiredです。
 
+## Selector survival benchmark
+
+`web-selector-survival`はdiscovery済みaction inventoryをsemantic locator contractへ変換し、minor UI revision間で比較します。class名、生成DOM id、wrapper node、要素順が変わってもrole/name/scope/test identityが維持されていればsurvivalを保てます。commit済みbenchmarkではminor revisionに95%以上を要求し、semantic accessibility contractを意図的に壊した場合は低下を検出できることも別に確認します。
+
+```bash
+node scripts/test_web_selector_survival.mjs
+```
+
 ## Generic browser inventory
 
 起動済みアプリに対して、project-specificなPlaywright codeなしでgeneric browser adapterがaction discoveryとsemantic state captureを行えます。

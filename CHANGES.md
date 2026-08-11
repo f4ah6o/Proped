@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a semantic selector-survival benchmark that compares discovered locator contracts across minor DOM revisions; wrapper/class/generated-ID changes retain 100% survival in the fixture while deliberate accessibility-contract breakage is detected below the 95% target.
 - Added a v2 Web project runner CLI and a stdout-first GitHub Actions workflow generator that pins Proped Rabbita by full commit SHA, keeps workflow permissions read-only, separates project bootstrap from strict execution, installs the managed Chromium runtime, and uploads Proped artifacts on success or failure.
 - Added a fresh-campaign replay gate that promotes a candidate Web failure to a quality failure only when the same canonical failure class reproduces across the configured replay attempts (v2 defaults to 3); unstable candidates become nondeterminism diagnostics.
 - Added canonical Web failure classification and clustering from oracle family, normalized action pattern, semantic evidence paths, route family, and exception kind; runner summaries and Atlas now retain stable canonical failure-class IDs alongside human-facing failure codes.

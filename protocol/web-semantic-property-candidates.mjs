@@ -94,8 +94,8 @@ const RULES = [
     id: "escape-cancels-edit",
     title: "Escape cancels an in-progress edit without committing the draft",
     oracleFamily: "reversible-actions",
-    source: /Escape|keydown|keyup/i,
-    ui: /edit|cancel/i,
+    source: /\b(?:event\.)?(?:key|code)\s*={2,3}\s*["'`]Escape["'`]|\b(?:keydown|keyup|onKeyDown|onKeyUp|KeyboardEvent)\b/i,
+    ui: /\b(?:cancel|edit|editing)\b/i,
     tests: /escape.*cancel|cancel.*edit|edit.*escape/i,
   },
   {

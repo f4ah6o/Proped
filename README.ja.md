@@ -103,6 +103,15 @@ exploration frontierはdeterministicなsemantic novelty scoreで順位付けで�
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Unified semantic review report
+
+property/projection/normalizer提案を1つのbounded review reportで確認できます。各candidateにstableな`kind:id` ref、HIGH/MEDIUM/LOW confidence band、必要に応じたsemantic risk、recommended decision、evidence source、automatic activation flagを表示します。既定CLIは人間向け表示、`--json`では同じreview dataをtooling向けに出力します。
+
+```bash
+node scripts/web_semantic_review.mjs .
+node scripts/web_semantic_review.mjs . --volatility volatility.json --json
+```
+
 ## Review-only normalizer candidates
 
 volatility findingをそのまま適用せず、説明付きnormalizer候補へ昇格できます。fresh-context volatilityとsource evidenceを組み合わせ、semantic riskと推奨判断を付けます。DOM generated ID/timestamp/tokenはlow-risk replacement候補にできますが、storage/form/application-state/IndexedDB pathはhigh-riskのまま保持し、自動replacementは出しません。

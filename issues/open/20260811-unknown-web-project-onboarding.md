@@ -836,7 +836,9 @@ Acceptance:
 - [x] normalizer candidate 提案
 
   - fresh-run volatility候補へsource corroboration / semantic risk / recommended decisionを付与するreview-only normalizer layerを追加。DOM generated-id/timestamp/tokenはreplacement候補にできるが、storage/forms/applicationState/IndexedDBは常にhigh-risk reviewへ倒し、自動適用=0。
-- [ ] confidence / evidence 表示
+- [x] confidence / evidence 表示
+
+  - property/projection/normalizerを共通candidate refへ揃え、HIGH/MEDIUM/LOW confidence band、semantic risk、recommended decision、source/test/UI/runtime/volatility evidence、automatic activation有無をhuman-readable/JSON両形式で表示。drawDB dogfoodでescapeQuotes誤検知も発見・修正。
 - [ ] human approval workflow
 
 ## Minimum Vertical Slice

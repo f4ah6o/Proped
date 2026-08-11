@@ -103,6 +103,15 @@ Exploration can rank frontier states with a deterministic semantic novelty score
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Unified semantic review report
+
+Property, projection, and normalizer suggestions can be reviewed through one bounded report. Every candidate gets a stable `kind:id` reference, HIGH/MEDIUM/LOW confidence band, semantic risk when applicable, recommended decision, evidence sources, and an explicit automatic-activation flag. The default CLI is human-readable; `--json` exposes the same review data for tooling.
+
+```bash
+node scripts/web_semantic_review.mjs .
+node scripts/web_semantic_review.mjs . --volatility volatility.json --json
+```
+
 ## Review-only normalizer candidates
 
 Volatility findings can be promoted into explained normalizer candidates without applying them. The explainer combines fresh-context volatility with source-level evidence, assigns semantic risk, and recommends whether to review a replacement rule or keep the value observed. Generated DOM IDs, timestamps, and token-like values may receive low-risk replacement suggestions; storage, form, application-state, and IndexedDB paths remain high-risk and never receive an automatic replacement.

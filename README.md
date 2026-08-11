@@ -103,6 +103,14 @@ Exploration can rank frontier states with a deterministic semantic novelty score
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Coverage-guided Web exploration
+
+A bounded explorer reconstructs frontier states by replaying semantic traces into fresh browser contexts, then prioritizes states with discovery novelty and globally unexecuted semantic actions. This avoids relying on browser-state cloning and keeps exploration reproducible. The synthetic regression reaches a new-route failure in three transitions and reproduces the same transition graph and semantic hash on a second run.
+
+```bash
+node scripts/test_web_coverage_guided_exploration.mjs
+```
+
 ## Generic browser inventory
 
 For an already-running app, the generic browser adapter can discover actions and capture semantic state without project-specific Playwright code:

@@ -815,7 +815,9 @@ Acceptance:
 - [x] state novelty weighting
 
   - fingerprint / route family / storage key shape / IndexedDB schema shape / action target frontierを別軸でscore化。再訪stateは0、新構造を含むstateを決定的に優先し、volatile valueそのものはweightingに使わない。
-- [ ] coverage-guided exploration
+- [x] coverage-guided exploration
+
+  - traceをfresh contextへreplayしてstateを再構成するbounded explorerを追加。未実行semantic actionとdiscovery noveltyを優先し、synthetic fixtureでは3 transitionsで新route上のfailureへ決定的に到達。
 - [ ] server reset/read-only API hooks
 - [ ] multi-context scheduler prototype
 

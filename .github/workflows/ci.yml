@@ -94,6 +94,7 @@ jobs:
           node scripts/test_github_actions_workflow.mjs
           node scripts/test_web_selector_survival.mjs
           node scripts/test_web_state_novelty.mjs
+          node scripts/test_web_coverage_guided_exploration.mjs
           node scripts/test_web_generic_property_packs.mjs
           node scripts/test_web_project_onboarding_v2.mjs
 

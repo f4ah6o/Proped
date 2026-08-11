@@ -103,6 +103,14 @@ exploration frontierはdeterministicなsemantic novelty scoreで順位付けで�
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Coverage-guided Web exploration
+
+bounded explorerはsemantic traceをfresh browser contextへreplayしてfrontier stateを再構成し、discovery noveltyと未実行semantic actionを優先します。browser state cloneへ依存せずreproducibleに探索できます。synthetic regressionでは3 transitionsで新route上のfailureへ到達し、2回目も同一transition graph/semantic hashを再現します。
+
+```bash
+node scripts/test_web_coverage_guided_exploration.mjs
+```
+
 ## Generic browser inventory
 
 起動済みアプリに対して、project-specificなPlaywright codeなしでgeneric browser adapterがaction discoveryとsemantic state captureを行えます。

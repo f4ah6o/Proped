@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+import assert from "node:assert/strict";
+import { semanticHash } from "../protocol/ui-driver-v1.mjs";
+import { exploreWebCoverageGuided } from "../protocol/web-coverage-guided-exploration.mjs";
+
+class SyntheticCoverageDriver {
+  constructor() { this.state = "home"; }
+  snapshot() {
+    const route = this.state === "admin" || this.state === "crashed" ? "/admin" : "/";
+    return {
+      fingerprint: semanticHash({ state: this.state }),
+      url: `http://app.local${route}`,
+      storage: { local: {}, session: {} },
+      applicationState: null,
+    };
+  }
+  async reset() { this.state = "home"; return this.snapshot(); }
+  async actions() {
+    const action = (id, kind, role, name) => ({ id, kind, target: { role, name, within: [] } });
+    const actions = {
+      home: [
+        action("a-noise", "click", "button", "Increment"),
+        action("z-admin", "click", "link", "Admin"),
+      ],
+      noise: [action("a-noise", "click", "button", "Increment")],
+      admin: [action("m-crash", "click", "button", "Crash")],
+      crashed: [],
+    }[this.state];
+    return { actions, diagnostics: [], metrics: {} };
+  }
+  async execute(action) {
+    const violations = [];
+    if (this.state === "home" && action.id === "a-noise") this.state = "noise";
+    else if (this.state === "home" && action.id === "z-admin") this.state = "admin";
+    else if (this.state === "noise" && action.id === "a-noise") this.state = "noise";
+    else if (this.state === "admin" && action.id === "m-crash") {
+      this.state = "crashed";
+      violations.push({ property: "browser_uncaught_exception", message: "TypeError: synthetic crash" });
+    } else throw new Error(`unexpected transition ${this.state} / ${action.id}`);
+    return { snapshot: this.snapshot(), violations };
+  }
+}
+
+const first = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
+assert.equal(first.states, 4);
+assert.equal(first.transitions, 3);
+assert.deepEqual(first.transitionGraph.map((edge) => edge.actionId), ["a-noise", "z-admin", "m-crash"]);
+assert.equal(first.routeFamilies.length, 2);
+assert.equal(first.failureCount, 1);
+assert.equal(first.failures[0].property, "browser_uncaught_exception");
+assert.equal(first.frontierExhausted, false);
+assert.equal(first.truncatedByTransitionLimit, true);
+
+const second = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
+assert.equal(second.semanticHash, first.semanticHash);
+assert.deepEqual(second.transitionGraph, first.transitionGraph);
+
+const bounded = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 2, maxDepth: 4 });
+assert.equal(bounded.failureCount, 0);
+assert.equal(bounded.truncatedByTransitionLimit, true);
+
+console.log(JSON.stringify({
+  ok: true,
+  runtime: "web-coverage-guided-exploration-test",
+  states: first.states,
+  transitions: first.transitions,
+  routeFamilies: first.routeFamilies,
+  actionOrder: first.transitionGraph.map((edge) => edge.actionId),
+  deterministic: second.semanticHash === first.semanticHash,
+  failureProperty: first.failures[0].property,
+}));

@@ -770,14 +770,21 @@ Acceptance:
 - [x] manifest v2 + v1 compiler
 - [x] `proped web init`
 - [x] `proped web doctor`
-- [ ] generic property packs
-- [ ] local/session persistence pack
+- [x] generic property packs
+- [x] local/session persistence pack
 - [ ] IndexedDB inventory
 - [ ] Dexie adapter
 - [ ] volatility noise miner
 - [ ] canonical failure classifier
 - [ ] runner-native replay × 3
 - [ ] GitHub Actions workflow generator
+
+### P1 generic pack evidence
+
+- TodoMVC React/Vueの既存production distへproject-specific contractなしで適用。
+- 両実装で`reload_state_loss_without_persistence_evidence`をconfidence 0.65 advisoryとして自動抽出。
+- storage driftの実evidenceがある場合だけ`reload_persistence_storage_drift`をerrorに昇格する。
+- synthetic healthy fixtureではfailure 0、faulty fixtureでは`browser_uncaught_exception`と`reload_persistence_storage_drift`を検出。
 
 Acceptance:
 

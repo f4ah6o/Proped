@@ -294,6 +294,7 @@ export class GenericPlaywrightBrowserDriver {
             confidence: element.getAttribute("data-testid") ? 1 : identity.confidence,
             source: element.getAttribute("data-testid") ? "data-testid" : identity.source,
           },
+          insideForm: Boolean(element.closest("form")),
         };
         if (role === "checkbox" || role === "radio") descriptor.checked = Boolean(element.checked) || element.getAttribute("aria-checked") === "true";
         if ((role === "combobox" || role === "listbox") && element.options) {
@@ -332,9 +333,25 @@ export class GenericPlaywrightBrowserDriver {
     }
 
     const diagnostics = [...discovered.diagnostics];
+    const discoveredActions = [...discovered.actions];
+    for (const descriptor of descriptors) {
+      if (!["textbox", "searchbox", "spinbutton"].includes(descriptor.role) || !descriptor.name) continue;
+      const target = { role: descriptor.role, name: descriptor.name, within: descriptor.within ?? [] };
+      if (descriptor.testIdentity) target.testIdentity = descriptor.testIdentity;
+      const id = `press|${target.role}|${target.name}|${(target.within ?? []).map((scope) => `within=${scope}`).join("|")}${target.testIdentity ? `|test=${target.testIdentity}` : ""}|input=${JSON.stringify("Enter")}`;
+      discoveredActions.push({
+        id,
+        kind: "press",
+        target,
+        input: "Enter",
+        label: `press ${target.role} "${target.name}" with "Enter"`,
+        ambiguity: "none",
+        destructiveRisk: "bounded-mutation",
+      });
+    }
     const actions = [];
     const targetMetrics = new Map();
-    for (const action of discovered.actions) {
+    for (const action of discoveredActions) {
       if (action.target.role === "dialog") {
         diagnostics.push({ kind: "unsupported_generic_action", actionId: action.id, message: "generic browser mode uses dialog controls rather than invoking dialog lifecycle methods directly" });
         continue;
@@ -363,7 +380,7 @@ export class GenericPlaywrightBrowserDriver {
       actions.push({
         ...action,
         locator: { strategy: resolver.strategy, confidence: resolver.confidence, count },
-        destructiveRisk: riskFor(action),
+        destructiveRisk: action.destructiveRisk ?? riskFor(action),
       });
     }
     const metrics = {
@@ -402,7 +419,8 @@ export class GenericPlaywrightBrowserDriver {
     else if (action.kind === "select") {
       if (action.target.role === "radio") await locator.check();
       else await locator.selectOption({ label: String(action.input) });
-    } else throw new Error(`unsupported generic browser action: ${action.kind}`);
+    } else if (action.kind === "press") await locator.press(String(action.input));
+    else throw new Error(`unsupported generic browser action: ${action.kind}`);
 
     const settle = await this.settle();
     this.lastSettle = settle;
@@ -412,6 +430,18 @@ export class GenericPlaywrightBrowserDriver {
       settle,
       violations: evaluateWebProperties({ before, action, after }),
     };
+  }
+
+  async reload() {
+    await this.page.reload({ waitUntil: "domcontentloaded" });
+    this.lastSettle = await this.settle();
+    return this.snapshot();
+  }
+
+  async goBack() {
+    await this.page.goBack({ waitUntil: "domcontentloaded" });
+    this.lastSettle = await this.settle();
+    return this.snapshot();
   }
 
   async rawSnapshot() {

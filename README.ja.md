@@ -48,6 +48,12 @@ node scripts/web_project_compile.mjs proped.web.json
 
 `web doctor`はinstall/build/start commandを実行せず、project/runtime/server/browser/sandbox readinessを検査します。static outputやmanaged command serverはcompile後にProped-owned browser stageが扱います。
 
+## Generic Web property packs
+
+Low-config Generic Browser Modeでは現在`browser-safety`、`navigation`、`reload-persistence`を提供します。false positive抑制のため保守的に判定し、uncaught exceptionや観測可能なlocal/session storage driftだけをquality failureにします。storage evidenceなしでreload後にvisible stateが消える場合は自動CI failureではなくadvisory candidateに留めます。
+
+このgeneric discoveryだけで、TodoMVC React/Vueのreload state lossをTodoMVC固有Playwright adapter/semantic contractなしにsurfaceできています。
+
 ## Generic browser inventory
 
 起動済みアプリに対して、project-specificなPlaywright codeなしでgeneric browser adapterがaction discoveryとsemantic state captureを行えます。

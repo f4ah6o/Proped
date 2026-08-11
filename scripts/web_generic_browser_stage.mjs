@@ -6,6 +6,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { GenericPlaywrightBrowserDriver } from "../web/playwright-browser/generic-browser-driver.mjs";
 import { semanticHash } from "../protocol/ui-driver-v1.mjs";
+import { runGenericPropertyPacks } from "../protocol/web-generic-property-packs.mjs";
 
 function usage(message) {
   const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --property-packs-json <json-array>\n`;
@@ -205,6 +206,11 @@ try {
   });
   const snapshot = await driver.reset();
   const inventory = await driver.actions();
+  const propertyCampaign = await runGenericPropertyPacks(driver, {
+    packs: options.propertyPacks,
+    allowBoundedMutations: options.serverMode === "static-output",
+    maxProbes: 12,
+  });
   const riskCounts = inventory.actions.reduce((counts, action) => {
     counts[action.destructiveRisk] = (counts[action.destructiveRisk] ?? 0) + 1;
     return counts;
@@ -216,7 +222,7 @@ try {
     storage: snapshot.storage,
   });
   const result = {
-    ok: true,
+    ok: propertyCampaign.ok,
     runtime: "generic-web-browser-stage",
     server: { mode: options.serverMode, url: server.url },
     browser: snapshot.browser,
@@ -225,6 +231,9 @@ try {
     diagnostics: inventory.diagnostics,
     metrics: { ...inventory.metrics, riskCounts },
     propertyPacks: options.propertyPacks,
+    propertyCampaign,
+    failures: propertyCampaign.failures,
+    advisories: propertyCampaign.advisories,
     stateFingerprint: snapshot.fingerprint,
     stateSemanticHash,
   };
@@ -236,9 +245,11 @@ try {
     actionSemanticHash: inventory.semanticHash,
     metrics: result.metrics,
     propertyPacks: result.propertyPacks,
+    propertyCampaignSemanticHash: propertyCampaign.semanticHash,
     stateSemanticHash,
   });
   console.log(JSON.stringify(result));
+  if (!result.ok) process.exitCode = 1;
 } catch (error) {
   console.error(JSON.stringify({ ok: false, runtime: "generic-web-browser-stage", error: error.message }));
   process.exitCode = 2;

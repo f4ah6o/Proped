@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added conservative generic Browser property packs for uncaught-exception safety, navigation restoration, and reload persistence; TodoMVC React/Vue now surface the known reload-state loss as a generated advisory with zero project-specific contract code.
 - Added high-level Web project manifest v2 with read-only `web init`, `web doctor`, v2-to-v1 compilation, managed static/command server lifecycle, and an end-to-end unknown-Vite onboarding vertical slice with zero project-specific executable JS.
 - Added a Linux bubblewrap strict Web execution sandbox with outbound network isolation, read-only source and `.git`, explicit build/artifact writable paths, private tmpfs, credential environment filtering, runner integration, and a live CI policy probe.
 - Made Chromium a Proped-managed runtime boundary: Generic Browser Mode reports the pinned Playwright/Chromium revision and works against target projects with no Playwright dependency.

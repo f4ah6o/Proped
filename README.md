@@ -48,6 +48,12 @@ node scripts/web_project_compile.mjs proped.web.json
 
 `web doctor` checks project/runtime/server/browser/sandbox readiness without running install, build, or start commands. Static output and managed command servers are executed by a Proped-owned browser stage after compilation.
 
+## Generic Web property packs
+
+Low-config Generic Browser Mode currently ships `browser-safety`, `navigation`, and `reload-persistence`. The packs are deliberately conservative: uncaught exceptions and observable local/session-storage drift are quality failures; visible state that disappears on reload without persistence evidence is an advisory candidate rather than an automatic CI failure.
+
+This already surfaces TodoMVC React and Vue reload-state loss from generic discovery alone, with no TodoMVC-specific Playwright adapter or semantic contract.
+
 ## Generic browser inventory
 
 For an already-running app, the generic browser adapter can discover actions and capture semantic state without project-specific Playwright code:

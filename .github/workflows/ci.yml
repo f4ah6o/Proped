@@ -86,6 +86,7 @@ jobs:
           node scripts/test_managed_browser_runtime.mjs
           node scripts/test_semantic_quiescence.mjs
           node web/playwright-browser/test-generic-browser-driver.mjs
+          node scripts/test_web_generic_property_packs.mjs
           node scripts/test_web_project_onboarding_v2.mjs
 
       - name: Web project quality manifest

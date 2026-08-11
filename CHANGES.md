@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added high-level Web project manifest v2 with read-only `web init`, `web doctor`, v2-to-v1 compilation, managed static/command server lifecycle, and an end-to-end unknown-Vite onboarding vertical slice with zero project-specific executable JS.
 - Added a Linux bubblewrap strict Web execution sandbox with outbound network isolation, read-only source and `.git`, explicit build/artifact writable paths, private tmpfs, credential environment filtering, runner integration, and a live CI policy probe.
 - Made Chromium a Proped-managed runtime boundary: Generic Browser Mode reports the pinned Playwright/Chromium revision and works against target projects with no Playwright dependency.
 - Added semantic browser quiescence based on repeated semantic fingerprint stability, two animation frames per sample, bounded same-origin request tracking, optional explicit readiness, and machine-readable timeout diagnostics without relying on networkidle.

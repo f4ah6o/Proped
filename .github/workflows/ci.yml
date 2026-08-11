@@ -62,8 +62,10 @@ jobs:
       - name: Web project runner unit tests
         run: |
           python3 -m json.tool protocol/web-project-manifest.schema.json > /dev/null
+          python3 -m json.tool protocol/web-project-manifest-v2.schema.json > /dev/null
           python3 -m json.tool web/project-manifests/proped-web-quality.json > /dev/null
           node scripts/test_web_execution_sandbox.mjs
+          node scripts/test_web_project_manifest_v2.mjs
           node scripts/test_web_project_runner.mjs
 
       - name: Web project inspect unit tests
@@ -84,6 +86,7 @@ jobs:
           node scripts/test_managed_browser_runtime.mjs
           node scripts/test_semantic_quiescence.mjs
           node web/playwright-browser/test-generic-browser-driver.mjs
+          node scripts/test_web_project_onboarding_v2.mjs
 
       - name: Web project quality manifest
         run: |

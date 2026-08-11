@@ -36,6 +36,18 @@ node scripts/web_project_inspect.mjs . --json
 
 The current implementation entry point is the Node script; the planned packaged CLI surface is `proped web inspect`.
 
+## Low-config Web project manifest v2
+
+The high-level v2 manifest is generated from read-only inspection and compiles to the existing v1 stage graph. The current canonical format is JSON; generation is stdout-only unless `--output` is explicit.
+
+```bash
+node scripts/web_project_init.mjs . > proped.web.json
+node scripts/web_project_doctor.mjs proped.web.json
+node scripts/web_project_compile.mjs proped.web.json
+```
+
+`web doctor` checks project/runtime/server/browser/sandbox readiness without running install, build, or start commands. Static output and managed command servers are executed by a Proped-owned browser stage after compilation.
+
 ## Generic browser inventory
 
 For an already-running app, the generic browser adapter can discover actions and capture semantic state without project-specific Playwright code:

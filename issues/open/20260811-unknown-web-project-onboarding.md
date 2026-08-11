@@ -137,7 +137,7 @@ unknown project onboarding は四層に分ける。
 
 ## Proposed CLI
 
-以下は提案 CLI。現時点では未実装。
+配布CLIの最終surfaceは以下を予定する。現在は同等のNode entry pointを実装済みで、`web inspect` / `web init` / `web doctor` / v2 compileを段階的に統合している。
 
 ```bash
 # Read-only discovery
@@ -767,9 +767,9 @@ Acceptance:
 
 ## P1 — Low-code Semantic Testing
 
-- [ ] manifest v2 + v1 compiler
-- [ ] `proped web init`
-- [ ] `proped web doctor`
+- [x] manifest v2 + v1 compiler
+- [x] `proped web init`
+- [x] `proped web doctor`
 - [ ] generic property packs
 - [ ] local/session persistence pack
 - [ ] IndexedDB inventory

@@ -1,0 +1,66 @@
+#!/usr/bin/env node
+import assert from "node:assert/strict";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { inspectWebProject } from "../protocol/web-project-inspect.mjs";
+import {
+  compileWebProjectManifestV2,
+  createWebProjectManifestV2FromInspection,
+  validateWebProjectManifestV2,
+} from "../protocol/web-project-manifest-v2.mjs";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const inspection = inspectWebProject(path.join(ROOT, "web/next-ssr-hydration"));
+const generated = createWebProjectManifestV2FromInspection(inspection, { projectRoot: "web/next-ssr-hydration" });
+assert.equal(generated.schemaVersion, 2);
+assert.equal(generated.project.framework, "next");
+assert.equal(generated.server.mode, "review-required");
+assert.equal(generated.server.start, null);
+assert.equal(generated.replay.attempts, 3);
+assert.equal(generated.sandbox.mode, "strict");
+assert.ok(generated.properties.packs.includes("browser-safety"));
+validateWebProjectManifestV2(generated);
+
+assert.throws(() => compileWebProjectManifestV2(generated, ROOT), /review-required/);
+const resolved = {
+  ...generated,
+  server: { ...generated.server, mode: "external", url: "http://127.0.0.1:3000", outputDir: null, start: null },
+};
+const compiled = compileWebProjectManifestV2(resolved, ROOT);
+assert.equal(compiled.manifest.schemaVersion, 1);
+assert.deepEqual(compiled.manifest.stages.map((stage) => stage.id), ["project-build", "generic-browser"]);
+assert.equal(compiled.manifest.stages[1].dependsOn[0], "project-build");
+assert.equal(compiled.execution.strictSandbox, true);
+assert.deepEqual(compiled.execution.bootstrapInstall, inspection.commands.install.argv);
+
+const optional = [
+  [".tmp/todomvc/examples/react", "static-output", "react-webpack"],
+  [".tmp/todomvc/examples/vue", "static-output", "vue-vite"],
+  [".tmp/drawdb", "static-output", "react-vite"],
+];
+const dogfood = [];
+for (const [relative, expectedServer, expectedFramework] of optional) {
+  const target = path.join(ROOT, relative);
+  try {
+    const report = inspectWebProject(target);
+    const manifest = createWebProjectManifestV2FromInspection(report, { projectRoot: relative });
+    const result = compileWebProjectManifestV2(manifest, ROOT);
+    assert.equal(manifest.server.mode, expectedServer);
+    assert.equal(manifest.project.framework, expectedFramework);
+    assert.equal(result.manifest.stages.at(-1).id, "generic-browser");
+    dogfood.push({ target: relative, framework: manifest.project.framework, server: manifest.server.mode, packs: manifest.properties.packs });
+  } catch (error) {
+    if (error.code === "ENOENT") continue;
+    throw error;
+  }
+}
+
+assert.throws(() => validateWebProjectManifestV2({ ...generated, unexpected: true }), /unknown field unexpected/);
+
+console.log(JSON.stringify({
+  ok: true,
+  runtime: "web-project-manifest-v2-test",
+  generatedFramework: generated.project.framework,
+  compiledStages: compiled.manifest.stages.map((stage) => stage.id),
+  optionalRealTargets: dogfood,
+}));

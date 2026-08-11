@@ -36,6 +36,18 @@ node scripts/web_project_inspect.mjs . --json
 
 現在の実装入口はNode scriptで、配布CLIでは`proped web inspect`を予定しています。
 
+## Low-config Web project manifest v2
+
+read-only inspection結果からhigh-level manifest v2を生成し、既存のv1 stage graphへcompileします。現時点のcanonical formatはJSONで、`--output`を明示しない限りstdout-onlyです。
+
+```bash
+node scripts/web_project_init.mjs . > proped.web.json
+node scripts/web_project_doctor.mjs proped.web.json
+node scripts/web_project_compile.mjs proped.web.json
+```
+
+`web doctor`はinstall/build/start commandを実行せず、project/runtime/server/browser/sandbox readinessを検査します。static outputやmanaged command serverはcompile後にProped-owned browser stageが扱います。
+
 ## Generic browser inventory
 
 起動済みアプリに対して、project-specificなPlaywright codeなしでgeneric browser adapterがaction discoveryとsemantic state captureを行えます。

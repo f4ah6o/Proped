@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a Linux bubblewrap strict Web execution sandbox with outbound network isolation, read-only source and `.git`, explicit build/artifact writable paths, private tmpfs, credential environment filtering, runner integration, and a live CI policy probe.
 - Made Chromium a Proped-managed runtime boundary: Generic Browser Mode reports the pinned Playwright/Chromium revision and works against target projects with no Playwright dependency.
 - Added semantic browser quiescence based on repeated semantic fingerprint stability, two animation frames per sample, bounded same-origin request tracking, optional explicit readiness, and machine-readable timeout diagnostics without relying on networkidle.
 - Added a fixture-independent Generic Playwright Browser Adapter for arbitrary URLs with same-origin network policy, role/label/placeholder/test-id action discovery, fail-closed locator ambiguity, semantic DOM/form/URL/storage snapshots, risk hints, and fresh-context replay.

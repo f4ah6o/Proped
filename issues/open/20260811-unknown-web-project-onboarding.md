@@ -759,11 +759,11 @@ Acceptance:
 
 ### P0.5 Strict Sandbox Integration
 
-- [ ] execution outbound network deny
-- [ ] source read-only
-- [ ] artifact/temp/build writable only
-- [ ] credentials deny
-- [ ] upstream git writes deny
+- [x] execution outbound network deny
+- [x] source read-only
+- [x] artifact/temp/build writable only
+- [x] credentials deny
+- [x] upstream git writes deny
 
 ## P1 — Low-code Semantic Testing
 

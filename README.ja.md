@@ -54,6 +54,19 @@ Generic Browser Modeはready判定を`networkidle`へ依存させません。各
 
 Generic Browser Modeはtarget projectのbrowser dependencyを使わず、Proped側でbrowser runtimeを所有します。現在はPlaywright 1.62.0 / Chromium revision 1234（Chromium 151.0.7922.34）をpinしています。target側にPlaywright dependencyは不要で、再現性のためruntime metadataをbrowser snapshotへ含めます。
 
+## Strict Web execution sandbox
+
+LinuxではWeb project stageをOS-enforcedなbubblewrap境界で実行できます。
+
+```bash
+node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json \
+  --strict-sandbox \
+  --writable web/next-ssr-hydration/.next \
+  --writable web/nuxt-ssr-hydration/.output
+```
+
+strict modeではoutbound networkをdenyし、repositoryと`.git`をread-only mountし、明示したbuild/artifact directoryだけwrite可能にし、private `/tmp`とallowlist済みenvironmentを使います。完全なfilesystem strict modeは現時点でLinux + bubblewrapを要求し、未対応platformではsilent downgradeせずfail-closedします。
+
 ## Web mutation品質ゲート
 
 framework-neutralなWeb mutation benchmarkは、generic Web propertyごとにレビュー済みmutationを1件実行し、対応するhealthy controlも検証します。品質ゲートはmutation score、false-positive rate、deterministic replay、最小traceのずれ、throughput、elapsed timeの違反を機械可読codeで返します。

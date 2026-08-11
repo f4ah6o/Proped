@@ -54,6 +54,19 @@ Generic Browser Mode does not use `networkidle` as its readiness oracle. After e
 
 Generic Browser Mode owns its browser runtime instead of inheriting one from the target project. The current pinned runtime is Playwright 1.62.0 with Chromium revision 1234 (Chromium 151.0.7922.34). Target applications do not need a Playwright dependency; runtime metadata is included in browser snapshots for reproducibility.
 
+## Strict Web execution sandbox
+
+On Linux, Web project stages can run under an OS-enforced bubblewrap boundary:
+
+```bash
+node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json \
+  --strict-sandbox \
+  --writable web/next-ssr-hydration/.next \
+  --writable web/nuxt-ssr-hydration/.output
+```
+
+Strict mode denies outbound network, mounts the repository read-only, keeps `.git` read-only, exposes only explicit build/artifact directories as writable, uses a private `/tmp`, and passes only an allowlisted environment. Full filesystem strict mode currently requires Linux + bubblewrap; unsupported platforms fail closed rather than silently downgrading.
+
 ## Web mutation quality gate
 
 The framework-neutral Web mutation benchmark kills one reviewed mutation for each generic Web property and runs paired healthy controls. Its quality gate reports mutation score, false-positive rate, deterministic replay, minimized-trace drift, throughput, and elapsed-time violations as machine-readable codes.

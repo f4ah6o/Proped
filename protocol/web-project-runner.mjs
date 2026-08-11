@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { buildStrictSandboxInvocation, safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
 import { semanticHash } from "./ui-driver-v1.mjs";
 
 export const WEB_PROJECT_MANIFEST_VERSION = 1;
@@ -172,35 +173,8 @@ function trimTail(value, maximum = 4096) {
   return value.slice(value.length - maximum);
 }
 
-function childEnvironment() {
-  const allowed = [
-    "PATH",
-    "HOME",
-    "TMPDIR",
-    "TMP",
-    "TEMP",
-    "LANG",
-    "LC_ALL",
-    "TZ",
-    "SYSTEMROOT",
-    "COMSPEC",
-    "PATHEXT",
-    "USERPROFILE",
-    "APPDATA",
-    "LOCALAPPDATA",
-    "PLAYWRIGHT_BROWSERS_PATH",
-  ];
-  const environment = {};
-  for (const key of allowed) {
-    if (process.env[key] !== undefined) environment[key] = process.env[key];
-  }
-  environment.CI = process.env.CI ?? "1";
-  environment.NO_COLOR = process.env.NO_COLOR ?? "1";
-  environment.PROPED_NETWORK_POLICY = "caller-enforced-deny";
-  environment.PROPED_FILESYSTEM_WRITE_POLICY = "caller-enforced-artifacts-and-build-output";
-  environment.PROPED_UPSTREAM_WRITE_POLICY = "caller-enforced-deny";
-  environment.PROPED_CREDENTIAL_POLICY = "caller-enforced-deny";
-  return environment;
+function childEnvironment({ osEnforced = false } = {}) {
+  return safeExecutionEnvironment(process.env, { osEnforced });
 }
 
 function stageStatus(child) {
@@ -262,6 +236,14 @@ function stableStage(stageResult) {
 export function runWebProject(repositoryRoot, manifest, options = {}) {
   validateWebProjectManifest(manifest, repositoryRoot);
   const projectRoot = resolveExistingInside(repositoryRoot, manifest.projectRoot, "projectRoot");
+  const strictSandbox = options.sandbox?.mode === "strict";
+  const sandboxWritablePaths = strictSandbox
+    ? [
+        ...(options.writeArtifacts === false ? [] : [options.output ?? manifest.artifacts.output]),
+        ...(options.sandbox?.writablePaths ?? []),
+      ]
+    : [];
+  let sandboxMetadata = strictSandbox ? { mode: "strict", backend: "bubblewrap" } : { mode: "caller-enforced" };
   const results = [];
   const byId = new Map();
 
@@ -289,13 +271,26 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
 
     const cwd = resolveExistingInside(projectRoot, stage.cwd, `${stage.id}.cwd`);
     const started = performance.now();
-    const child = spawnSync(stage.command[0], stage.command.slice(1), {
+    let executable = stage.command[0];
+    let args = stage.command.slice(1);
+    if (strictSandbox) {
+      const invocation = buildStrictSandboxInvocation({
+        command: stage.command,
+        cwd,
+        repositoryRoot,
+        writablePaths: sandboxWritablePaths,
+      });
+      executable = invocation.executable;
+      args = invocation.args;
+      sandboxMetadata = invocation.metadata;
+    }
+    const child = spawnSync(executable, args, {
       cwd,
       encoding: "utf8",
       timeout: stage.timeoutMs,
       maxBuffer: 8 * 1024 * 1024,
       shell: false,
-      env: childEnvironment(),
+      env: childEnvironment({ osEnforced: strictSandbox }),
     });
     const durationMs = Math.round((performance.now() - started) * 1000) / 1000;
     const status = stageStatus(child);
@@ -326,6 +321,7 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
     runnerVersion: WEB_PROJECT_RUNNER_VERSION,
     id: manifest.id,
     safety: manifest.safety,
+    sandbox: sandboxMetadata,
     stages: results.map(stableStage),
   };
   const report = {

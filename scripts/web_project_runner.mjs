@@ -11,7 +11,7 @@ const ROOT = path.resolve(HERE, "..");
 
 const HELP = `Usage:
   node scripts/web_project_runner.mjs validate <manifest>
-  node scripts/web_project_runner.mjs run <manifest> [--output <dir>] [--no-artifacts]
+  node scripts/web_project_runner.mjs run <manifest> [--output <dir>] [--no-artifacts] [--strict-sandbox] [--writable <dir>]
 
 Commands:
   validate    Validate a Web project manifest without executing stages
@@ -20,6 +20,8 @@ Commands:
 Options:
   --output <dir>    Override the manifest artifact output directory
   --no-artifacts    Do not write summary/atlas artifacts
+  --strict-sandbox  Run stages in the Linux bubblewrap strict execution sandbox
+  --writable <dir>  Additional repository-relative writable build directory (repeatable)
   --help            Show this help
 `;
 
@@ -34,12 +36,25 @@ function parseArgs(argv) {
   const [command, manifestPath, ...rest] = argv;
   if (!["validate", "run"].includes(command)) usage(`unknown command: ${command}`);
   if (!manifestPath || manifestPath.startsWith("--")) usage(`${command} requires a manifest path`);
-  const options = { command, manifestPath, output: undefined, writeArtifacts: true };
+  const options = { command, manifestPath, output: undefined, writeArtifacts: true, strictSandbox: false, writablePaths: [] };
   for (let index = 0; index < rest.length; index += 1) {
     const option = rest[index];
     if (option === "--no-artifacts") {
       if (command !== "run") usage("--no-artifacts is only valid with run");
       options.writeArtifacts = false;
+      continue;
+    }
+    if (option === "--strict-sandbox") {
+      if (command !== "run") usage("--strict-sandbox is only valid with run");
+      options.strictSandbox = true;
+      continue;
+    }
+    if (option === "--writable") {
+      if (command !== "run") usage("--writable is only valid with run");
+      const value = rest[index + 1];
+      if (!value || value.startsWith("--")) usage("--writable requires a value");
+      options.writablePaths.push(value);
+      index += 1;
       continue;
     }
     if (option === "--output") {
@@ -83,10 +98,17 @@ if (options.command === "validate") {
   process.exit(0);
 }
 
-const report = runWebProject(ROOT, manifest, {
-  output: options.output,
-  writeArtifacts: options.writeArtifacts,
-});
+let report;
+try {
+  report = runWebProject(ROOT, manifest, {
+    output: options.output,
+    writeArtifacts: options.writeArtifacts,
+    sandbox: options.strictSandbox ? { mode: "strict", writablePaths: options.writablePaths } : null,
+  });
+} catch (error) {
+  console.error(JSON.stringify({ ok: false, error: "execution_environment_failed", message: error.message }));
+  process.exit(2);
+}
 const destination = report.ok ? console.log : console.error;
 destination(JSON.stringify(report));
 process.exitCode = report.ok ? 0 : 1;

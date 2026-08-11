@@ -194,6 +194,14 @@ try {
   const badCli = cli(["unknown", SAMPLE]);
   assert.equal(badCli.status, 2);
   assert.equal(JSON.parse(badCli.stderr).error, "invalid_arguments");
+
+  const sandboxOnValidate = cli(["validate", SAMPLE, "--strict-sandbox"]);
+  assert.equal(sandboxOnValidate.status, 2);
+  assert.equal(JSON.parse(sandboxOnValidate.stderr).error, "invalid_arguments");
+
+  const writableOnValidate = cli(["validate", SAMPLE, "--writable", ".tmp/build"]);
+  assert.equal(writableOnValidate.status, 2);
+  assert.equal(JSON.parse(writableOnValidate.stderr).error, "invalid_arguments");
 } finally {
   delete process.env.PROPED_RUNNER_TEST_SECRET;
   fs.rmSync(TMP, { recursive: true, force: true });

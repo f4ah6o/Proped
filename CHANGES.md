@@ -8,6 +8,11 @@
 - Added fail-closed benchmark CLI options for iteration count, quality thresholds, custom artifact output, artifact suppression, and help.
 - Added a manifest-driven Web project runner with ordered dependency stages, bounded execution, fail-closed exit classification, repository-root path confinement, and unified JSON/HTML/SVG/DOT artifacts.
 - Integrated the React, Vue, Playwright, cross-mode replay, Next.js, Nuxt, external dogfood, network/timer, and mutation quality checks behind one CI Web quality manifest.
+- Added a framework-neutral real-browser TodoMVC contract and dogfooded pinned `tastejs/todomvc` React/Vue production builds, producing deterministic machine-readable specification failures without upstream writes.
+
+### Changed
+
+- Generalized Web project runner quality summaries so non-mutation quality stages expose `failures[].code`, `property`, or `failureClass` as Atlas `qualityFailureCodes`.
 
 ## 0.35.0 - 2026-08-06
 

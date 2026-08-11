@@ -146,6 +146,28 @@ try {
     failed.stages[0].payload.qualityGate.failures.map((failure) => failure.code),
     ["mutation_score_below_minimum"],
   );
+  assert.deepEqual(failed.stages[0].payload.qualityFailureCodes, ["mutation_score_below_minimum"]);
+
+  const genericQuality = runWebProject(
+    ROOT,
+    manifest([
+      stage(
+        "generic-quality-fail",
+        [process.execPath, "-e", "console.log(JSON.stringify({ok:false,semanticHash:'real-app',failureCount:2,failures:[{property:'reload_persists_todos'},{failureClass:'escape_cancels_edit'}]}));process.exit(1)"],
+        { kind: "quality" },
+      ),
+    ], ".tmp/web-project-runner-test/generic-quality-out"),
+  );
+  assert.equal(genericQuality.ok, false);
+  assert.deepEqual(
+    genericQuality.stages[0].payload.qualityFailureCodes,
+    ["reload_persists_todos", "escape_cancels_edit"],
+  );
+  const genericAtlas = JSON.parse(fs.readFileSync(path.join(TMP, "generic-quality-out/atlas.json"), "utf8"));
+  assert.deepEqual(
+    genericAtlas.stages[0].qualityFailureCodes,
+    ["reload_persists_todos", "escape_cancels_edit"],
+  );
 
   const custom = runWebProject(
     ROOT,

@@ -211,6 +211,18 @@ function stageStatus(child) {
   return "execution_failed";
 }
 
+function qualityFailureCodes(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return [];
+  const failures = [
+    ...(Array.isArray(payload.qualityGate?.failures) ? payload.qualityGate.failures : []),
+    ...(Array.isArray(payload.failures) ? payload.failures : []),
+  ];
+  const codes = failures
+    .map((failure) => failure?.code ?? failure?.property ?? failure?.failureClass ?? null)
+    .filter((code) => typeof code === "string" && code.length > 0);
+  return [...new Set(codes)];
+}
+
 function payloadSummary(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const summary = {};
@@ -229,6 +241,8 @@ function payloadSummary(payload) {
   ]) {
     if (key in payload) summary[key] = payload[key];
   }
+  const failures = qualityFailureCodes(payload);
+  if (failures.length > 0) summary.qualityFailureCodes = failures;
   return summary;
 }
 
@@ -241,7 +255,7 @@ function stableStage(stageResult) {
     status: stageResult.status,
     exitCode: stageResult.exitCode,
     resultSemanticHash: stageResult.payload?.semanticHash ?? null,
-    qualityFailureCodes: stageResult.payload?.qualityGate?.failures?.map((failure) => failure.code) ?? [],
+    qualityFailureCodes: stageResult.payload?.qualityFailureCodes ?? qualityFailureCodes(stageResult.payload),
   };
 }
 

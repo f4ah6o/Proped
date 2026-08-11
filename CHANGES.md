@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a human semantic-approval workflow with review-hash pinning, stable candidate refs, approve/reject/defer decisions, explicit high-risk acknowledgement, stale/tamper rejection, and deterministic human-approved hint compilation without automatic activation.
 - Added a unified semantic review report for property/projection/normalizer candidates with stable refs, confidence bands, risk/decision metadata, bounded evidence display, and human/JSON output; tightened Escape-key evidence to avoid escape-helper false positives.
 - Added review-only normalizer candidate explanations that combine fresh-run volatility with source corroboration, semantic-risk classification, and guarded replacement suggestions while keeping state-bearing paths non-automatic.
 - Added review-only semantic state-projection candidates for selection identity, collection counts, history position, persistence metadata, route identity, and graph summaries, without generating executable project-specific code.

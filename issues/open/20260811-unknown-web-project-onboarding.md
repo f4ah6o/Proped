@@ -839,7 +839,9 @@ Acceptance:
 - [x] confidence / evidence 表示
 
   - property/projection/normalizerを共通candidate refへ揃え、HIGH/MEDIUM/LOW confidence band、semantic risk、recommended decision、source/test/UI/runtime/volatility evidence、automatic activation有無をhuman-readable/JSON両形式で表示。drawDB dogfoodでescapeQuotes誤検知も発見・修正。
-- [ ] human approval workflow
+- [x] human approval workflow
+
+  - semantic review hashをpinするapproval planを追加。candidate refごとにapprove/reject/deferし、high-risk approveは明示risk acknowledgement必須。stale review/tampered planを拒否し、compile結果はhuman-approved hintsのみでautomatic activation=false。
 
 ## Minimum Vertical Slice
 

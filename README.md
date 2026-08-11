@@ -103,6 +103,16 @@ Exploration can rank frontier states with a deterministic semantic novelty score
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Human semantic approval workflow
+
+Semantic suggestions remain inert until a human records an explicit decision. An approval plan pins the semantic review hash, tracks `approve`/`reject`/`defer` per stable candidate ref, requires explicit acknowledgement for high-risk approvals, and rejects stale or tampered plans. Compiling a plan yields human-approved hints only; it never performs automatic activation.
+
+```bash
+node scripts/web_semantic_approval.mjs init review.json --output approvals.json
+node scripts/web_semantic_approval.mjs decide review.json approvals.json property:undo-redo-inverse approve --output approvals.json
+node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
+```
+
 ## Unified semantic review report
 
 Property, projection, and normalizer suggestions can be reviewed through one bounded report. Every candidate gets a stable `kind:id` reference, HIGH/MEDIUM/LOW confidence band, semantic risk when applicable, recommended decision, evidence sources, and an explicit automatic-activation flag. The default CLI is human-readable; `--json` exposes the same review data for tooling.

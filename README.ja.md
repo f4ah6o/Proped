@@ -103,6 +103,16 @@ exploration frontierはdeterministicなsemantic novelty scoreで順位付けで�
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Human semantic approval workflow
+
+semantic suggestionは人間が明示decisionを記録するまでinertです。approval planはsemantic review hashをpinし、stable candidate refごとに`approve`/`reject`/`defer`を保持します。high-risk approveは明示risk acknowledgement必須で、stale/tampered planは拒否します。compileして得られるのはhuman-approved hintsだけで、自動activationは行いません。
+
+```bash
+node scripts/web_semantic_approval.mjs init review.json --output approvals.json
+node scripts/web_semantic_approval.mjs decide review.json approvals.json property:undo-redo-inverse approve --output approvals.json
+node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
+```
+
 ## Unified semantic review report
 
 property/projection/normalizer提案を1つのbounded review reportで確認できます。各candidateにstableな`kind:id` ref、HIGH/MEDIUM/LOW confidence band、必要に応じたsemantic risk、recommended decision、evidence source、automatic activation flagを表示します。既定CLIは人間向け表示、`--json`では同じreview dataをtooling向けに出力します。

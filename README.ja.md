@@ -36,6 +36,16 @@ node scripts/web_project_inspect.mjs . --json
 
 現在の実装入口はNode scriptで、配布CLIでは`proped web inspect`を予定しています。
 
+## Generic browser inventory
+
+起動済みアプリに対して、project-specificなPlaywright codeなしでgeneric browser adapterがaction discoveryとsemantic state captureを行えます。
+
+```bash
+node scripts/web_browser_inventory.mjs http://127.0.0.1:3000 --json
+```
+
+locatorが曖昧な場合は`.first()`で推測せずdiagnosticへ倒します。target originは許可し、外部networkはdefault denyです。
+
 ## Web mutation品質ゲート
 
 framework-neutralなWeb mutation benchmarkは、generic Web propertyごとにレビュー済みmutationを1件実行し、対応するhealthy controlも検証します。品質ゲートはmutation score、false-positive rate、deterministic replay、最小traceのずれ、throughput、elapsed timeの違反を機械可読codeで返します。

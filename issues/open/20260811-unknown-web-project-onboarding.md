@@ -730,19 +730,19 @@ Acceptance:
 
 ### P0.2 Generic Playwright Adapter
 
-- [ ] fixture-specific dependency を除去
-- [ ] unknown URL へ直接接続
-- [ ] ARIA action inventory
-- [ ] locator confidence
-- [ ] ambiguity fail-closed
-- [ ] DOM/forms/URL/storage snapshot
-- [ ] fresh-context replay
+- [x] fixture-specific dependency を除去
+- [x] unknown URL へ直接接続
+- [x] ARIA action inventory
+- [x] locator confidence
+- [x] ambiguity fail-closed
+- [x] DOM/forms/URL/storage snapshot
+- [x] fresh-context replay
 
 Acceptance:
 
-- [ ] project-specific Playwright code 0 行で TodoMVC generic campaign 開始
-- [ ] actionable control recall >= 90% を benchmark 化
-- [ ] generated locator uniqueness >= 99% を目標
+- [x] project-specific Playwright code 0 行で TodoMVC generic campaign 開始
+- [x] actionable control recall >= 90% を benchmark 化
+- [x] generated locator uniqueness >= 99% を目標
 
 ### P0.3 Semantic Quiescence
 

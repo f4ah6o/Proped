@@ -78,6 +78,9 @@ jobs:
           npm audit --prefix web/nuxt-ssr-hydration --omit=dev
           npx --prefix web/playwright-browser playwright install --with-deps --only-shell chromium
 
+      - name: Generic browser adapter tests
+        run: node web/playwright-browser/test-generic-browser-driver.mjs
+
       - name: Web project quality manifest
         run: |
           node scripts/web_project_runner.mjs validate web/project-manifests/proped-web-quality.json

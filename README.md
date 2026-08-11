@@ -36,6 +36,16 @@ node scripts/web_project_inspect.mjs . --json
 
 The current implementation entry point is the Node script; the planned packaged CLI surface is `proped web inspect`.
 
+## Generic browser inventory
+
+For an already-running app, the generic browser adapter can discover actions and capture semantic state without project-specific Playwright code:
+
+```bash
+node scripts/web_browser_inventory.mjs http://127.0.0.1:3000 --json
+```
+
+Action resolution is fail-closed: ambiguous locators become diagnostics rather than `.first()` guesses. External network is denied by default while the target origin remains available.
+
 ## Web mutation quality gate
 
 The framework-neutral Web mutation benchmark kills one reviewed mutation for each generic Web property and runs paired healthy controls. Its quality gate reports mutation score, false-positive rate, deterministic replay, minimized-trace drift, throughput, and elapsed-time violations as machine-readable codes.

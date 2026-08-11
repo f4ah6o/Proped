@@ -103,6 +103,14 @@ Exploration can rank frontier states with a deterministic semantic novelty score
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Multi-context scheduler prototype
+
+A deterministic multi-context scheduler explores interleavings over shared state and per-context state using context-tagged semantic actions. It records the transition graph and replays failure traces without relying on wall-clock concurrency. The synthetic regression finds a two-context lost-update race and reproduces the same failure signature from the recorded four-step interleaving.
+
+```bash
+node scripts/test_web_multi_context_scheduler.mjs
+```
+
 ## Server reset and read-only API hooks
 
 Manifest v2 can declare optional same-origin server hooks for deterministic campaigns. A reset hook is an explicit credential-free `POST` relative path invoked before every fresh browser reset. Read-only hooks are limited to `GET`/`HEAD`; redirects and cross-origin URLs are denied, responses are byte-bounded, and artifacts keep only status, content hash, and JSON shape rather than raw bodies. This lets server-backed apps participate in fresh replay without a project-specific adapter.

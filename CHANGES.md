@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a deterministic multi-context scheduler prototype for shared-state interleavings, including replayable context-tagged traces and a synthetic lost-update race regression.
 - Added manifest v2 server reset/read-only API hooks with same-origin enforcement, GET/HEAD-only observation, bounded response hashing/JSON-shape evidence, redirect denial, and fresh-reset browser integration.
 - Added deterministic coverage-guided Web exploration that reconstructs frontier states by fresh-context trace replay and prioritizes discovery novelty plus globally unexecuted semantic actions.
 - Added deterministic Web state-novelty weighting across fingerprint, route family, storage-key shape, IndexedDB schema shape, and accessible action frontier, while ignoring volatile values and dynamic route IDs.

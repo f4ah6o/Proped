@@ -103,6 +103,14 @@ exploration frontierはdeterministicなsemantic novelty scoreで順位付けで�
 node scripts/test_web_state_novelty.mjs
 ```
 
+## Multi-context scheduler prototype
+
+deterministicなmulti-context schedulerで、shared stateとcontextごとのstateに対するcontext-tagged semantic actionのinterleavingを探索できます。wall-clock concurrencyへ依存せずtransition graphを記録し、failure traceをreplayします。synthetic regressionでは2 contextのlost-update raceを検出し、記録した4-step interleavingから同一failure signatureを再現します。
+
+```bash
+node scripts/test_web_multi_context_scheduler.mjs
+```
+
 ## Server reset / read-only API hooks
 
 manifest v2ではdeterministic campaign向けにsame-origin server hookを任意宣言できます。reset hookはcredentialなしの明示`POST` relative pathで、fresh browser resetの直前に毎回呼びます。read-only hookは`GET`/`HEAD`だけに制限し、redirect/cross-originを拒否、responseはbyte上限を設け、artifactにはraw bodyではなくstatus/content hash/JSON shapeだけを残します。server-backed appでもproject-specific adapterなしでfresh replayへ参加できます。

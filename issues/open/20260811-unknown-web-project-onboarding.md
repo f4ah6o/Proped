@@ -821,7 +821,9 @@ Acceptance:
 - [x] server reset/read-only API hooks
 
   - manifest v2 `server.hooks`でsame-origin reset POSTとGET/HEAD read-only probeを宣言可能。redirect/credentials/body送信を拒否し、read-only responseはbounded hash/JSON shapeだけをsnapshot evidenceへ入れる。
-- [ ] multi-context scheduler prototype
+- [x] multi-context scheduler prototype
+
+  - shared state + per-context stateをcontext-tagged action interleavingとして決定的に列挙するpure schedulerを追加。2 context lost-update raceを14 states/14 transitionsで検出し、failure trace replayで同一signatureを再現。
 
 ## P3 — AI Semantic Assistance
 

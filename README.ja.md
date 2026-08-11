@@ -46,6 +46,10 @@ node scripts/web_browser_inventory.mjs http://127.0.0.1:3000 --json
 
 locatorが曖昧な場合は`.first()`で推測せずdiagnosticへ倒します。target originは許可し、外部networkはdefault denyです。
 
+## Semantic browser quiescence
+
+Generic Browser Modeはready判定を`networkidle`へ依存させません。各action後に2 animation frame進め、DOM/form/URL/storageのsemantic fingerprintをsamplingし、観測可能なsame-origin requestを追跡したうえで、pending request=0かつ連続安定sampleを要求します。安定し続けないページは不透明なwait failureではなく`semantic_quiescence_timeout` diagnosticになります。
+
 ## Web mutation品質ゲート
 
 framework-neutralなWeb mutation benchmarkは、generic Web propertyごとにレビュー済みmutationを1件実行し、対応するhealthy controlも検証します。品質ゲートはmutation score、false-positive rate、deterministic replay、最小traceのずれ、throughput、elapsed timeの違反を機械可読codeで返します。

@@ -746,11 +746,11 @@ Acceptance:
 
 ### P0.3 Semantic Quiescence
 
-- [ ] generic settle detector
-- [ ] fingerprint stability
-- [ ] animation frame settling
-- [ ] bounded request tracking
-- [ ] timeout diagnostic
+- [x] generic settle detector
+- [x] fingerprint stability
+- [x] animation frame settling
+- [x] bounded request tracking
+- [x] timeout diagnostic
 
 ### P0.4 Managed Chromium
 

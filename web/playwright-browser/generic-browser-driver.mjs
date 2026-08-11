@@ -3,6 +3,7 @@ import { discoverAccessibleActions } from "../../protocol/accessible-action-disc
 import { createSemanticSnapshot } from "../../protocol/dom-semantic-snapshot.mjs";
 import { evaluateWebProperties } from "../../protocol/web-property-pack.mjs";
 import { semanticHash } from "../../protocol/ui-driver-v1.mjs";
+import { waitForSemanticQuiescence } from "../../protocol/semantic-quiescence.mjs";
 
 const ACTION_SELECTOR = [
   "button",
@@ -49,6 +50,8 @@ export class GenericPlaywrightBrowserDriver {
     locale = "en-US",
     timezoneId = "UTC",
     allowOrigins = [],
+    quiescence = {},
+    readyCheck = null,
   } = {}) {
     if (!url) throw new Error("GenericPlaywrightBrowserDriver requires url");
     this.url = new URL(url).href;
@@ -60,9 +63,18 @@ export class GenericPlaywrightBrowserDriver {
     this.locale = locale;
     this.timezoneId = timezoneId;
     this.allowOrigins = new Set([this.origin, ...allowOrigins]);
+    this.quiescence = {
+      timeoutMs,
+      stableSamples: 3,
+      sampleIntervalMs: 25,
+      ...quiescence,
+    };
+    this.readyCheck = readyCheck;
     this.consoleEntries = [];
     this.routeEntries = [];
     this.targetResolvers = new Map();
+    this.pendingRequests = new Set();
+    this.lastSettle = null;
   }
 
   async launch() {
@@ -77,6 +89,8 @@ export class GenericPlaywrightBrowserDriver {
     this.consoleEntries = [];
     this.routeEntries = [];
     this.targetResolvers = new Map();
+    this.pendingRequests = new Set();
+    this.lastSettle = null;
     this.context = await this.browser.newContext({
       acceptDownloads: false,
       serviceWorkers: "block",
@@ -120,6 +134,19 @@ export class GenericPlaywrightBrowserDriver {
     }
 
     this.page = await this.context.newPage();
+    this.page.on("request", (request) => {
+      try {
+        const url = new URL(request.url());
+        if (this.allowOrigins.has(url.origin) && !["data:", "blob:"].includes(url.protocol) && request.resourceType() !== "websocket") {
+          this.pendingRequests.add(request);
+        }
+      } catch {
+        // Non-standard URLs are not counted as observable same-origin work.
+      }
+    });
+    const finishRequest = (request) => this.pendingRequests.delete(request);
+    this.page.on("requestfinished", finishRequest);
+    this.page.on("requestfailed", finishRequest);
     this.page.on("console", (message) => {
       this.consoleEntries.push({ kind: message.type(), message: message.text() });
     });
@@ -139,20 +166,49 @@ export class GenericPlaywrightBrowserDriver {
     if (this.context) await this.context.close();
     await this.createContext();
     await this.page.goto(this.url, { waitUntil: "domcontentloaded" });
-    await this.settle();
+    this.lastSettle = await this.settle();
     return this.snapshot();
   }
 
-  async settle() {
+  async advanceSemanticFrame() {
     await this.page.evaluate(async () => {
       await Promise.resolve();
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
-    return {
-      status: "settled",
-      readiness: "domcontentloaded+microtask+2raf",
-      networkIdleUsed: false,
-    };
+  }
+
+  pendingRequestCount() {
+    return this.pendingRequests.size;
+  }
+
+  async quiescenceFingerprint() {
+    const raw = await this.rawSnapshot();
+    return createSemanticSnapshot({
+      url: raw.url,
+      semanticDom: raw.semanticDom,
+      forms: raw.forms,
+      focus: raw.focus,
+      storage: raw.storage,
+      pending: [],
+      effects: [],
+      console: [],
+      applicationState: null,
+    }).fingerprint;
+  }
+
+  async settle() {
+    const readyCheck = this.readyCheck
+      ? async () => Boolean(await this.readyCheck(this.page))
+      : null;
+    return waitForSemanticQuiescence({
+      sampleFingerprint: async () => this.quiescenceFingerprint(),
+      pendingCount: async () => this.pendingRequestCount(),
+      advanceFrame: async () => this.advanceSemanticFrame(),
+      readyCheck,
+      timeoutMs: this.quiescence.timeoutMs,
+      stableSamples: this.quiescence.stableSamples,
+      sampleIntervalMs: this.quiescence.sampleIntervalMs,
+    });
   }
 
   async domDescriptors() {
@@ -348,6 +404,7 @@ export class GenericPlaywrightBrowserDriver {
     } else throw new Error(`unsupported generic browser action: ${action.kind}`);
 
     const settle = await this.settle();
+    this.lastSettle = settle;
     const after = await this.snapshot();
     return {
       snapshot: after,
@@ -476,6 +533,8 @@ export class GenericPlaywrightBrowserDriver {
         networkPolicy: "same-origin-only",
       },
       capture: { visitedNodes: raw.visitedNodes, maximumNodes: 2_000 },
+      settle: this.lastSettle ? { ...this.lastSettle } : null,
+      pendingRequests: this.pendingRequestCount(),
     };
   }
 

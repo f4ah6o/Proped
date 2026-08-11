@@ -21,6 +21,8 @@ const HTML = `<!doctype html><html><body>
   <select id="sort"><option>Newest</option><option>Oldest</option></select>
   <a href="/about">About</a>
   <button data-testid="write-storage" title="Write storage">◼</button>
+  <button id="delayed-update">Delayed update</button>
+  <output id="delayed-status">idle</output>
   <ul id="todos"></ul>
 </main>
 <script>
@@ -39,11 +41,28 @@ form.addEventListener('submit', (event) => {
   input.value = '';
 });
 document.querySelector('[data-testid=write-storage]').addEventListener('click', () => localStorage.setItem('mode', 'generic'));
+document.querySelector('#delayed-update').addEventListener('click', async () => {
+  document.querySelector('#delayed-status').textContent = 'loading';
+  const response = await fetch('/slow');
+  document.querySelector('#delayed-status').textContent = await response.text();
+});
 </script>
 </body></html>`;
 
 async function startServer() {
   const server = http.createServer((request, response) => {
+    if (request.url === "/slow") {
+      setTimeout(() => {
+        response.writeHead(200, { "content-type": "text/plain", "cache-control": "no-store" });
+        response.end("done");
+      }, 80);
+      return;
+    }
+    if (request.url === "/churn") {
+      response.writeHead(200, { "content-type": "text/html", "cache-control": "no-store" });
+      response.end(`<!doctype html><main><h1 id="tick">0</h1></main><script>let n=0;const tick=()=>{document.querySelector('#tick').textContent=String(++n);requestAnimationFrame(tick)};requestAnimationFrame(tick)</script>`);
+      return;
+    }
     if (request.url === "/about") {
       response.writeHead(200, { "content-type": "text/html" });
       response.end("<!doctype html><main><h1>About</h1><a href='/'>Home</a></main>");
@@ -82,6 +101,7 @@ try {
     "combobox:Sort",
     "link:About",
     "button:Write storage",
+    "button:Delayed update",
   ];
   const found = expectedTargets.filter((target) => targets.has(target));
   const recall = found.length / expectedTargets.length;
@@ -107,7 +127,18 @@ try {
   const storage = await driver.execute(writeStorage);
   assert.equal(storage.snapshot.storage.local.mode, "generic");
 
-  const beforeContext = storage.snapshot.browser.contextSequence;
+  const delayed = (await driver.actions()).actions.find((action) => action.kind === "click" && action.target.name === "Delayed update");
+  assert.ok(delayed);
+  const delayedResult = await driver.execute(delayed);
+  assert.equal(delayedResult.settle.status, "settled");
+  assert.equal(delayedResult.settle.strategy, "semantic-quiescence");
+  assert.equal(delayedResult.settle.pendingRequests, 0);
+  assert.ok(delayedResult.settle.samples >= 3);
+  assert.equal(delayedResult.settle.networkIdleUsed, false);
+  assert.ok(delayedResult.snapshot.dom.includes("done"));
+  assert.equal(delayedResult.snapshot.pendingRequests, 0);
+
+  const beforeContext = delayedResult.snapshot.browser.contextSequence;
   const reset = await driver.reset();
   assert.ok(reset.browser.contextSequence > beforeContext);
   assert.deepEqual(reset.storage, { local: {}, session: {} });
@@ -122,6 +153,21 @@ try {
     await ambiguous.dispose();
   }
 
+  const churn = new GenericPlaywrightBrowserDriver({
+    url: `${server.url}churn`,
+    timeoutMs: 1_000,
+    quiescence: { timeoutMs: 140, stableSamples: 3, sampleIntervalMs: 10 },
+  });
+  try {
+    const churnSnapshot = await churn.reset();
+    assert.equal(churnSnapshot.settle.status, "timeout");
+    assert.equal(churnSnapshot.settle.diagnostic.code, "semantic_quiescence_timeout");
+    assert.ok(churnSnapshot.settle.distinctFingerprints >= 2);
+    assert.equal(churnSnapshot.settle.networkIdleUsed, false);
+  } finally {
+    await churn.dispose();
+  }
+
   console.log(JSON.stringify({
     ok: true,
     runtime: "generic-browser-driver-test",
@@ -131,6 +177,7 @@ try {
     locatorUniqueness: inventory.metrics.locatorUniqueness,
     actionCount: inventory.actions.length,
     deterministicReplay: replay.deterministic,
+    semanticQuiescence: true,
   }));
 } finally {
   await driver.dispose();

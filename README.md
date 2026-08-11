@@ -46,6 +46,10 @@ node scripts/web_browser_inventory.mjs http://127.0.0.1:3000 --json
 
 Action resolution is fail-closed: ambiguous locators become diagnostics rather than `.first()` guesses. External network is denied by default while the target origin remains available.
 
+## Semantic browser quiescence
+
+Generic Browser Mode does not use `networkidle` as its readiness oracle. After each action it advances two animation frames, samples a semantic DOM/form/URL/storage fingerprint, tracks observable same-origin requests, and requires repeated stable samples with zero pending requests. A page that never stabilizes returns a `semantic_quiescence_timeout` diagnostic instead of an opaque wait failure.
+
 ## Web mutation quality gate
 
 The framework-neutral Web mutation benchmark kills one reviewed mutation for each generic Web property and runs paired healthy controls. Its quality gate reports mutation score, false-positive rate, deterministic replay, minimized-trace drift, throughput, and elapsed-time violations as machine-readable codes.

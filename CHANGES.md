@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added semantic browser quiescence based on repeated semantic fingerprint stability, two animation frames per sample, bounded same-origin request tracking, optional explicit readiness, and machine-readable timeout diagnostics without relying on networkidle.
 - Added a fixture-independent Generic Playwright Browser Adapter for arbitrary URLs with same-origin network policy, role/label/placeholder/test-id action discovery, fail-closed locator ambiguity, semantic DOM/form/URL/storage snapshots, risk hints, and fresh-context replay.
 - Added read-only unknown-Web-project inspection with package-manager/framework/build/serve inference, bounded storage/runtime hint scanning, confidence, ambiguity diagnostics, and real TodoMVC/drawDB classification checks.
 - Added a reusable Web mutation quality-gate API with machine-readable failure codes for mutation score, healthy-control false positives, deterministic replay, minimized-trace drift, throughput, and elapsed time.

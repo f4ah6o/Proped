@@ -40,7 +40,7 @@ try {
   fs.writeFileSync(path.join(PROJECT, "package-lock.json"), "{}\n");
   fs.writeFileSync(path.join(PROJECT, "src/app.js"), "localStorage.setItem('boot','yes');\n");
   fs.writeFileSync(path.join(PROJECT, "index.html"), "<!doctype html><main><button>Source</button></main>\n");
-  fs.writeFileSync(path.join(PROJECT, "dist/index.html"), `<!doctype html><main><h1>Unknown Vite</h1><button>Add item</button><label><input type="checkbox"> Show archived</label></main>`);
+  fs.writeFileSync(path.join(PROJECT, "dist/index.html"), `<!doctype html><main><h1>Unknown Vite</h1><button>Add item</button><label><input type="checkbox"> Show archived</label><button>Delete account</button></main>`);
 
   const inspection = inspectWebProject(PROJECT);
   assert.equal(inspection.framework.name, "vite");
@@ -54,6 +54,7 @@ try {
   assert.equal(generatedStdout.schemaVersion, 2);
   assert.equal(generatedStdout.project.root, ".");
   assert.equal(generatedStdout.server.mode, "static-output");
+  assert.equal(generatedStdout.exploration.mode, "coverage-guided");
   assert.ok(generatedStdout.properties.packs.includes("reload-persistence"));
   assert.equal(fs.existsSync(path.join(PROJECT, "proped.web.json")), false);
 
@@ -101,6 +102,10 @@ try {
   assert.equal(report.stages[0].payload.replayGate.attempts, 3);
   assert.equal(report.stages[0].payload.replayGate.deterministic, true);
   assert.equal(report.stages[0].payload.replayGate.stableFailureCount, 0);
+  assert.equal(report.stages[0].payload.exploration.runtime, "web-coverage-guided-exploration");
+  assert.ok(report.stages[0].payload.exploration.transitions > 0);
+  assert.ok(report.stages[0].payload.metrics.riskCounts.destructive >= 1);
+  assert.ok(report.stages[0].payload.exploration.transitionGraph.every((edge) => !edge.actionId.includes("Delete account")));
 
   const runnableFile = path.join(TMP, "runnable.web.json");
   fs.writeFileSync(runnableFile, `${JSON.stringify(runnable, null, 2)}\n`);
@@ -127,6 +132,8 @@ try {
     verticalSliceStages: report.stages.map((stage) => stage.status),
     locatorUniqueness: report.stages[0].payload.metrics.locatorUniqueness,
     replayAttempts: report.stages[0].payload.replayGate.attempts,
+    explorationTransitions: report.stages[0].payload.exploration.transitions,
+    destructiveExplorationFiltered: report.stages[0].payload.exploration.transitionGraph.every((edge) => !edge.actionId.includes("Delete account")),
     v2RunnerCli: v2Report.ok,
   }));
 } finally {

@@ -47,6 +47,22 @@ node scripts/web_project_ci.mjs proped.web.json --output .github/workflows/prope
 
 The generated workflow checks out Proped Rabbita at a **full commit SHA**, uses read-only repository permissions, runs project dependency bootstrap separately, installs the Proped-managed Playwright/Chromium runtime, installs bubblewrap for strict execution, runs `web_project_run_v2.mjs`, and uploads `.proped/out` even when the quality gate fails.
 
+## Unified Web CLI
+
+The canonical Web onboarding entry point is now `proped web`. Inside the repository, the same dispatcher runs as `node scripts/proped.mjs web ...`. It does not invoke a shell and preserves each existing command's stdout, stderr, and exit code.
+
+```bash
+node scripts/proped.mjs web inspect . --json
+node scripts/proped.mjs web init . --output proped.web.json
+node scripts/proped.mjs web doctor proped.web.json
+node scripts/proped.mjs web review . --json
+node scripts/proped.mjs web approve init review.json --output approvals.json
+node scripts/proped.mjs web apply proped.web.json semantic-hints.json --output proped.web.approved.json
+node scripts/proped.mjs web run proped.web.approved.json
+```
+
+The existing `web_project_*` and `web_semantic_*` scripts remain compatibility entry points.
+
 ## Low-config Web project manifest v2
 
 The high-level v2 manifest is generated from read-only inspection and compiles to the existing v1 stage graph. The current canonical format is JSON; generation is stdout-only unless `--output` is explicit.
@@ -121,6 +137,22 @@ node scripts/web_semantic_approval.mjs init review.json --output approvals.json
 node scripts/web_semantic_approval.mjs decide review.json approvals.json property:undo-redo-inverse approve --output approvals.json
 node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
 ```
+
+## Coverage-guided Generic Browser exploration
+
+Generated manifest v2 enables a small bounded coverage-guided campaign by default, starting with `maxStates=32`, `maxTransitions=64`, and `maxDepth=4`. The frontier prioritizes semantic-state novelty and previously unseen actions, reconstructing each state by replaying its trace in a fresh context. **Destructive actions are always excluded**; bounded mutations are allowed only for self-contained `static-output` runs, while command/external servers explore safe actions only. Exploration failures are promoted only when the exact discovered trace reproduces the same failure class in every fresh replay attempt; flaky candidates remain diagnostics.
+
+## Approved semantic runtime integration
+
+`semantic-hints.json` can be attached explicitly to manifest v2 as `semantics.approved`. Only human-approved hints enter runtime execution; unapproved candidates remain inert. The first runtime maps `property:saved-state-survives-reload` to the existing `reload-persistence` pack, adds `projection:route-identity` and `projection:persistence-summary` to semantic state, and applies concrete approved normalizer rules to fresh-context fingerprints. Approved hints without a generic executor are preserved as diagnostics instead of being silently activated.
+
+```bash
+node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
+node scripts/web_semantic_apply.mjs proped.web.json semantic-hints.json --output proped.web.approved.json
+node scripts/web_project_run_v2.mjs proped.web.approved.json
+```
+
+Without `--output`, `web_semantic_apply.mjs` is stdout-only and does not modify the source manifest. The compiled hint semantic hash is revalidated so post-approval tampering is rejected.
 
 ## Unified semantic review report
 

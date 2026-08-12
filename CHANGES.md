@@ -1,4 +1,8 @@
 # Changes
+- Added trace-focused replay gating for coverage-guided Web exploration so only failure classes reproduced by the exact discovered trace across all fresh attempts are promoted to quality failures; flaky exploration candidates remain diagnostics.
+- Added a shell-free unified `proped web` dispatcher covering inspect/init/doctor/compile/review/approve/apply/run while preserving the existing Web script entry points and child exit codes.
+- Connected manifest v2 exploration bounds to real Generic Browser coverage-guided exploration with fresh-trace state reconstruction, semantic novelty prioritization, destructive-action exclusion, and bounded-mutation execution only for self-contained static output.
+- Wired human-approved semantic hints into manifest v2 and Generic Browser runtime: approved reload semantics enable the existing persistence pack, route/persistence projections participate in semantic state, concrete approved normalizers affect fingerprints, unsupported approved hints remain explicit diagnostics, and a stdout-first manifest apply CLI was added.
 
 ## Unreleased
 

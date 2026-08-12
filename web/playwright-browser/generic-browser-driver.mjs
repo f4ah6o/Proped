@@ -6,6 +6,7 @@ import { createSemanticSnapshot } from "../../protocol/dom-semantic-snapshot.mjs
 import { evaluateWebProperties } from "../../protocol/web-property-pack.mjs";
 import { semanticHash } from "../../protocol/ui-driver-v1.mjs";
 import { waitForSemanticQuiescence } from "../../protocol/semantic-quiescence.mjs";
+import { applyApprovedSemanticNormalizers, projectApprovedSemanticState } from "../../protocol/web-approved-semantics-runtime.mjs";
 
 const ACTION_SELECTOR = [
   "button",
@@ -58,6 +59,7 @@ export class GenericPlaywrightBrowserDriver {
     indexedDBAdapter = null,
     beforeReset = null,
     readOnlyStateProbe = null,
+    approvedSemanticRuntime = null,
   } = {}) {
     if (!url) throw new Error("GenericPlaywrightBrowserDriver requires url");
     this.url = new URL(url).href;
@@ -84,6 +86,7 @@ export class GenericPlaywrightBrowserDriver {
     if (readOnlyStateProbe !== null && typeof readOnlyStateProbe !== "function") throw new Error("readOnlyStateProbe must be a function or null");
     this.beforeReset = beforeReset;
     this.readOnlyStateProbe = readOnlyStateProbe;
+    this.approvedSemanticRuntime = approvedSemanticRuntime;
     this.consoleEntries = [];
     this.routeEntries = [];
     this.targetResolvers = new Map();
@@ -204,12 +207,19 @@ export class GenericPlaywrightBrowserDriver {
     return inventory;
   }
 
-  async quiescenceFingerprint() {
+  async semanticSnapshotInput({ includeConsole = true } = {}) {
     const raw = await this.rawSnapshot();
     const indexedDB = await this.indexedDbInventory();
     const serverHooks = this.readOnlyStateProbe ? await this.readOnlyStateProbe() : null;
-    const applicationState = indexedDB || serverHooks ? { ...(indexedDB ? { indexedDB } : {}), ...(serverHooks ? { serverHooks } : {}) } : null;
-    return createSemanticSnapshot({
+    const semanticProjections = projectApprovedSemanticState(this.approvedSemanticRuntime, {
+      url: raw.url, storage: raw.storage, indexedDB,
+    });
+    const applicationState = indexedDB || serverHooks || semanticProjections ? {
+      ...(indexedDB ? { indexedDB } : {}),
+      ...(serverHooks ? { serverHooks } : {}),
+      ...(semanticProjections ? { semanticProjections } : {}),
+    } : null;
+    return applyApprovedSemanticNormalizers({
       url: raw.url,
       semanticDom: raw.semanticDom,
       forms: raw.forms,
@@ -217,9 +227,14 @@ export class GenericPlaywrightBrowserDriver {
       storage: raw.storage,
       pending: [],
       effects: [],
-      console: [],
+      console: includeConsole ? this.consoleEntries : [],
       applicationState,
-    }).fingerprint;
+      __captureVisitedNodes: raw.visitedNodes,
+    }, this.approvedSemanticRuntime);
+  }
+
+  async quiescenceFingerprint() {
+    return createSemanticSnapshot(await this.semanticSnapshotInput({ includeConsole: false })).fingerprint;
   }
 
   async settle() {
@@ -565,21 +580,8 @@ export class GenericPlaywrightBrowserDriver {
   }
 
   async snapshot() {
-    const raw = await this.rawSnapshot();
-    const indexedDB = await this.indexedDbInventory();
-    const serverHooks = this.readOnlyStateProbe ? await this.readOnlyStateProbe() : null;
-    const applicationState = indexedDB || serverHooks ? { ...(indexedDB ? { indexedDB } : {}), ...(serverHooks ? { serverHooks } : {}) } : null;
-    const snapshot = createSemanticSnapshot({
-      url: raw.url,
-      semanticDom: raw.semanticDom,
-      forms: raw.forms,
-      focus: raw.focus,
-      storage: raw.storage,
-      pending: [],
-      effects: [],
-      console: this.consoleEntries,
-      applicationState,
-    });
+    const input = await this.semanticSnapshotInput({ includeConsole: true });
+    const snapshot = createSemanticSnapshot(input);
     return {
       ...snapshot,
       routes: this.routeEntries.map((entry) => ({ ...entry })),
@@ -592,7 +594,7 @@ export class GenericPlaywrightBrowserDriver {
         networkPolicy: "same-origin-only",
         managedRuntime: { ...this.managedRuntime },
       },
-      capture: { visitedNodes: raw.visitedNodes, maximumNodes: 2_000 },
+      capture: { visitedNodes: input.__captureVisitedNodes, maximumNodes: 2_000 },
       settle: this.lastSettle ? { ...this.lastSettle } : null,
       pendingRequests: this.pendingRequestCount(),
     };

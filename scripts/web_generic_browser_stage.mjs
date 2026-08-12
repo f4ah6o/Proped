@@ -10,9 +10,12 @@ import { runGenericPropertyPacks } from "../protocol/web-generic-property-packs.
 import { mineDriverVolatility } from "../protocol/web-volatility-miner.mjs";
 import { runFailureReplayGate } from "../protocol/web-replay-gate.mjs";
 import { createWebServerHookClient, validateWebServerHooks } from "../protocol/web-server-hooks.mjs";
+import { exploreWebCoverageGuided } from "../protocol/web-coverage-guided-exploration.mjs";
+import { runWebExplorationReplayGate } from "../protocol/web-exploration-replay-gate.mjs";
+import { resolveApprovedSemanticRuntime, validateApprovedSemanticHints } from "../protocol/web-approved-semantics-runtime.mjs";
 
 function usage(message) {
-  const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --server-hooks-json <json-object>\n  --property-packs-json <json-array>\n`;
+  const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --server-hooks-json <json-object>\n  --property-packs-json <json-array>\n  --semantic-hints-json <json|null>\n  --exploration-json <json-object>\n`;
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
   else console.log(help);
   process.exit(message ? 2 : 0);
@@ -32,6 +35,8 @@ function parseArgs(argv) {
     timezone: "UTC",
     readinessTimeoutMs: 30_000,
     propertyPacks: [],
+    semanticHints: null,
+    exploration: { mode: "off", maxStates: 32, maxTransitions: 64, maxDepth: 4, seed: 1 },
     serverHooks: { reset: null, readOnly: [] },
     indexedDBMode: "off",
     indexedDBAdapter: null,
@@ -59,6 +64,8 @@ function parseArgs(argv) {
     else if (key === "--readiness-timeout") options.readinessTimeoutMs = Number(value);
     else if (key === "--server-hooks-json") options.serverHooks = JSON.parse(value);
     else if (key === "--property-packs-json") options.propertyPacks = JSON.parse(value);
+    else if (key === "--semantic-hints-json") options.semanticHints = JSON.parse(value);
+    else if (key === "--exploration-json") options.exploration = JSON.parse(value);
     else if (key === "--indexeddb-mode") options.indexedDBMode = value;
     else if (key === "--indexeddb-adapter-json") options.indexedDBAdapter = JSON.parse(value);
     else if (key === "--volatility-probe-runs") options.volatilityProbeRuns = Number(value);
@@ -73,9 +80,15 @@ function parseArgs(argv) {
   if (!Number.isSafeInteger(options.readinessTimeoutMs) || options.readinessTimeoutMs < 1) usage("--readiness-timeout must be a positive integer");
   try { options.serverHooks = validateWebServerHooks(options.serverHooks); } catch (error) { usage(error.message); }
   if (!Array.isArray(options.propertyPacks) || options.propertyPacks.some((pack) => typeof pack !== "string")) usage("--property-packs-json must be a string array");
+  try { options.semanticHints = validateApprovedSemanticHints(options.semanticHints); } catch (error) { usage(error.message); }
   if (!["off", "auto-metadata"].includes(options.indexedDBMode)) usage("--indexeddb-mode is invalid");
   if (!Number.isSafeInteger(options.volatilityProbeRuns) || options.volatilityProbeRuns < 0) usage("--volatility-probe-runs must be a non-negative integer");
   if (!Number.isSafeInteger(options.replayAttempts) || options.replayAttempts < 1) usage("--replay-attempts must be a positive integer");
+  if (!options.exploration || !["off", "coverage-guided"].includes(options.exploration.mode)) usage("--exploration-json mode is invalid");
+  for (const key of ["maxStates", "maxTransitions", "maxDepth"]) {
+    if (!Number.isSafeInteger(options.exploration[key]) || options.exploration[key] < 1) usage(`--exploration-json ${key} must be a positive integer`);
+  }
+  if (!Number.isSafeInteger(options.exploration.seed) || options.exploration.seed < 0) usage("--exploration-json seed must be a non-negative integer");
   return options;
 }
 
@@ -213,6 +226,7 @@ try {
   else server = { url: options.url, stop: async () => {}, diagnostics: [{ kind: "external-server" }] };
 
   const hookClient = createWebServerHookClient(server.url, options.serverHooks);
+  const approvedSemanticRuntime = resolveApprovedSemanticRuntime(options.semanticHints);
   driver = new GenericPlaywrightBrowserDriver({
     url: server.url,
     headless: options.headless,
@@ -225,6 +239,7 @@ try {
     indexedDBAdapter: options.indexedDBAdapter,
     beforeReset: options.serverHooks.reset ? async () => { await hookClient.reset(); } : null,
     readOnlyStateProbe: options.serverHooks.readOnly.length ? async () => hookClient.readOnlyState() : null,
+    approvedSemanticRuntime,
   });
   const snapshot = await driver.reset();
   const inventory = await driver.actions();
@@ -232,7 +247,7 @@ try {
     ? await mineDriverVolatility(driver, { runs: options.volatilityProbeRuns })
     : { ok: true, runtime: "web-volatility-miner", runs: options.volatilityProbeRuns, candidateCount: 0, likelyNoiseCount: 0, reviewRequiredCount: 0, candidates: [], appliedCount: 0, semanticHash: semanticHash({ runs: options.volatilityProbeRuns, candidates: [] }) };
   const campaignOptions = {
-    packs: options.propertyPacks,
+    packs: [...new Set([...options.propertyPacks, ...approvedSemanticRuntime.propertyPacks])],
     allowBoundedMutations: options.serverMode === "static-output",
     maxProbes: 12,
   };
@@ -246,34 +261,64 @@ try {
     counts[action.destructiveRisk] = (counts[action.destructiveRisk] ?? 0) + 1;
     return counts;
   }, {});
+  const allowedExplorationRisks = new Set(options.serverMode === "static-output" ? ["safe", "bounded-mutation"] : ["safe"]);
+  const exploration = options.exploration.mode === "coverage-guided"
+    ? await exploreWebCoverageGuided(driver, {
+      maxStates: options.exploration.maxStates,
+      maxTransitions: options.exploration.maxTransitions,
+      maxDepth: options.exploration.maxDepth,
+      actionFilter: (action) => allowedExplorationRisks.has(action.destructiveRisk ?? "safe"),
+    })
+    : {
+      ok: true, runtime: "web-coverage-guided-exploration", disabled: true,
+      bounds: { maxStates: options.exploration.maxStates, maxTransitions: options.exploration.maxTransitions, maxDepth: options.exploration.maxDepth },
+      states: 0, transitions: 0, failureCount: 0, failures: [], diagnostics: [], semanticHash: semanticHash({ mode: "off" }),
+    };
+  const explorationReplayGate = await runWebExplorationReplayGate({
+    driver, exploration, attempts: options.replayAttempts,
+  });
   const stateSemanticHash = semanticHash({
     dom: snapshot.dom,
     forms: snapshot.forms,
     focus: snapshot.focus,
     storage: snapshot.storage,
+    applicationState: snapshot.applicationState,
   });
   const result = {
-    ok: replayGate.ok,
+    ok: replayGate.ok && explorationReplayGate.ok,
     runtime: "generic-web-browser-stage",
     server: { mode: options.serverMode, url: server.url },
     browser: snapshot.browser,
     settle: snapshot.settle,
     actionCount: inventory.actions.length,
-    diagnostics: inventory.diagnostics,
-    metrics: { ...inventory.metrics, riskCounts },
-    propertyPacks: options.propertyPacks,
+    diagnostics: [...inventory.diagnostics, ...approvedSemanticRuntime.diagnostics],
+    metrics: { ...inventory.metrics, riskCounts, explorationAllowedRisks: [...allowedExplorationRisks].sort() },
+    exploration,
+    explorationReplayGate: { ...explorationReplayGate, stableFailures: undefined },
+    propertyPacks: campaignOptions.packs,
+    approvedSemantics: {
+      semanticHash: approvedSemanticRuntime.semanticHash,
+      approvedHintSemanticHash: approvedSemanticRuntime.approvedHintSemanticHash,
+      projectionIds: approvedSemanticRuntime.projections.map((item) => item.id),
+      normalizerCount: approvedSemanticRuntime.normalizers.length,
+      diagnostics: approvedSemanticRuntime.diagnostics,
+    },
     propertyCampaign,
     replayGate: {
       ...replayGate,
       stableFailures: undefined,
     },
-    candidateFailures: propertyCampaign.failures,
-    failures: replayGate.stableFailures,
+    candidateFailures: [...propertyCampaign.failures, ...exploration.failures],
+    failures: [...replayGate.stableFailures, ...explorationReplayGate.stableFailures],
     advisories: [
       ...propertyCampaign.advisories,
       ...replayGate.unstableCandidates.map((candidate) => ({
         ...candidate,
         message: `candidate failure reproduced ${candidate.occurrenceCount}/${candidate.requiredCount} fresh campaigns and was not promoted to a quality failure`,
+      })),
+      ...explorationReplayGate.unstableCandidates.map((candidate) => ({
+        ...candidate,
+        message: `exploration candidate reproduced ${candidate.occurrenceCount}/${candidate.requiredCount} fresh trace replays and was not promoted to a quality failure`,
       })),
     ],
     volatility,
@@ -292,6 +337,9 @@ try {
     propertyCampaignSemanticHash: propertyCampaign.semanticHash,
     replayGateSemanticHash: replayGate.semanticHash,
     volatilitySemanticHash: volatility.semanticHash,
+    explorationSemanticHash: exploration.semanticHash,
+    explorationReplayGateSemanticHash: explorationReplayGate.semanticHash,
+    approvedSemanticRuntimeHash: approvedSemanticRuntime.semanticHash,
     stateSemanticHash,
   });
   console.log(JSON.stringify(result));

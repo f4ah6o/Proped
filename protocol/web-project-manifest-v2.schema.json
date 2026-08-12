@@ -384,6 +384,47 @@
         }
       }
     },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approved"
+      ],
+      "properties": {
+        "approved": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "required": [
+                "runtime",
+                "automaticActivation",
+                "semanticHash",
+                "approved"
+              ],
+              "properties": {
+                "runtime": {
+                  "const": "web-semantic-approved-hints"
+                },
+                "automaticActivation": {
+                  "const": false
+                },
+                "semanticHash": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "approved": {
+                  "type": "array"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
     "exploration": {
       "type": "object",
       "additionalProperties": false,
@@ -393,7 +434,17 @@
         "seed"
       ],
       "properties": {
+        "mode": {
+          "enum": [
+            "off",
+            "coverage-guided"
+          ]
+        },
         "maxStates": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxTransitions": {
           "type": "integer",
           "minimum": 1
         },

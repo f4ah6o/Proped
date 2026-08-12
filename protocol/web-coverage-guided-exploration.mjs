@@ -26,8 +26,8 @@ function edgeKey(fingerprint, actionId) {
   return `${fingerprint}\u0000${actionId}`;
 }
 
-function frontierScore(node, executedEdges, executedActionSignatures) {
-  const available = node.inventory.actions.filter((action) => !executedEdges.has(edgeKey(node.snapshot.fingerprint, action.id)));
+function frontierScore(node, executedEdges, executedActionSignatures, actionFilter) {
+  const available = node.inventory.actions.filter((action) => actionFilter(action) && !executedEdges.has(edgeKey(node.snapshot.fingerprint, action.id)));
   const globallyNew = available.filter((action) => !executedActionSignatures.has(actionSignature(action)));
   return {
     score: node.discoveryNovelty.score + globallyNew.length * 5 + available.length,
@@ -36,10 +36,10 @@ function frontierScore(node, executedEdges, executedActionSignatures) {
   };
 }
 
-function selectFrontierNode(nodes, executedEdges, executedActionSignatures, maxDepth) {
+function selectFrontierNode(nodes, executedEdges, executedActionSignatures, maxDepth, actionFilter) {
   const ranked = nodes
     .filter((node) => node.depth < maxDepth)
-    .map((node) => ({ node, frontier: frontierScore(node, executedEdges, executedActionSignatures) }))
+    .map((node) => ({ node, frontier: frontierScore(node, executedEdges, executedActionSignatures, actionFilter) }))
     .filter(({ frontier }) => frontier.available.length > 0)
     .sort((left, right) => {
       if (right.frontier.score !== left.frontier.score) return right.frontier.score - left.frontier.score;
@@ -75,10 +75,12 @@ export async function exploreWebCoverageGuided(driver, {
   maxStates = 100,
   maxTransitions = 500,
   maxDepth = 12,
+  actionFilter = () => true,
 } = {}) {
   if (!driver || typeof driver.reset !== "function" || typeof driver.actions !== "function" || typeof driver.execute !== "function") {
     throw new Error("coverage-guided exploration requires reset/actions/execute driver methods");
   }
+  if (typeof actionFilter !== "function") throw new Error("actionFilter must be a function");
   for (const [label, value] of [["maxStates", maxStates], ["maxTransitions", maxTransitions], ["maxDepth", maxDepth]]) {
     if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${label} must be a positive safe integer`);
   }
@@ -106,7 +108,7 @@ export async function exploreWebCoverageGuided(driver, {
   routeFamilies.add(webRouteFamily(initialSnapshot.url));
 
   while (transitions.length < maxTransitions && stateByFingerprint.size < maxStates) {
-    const selected = selectFrontierNode([...stateByFingerprint.values()], executedEdges, executedActionSignatures, maxDepth);
+    const selected = selectFrontierNode([...stateByFingerprint.values()], executedEdges, executedActionSignatures, maxDepth, actionFilter);
     if (!selected) break;
     const action = selectAction(selected.frontier, executedActionSignatures);
     const source = selected.node;
@@ -145,8 +147,14 @@ export async function exploreWebCoverageGuided(driver, {
       to: nextSnapshot.fingerprint,
       depth: source.depth + 1,
     });
-    for (const failure of result.violations ?? []) failures.push({ ...failure, trace: failure.trace ?? nextTrace });
+    const transitionViolations = result.violations ?? [];
+    for (const failure of transitionViolations) failures.push({ ...failure, trace: failure.trace ?? nextTrace });
     routeFamilies.add(webRouteFamily(nextSnapshot.url));
+    // A property violation terminates this branch. Keeping the post-failure
+    // state on the frontier tends to rediscover the same failure with a
+    // strictly longer trace (for example Crash -> Crash) and obscures the
+    // first counterexample before shrinking/replay has a chance to classify it.
+    if (transitionViolations.length > 0) continue;
 
     if (!stateByFingerprint.has(nextSnapshot.fingerprint) && stateByFingerprint.size < maxStates) {
       const features = webStateNoveltyFeatures({ snapshot: nextSnapshot, inventory: nextInventory });
@@ -164,7 +172,7 @@ export async function exploreWebCoverageGuided(driver, {
   }
 
   const nodes = [...stateByFingerprint.values()].sort((a, b) => a.ordinal - b.ordinal);
-  const frontierRemaining = nodes.some((node) => frontierScore(node, executedEdges, executedActionSignatures).available.length > 0 && node.depth < maxDepth);
+  const frontierRemaining = nodes.some((node) => frontierScore(node, executedEdges, executedActionSignatures, actionFilter).available.length > 0 && node.depth < maxDepth);
   const stable = {
     version: WEB_COVERAGE_GUIDED_EXPLORATION_VERSION,
     states: nodes.length,

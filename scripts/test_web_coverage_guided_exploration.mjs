@@ -42,7 +42,7 @@ class SyntheticCoverageDriver {
 }
 
 const first = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
-assert.equal(first.states, 4);
+assert.equal(first.states, 3);
 assert.equal(first.transitions, 3);
 assert.deepEqual(first.transitionGraph.map((edge) => edge.actionId), ["a-noise", "z-admin", "m-crash"]);
 assert.equal(first.routeFamilies.length, 2);
@@ -54,6 +54,31 @@ assert.equal(first.truncatedByTransitionLimit, true);
 const second = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
 assert.equal(second.semanticHash, first.semanticHash);
 assert.deepEqual(second.transitionGraph, first.transitionGraph);
+
+
+class SyntheticSafetyDriver {
+  constructor() { this.state = "home"; }
+  snapshot() { return { fingerprint: semanticHash({ state: this.state }), url: "http://app.local/", storage: { local: {}, session: {} }, applicationState: null }; }
+  async reset() { this.state = "home"; return this.snapshot(); }
+  async actions() {
+    return { actions: [
+      { id: "safe-open", kind: "click", target: { role: "button", name: "Open", within: [] }, destructiveRisk: "safe" },
+      { id: "delete-account", kind: "click", target: { role: "button", name: "Delete account", within: [] }, destructiveRisk: "destructive" },
+    ], diagnostics: [], metrics: {} };
+  }
+  async execute(action) {
+    if (action.id === "delete-account") throw new Error("destructive action must never execute");
+    this.state = "opened";
+    return { snapshot: this.snapshot(), violations: [] };
+  }
+}
+
+const safety = await exploreWebCoverageGuided(new SyntheticSafetyDriver(), {
+  maxStates: 4, maxTransitions: 2, maxDepth: 2,
+  actionFilter: (action) => action.destructiveRisk === "safe",
+});
+assert.ok(safety.transitionGraph.length >= 1);
+assert.ok(safety.transitionGraph.every((edge) => edge.actionId !== "delete-account"));
 
 const bounded = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 2, maxDepth: 4 });
 assert.equal(bounded.failureCount, 0);
@@ -68,4 +93,5 @@ console.log(JSON.stringify({
   actionOrder: first.transitionGraph.map((edge) => edge.actionId),
   deterministic: second.semanticHash === first.semanticHash,
   failureProperty: first.failures[0].property,
+  destructiveFiltered: safety.transitionGraph.every((edge) => edge.actionId !== "delete-account"),
 }));

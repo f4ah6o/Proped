@@ -47,6 +47,22 @@ node scripts/web_project_ci.mjs proped.web.json --output .github/workflows/prope
 
 generated workflowはProped Rabbitaを**full commit SHA**でpinし、repository permissionをread-onlyに保ち、project dependency bootstrapをstrict executionから分離します。その後Proped-managed Playwright/Chromium、bubblewrap、`web_project_run_v2.mjs`を実行し、quality gate失敗時も`.proped/out`をuploadします。
 
+## Unified Web CLI
+
+Web onboardingのcanonical入口を`proped web`へまとめました。repository内では`node scripts/proped.mjs web ...`として同じdispatcherを実行できます。dispatcherはshellを使わず、各既存commandのstdout/stderr/exit codeをそのまま保持します。
+
+```bash
+node scripts/proped.mjs web inspect . --json
+node scripts/proped.mjs web init . --output proped.web.json
+node scripts/proped.mjs web doctor proped.web.json
+node scripts/proped.mjs web review . --json
+node scripts/proped.mjs web approve init review.json --output approvals.json
+node scripts/proped.mjs web apply proped.web.json semantic-hints.json --output proped.web.approved.json
+node scripts/proped.mjs web run proped.web.approved.json
+```
+
+既存`web_project_*` / `web_semantic_*` scriptsは互換入口として残します。
+
 ## Low-config Web project manifest v2
 
 read-only inspection結果からhigh-level manifest v2を生成し、既存のv1 stage graphへcompileします。現時点のcanonical formatはJSONで、`--output`を明示しない限りstdout-onlyです。
@@ -121,6 +137,22 @@ node scripts/web_semantic_approval.mjs init review.json --output approvals.json
 node scripts/web_semantic_approval.mjs decide review.json approvals.json property:undo-redo-inverse approve --output approvals.json
 node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
 ```
+
+## Coverage-guided Generic Browser exploration
+
+生成manifest v2は小さくboundedなcoverage-guided explorationを既定で有効化し、`maxStates=32` / `maxTransitions=64` / `maxDepth=4`から開始します。frontierはsemantic state noveltyと未実行actionを優先し、各stateはfresh contextへtrace replayして再構成します。**destructive actionは常に探索対象外**で、bounded mutationもself-containedな`static-output`実行時だけ許可します。server/external modeではsafe actionだけを探索します。探索failureは、発見したtraceそのものをfresh contextで再実行し、全attemptで同じfailure classが再現した場合だけquality failureへ昇格します。flaky candidateはdiagnosticのままです。
+
+## Approved semantic runtime integration
+
+`semantic-hints.json`はmanifest v2の`semantics.approved`へ明示的に適用できます。承認済みhintだけがruntimeへ入り、未承認candidateは実行されません。初版runtimeは`property:saved-state-survives-reload`を既存`reload-persistence` packへ接続し、`projection:route-identity` / `projection:persistence-summary`をsemantic stateへ追加し、具体的なapproved normalizer ruleをfresh-context fingerprintへ適用します。未対応のapproved hintは黙って実行せずdiagnosticとして保持します。
+
+```bash
+node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
+node scripts/web_semantic_apply.mjs proped.web.json semantic-hints.json --output proped.web.approved.json
+node scripts/web_project_run_v2.mjs proped.web.approved.json
+```
+
+`web_semantic_apply.mjs`は`--output`を省略するとstdout-onlyで、元manifestを書き換えません。compiled hintsのsemantic hashを再検証するため、承認後の改変も拒否します。
 
 ## Unified semantic review report
 

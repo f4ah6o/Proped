@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateWebProjectManifest } from "./web-project-runner.mjs";
 import { validateWebServerHooks } from "./web-server-hooks.mjs";
+import { validateApprovedSemanticHints } from "./web-approved-semantics-runtime.mjs";
 
 export const WEB_PROJECT_MANIFEST_V2 = 2;
 const TOOL_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -10,7 +11,7 @@ const GENERIC_BROWSER_STAGE = path.join(TOOL_ROOT, "scripts/web_generic_browser_
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const TOP_KEYS = new Set([
   "schemaVersion", "id", "project", "bootstrap", "server", "browser", "discovery",
-  "state", "normalization", "properties", "exploration", "replay", "sandbox", "artifacts", "inference",
+  "state", "normalization", "properties", "semantics", "exploration", "replay", "sandbox", "artifacts", "inference",
 ]);
 
 function fail(message) {
@@ -124,8 +125,15 @@ export function validateWebProjectManifestV2(manifest) {
   exactKeys(manifest.properties, new Set(["packs"]), "properties");
   uniqueStrings(manifest.properties.packs, "properties.packs");
 
-  exactKeys(manifest.exploration, new Set(["maxStates", "maxDepth", "seed"]), "exploration");
+  if (manifest.semantics !== undefined) {
+    exactKeys(manifest.semantics, new Set(["approved"]), "semantics");
+    validateApprovedSemanticHints(manifest.semantics.approved);
+  }
+
+  exactKeys(manifest.exploration, new Set(["mode", "maxStates", "maxTransitions", "maxDepth", "seed"]), "exploration");
+  if (manifest.exploration.mode !== undefined && !["off", "coverage-guided"].includes(manifest.exploration.mode)) fail("exploration.mode is invalid");
   positiveInt(manifest.exploration.maxStates, "exploration.maxStates");
+  if (manifest.exploration.maxTransitions !== undefined) positiveInt(manifest.exploration.maxTransitions, "exploration.maxTransitions");
   positiveInt(manifest.exploration.maxDepth, "exploration.maxDepth");
   positiveInt(manifest.exploration.seed, "exploration.seed", { zero: true });
 
@@ -219,7 +227,8 @@ export function createWebProjectManifestV2FromInspection(inspection, { projectRo
     },
     normalization: { builtin: true, volatilityProbeRuns: 3 },
     properties: { packs },
-    exploration: { maxStates: 1000, maxDepth: 12, seed: 1 },
+    semantics: { approved: null },
+    exploration: { mode: "coverage-guided", maxStates: 32, maxTransitions: 64, maxDepth: 4, seed: 1 },
     replay: { attempts: 3, freshContext: true },
     sandbox: { mode: "strict", executionNetwork: "deny", credentials: "deny" },
     artifacts: { output: ".proped/out", traceOnFailure: true },
@@ -260,6 +269,14 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
     "--readiness-timeout", String(manifest.server.readiness.timeoutMs),
     "--server-hooks-json", JSON.stringify(manifest.server.hooks),
     "--property-packs-json", JSON.stringify(manifest.properties.packs),
+    "--semantic-hints-json", JSON.stringify(manifest.semantics?.approved ?? null),
+    "--exploration-json", JSON.stringify({
+      mode: manifest.exploration.mode ?? "off",
+      maxStates: manifest.exploration.maxStates,
+      maxTransitions: manifest.exploration.maxTransitions ?? Math.min(manifest.exploration.maxStates * 2, 500),
+      maxDepth: manifest.exploration.maxDepth,
+      seed: manifest.exploration.seed,
+    }),
     "--indexeddb-mode", manifest.state.indexedDB.mode,
     "--indexeddb-adapter-json", JSON.stringify(manifest.state.indexedDB.adapter),
     "--volatility-probe-runs", String(manifest.normalization.volatilityProbeRuns),
@@ -305,4 +322,10 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
       bootstrapInstall: manifest.bootstrap.install ? clone(manifest.bootstrap.install) : null,
     },
   };
+}
+
+export function withApprovedWebSemantics(manifest, approved) {
+  validateWebProjectManifestV2(manifest);
+  validateApprovedSemanticHints(approved);
+  return validateWebProjectManifestV2({ ...clone(manifest), semantics: { approved: clone(approved) } });
 }

@@ -81,6 +81,16 @@ The canonical Web onboarding entry point is now `proped web`. Inside the reposit
 
 The existing `web_project_*` and `web_semantic_*` scripts remain compatibility entry points.
 
+## Unknown-project campaign
+
+`web campaign` is the production-oriented one-command path for an unknown Web project. It performs read-only inspection and manifest inference, resolves already-installed Node/package-manager runtimes, prepares dependencies when required, compiles the inferred manifest, runs Generic Browser exploration, replays candidate failures, and emits a stable campaign summary without requiring a handwritten manifest.
+
+```bash
+./target/debug/proped web campaign .
+```
+
+A completed campaign reports `autoOnboarded`, `humanInterventions`, `interventionReasons`, canonical `failureClasses`, replay determinism, and explored state/transition/action counts. Stable quality failures are findings, not onboarding failures: a project can be `autoOnboarded: true` while `qualityPassed: false`. Critical inference ambiguity, missing compatible runtime, incomplete preparation, or an execution-stage failure remains explicit and requires intervention. By default the command is an explicit mutating orchestration and may run the existing credential-filtered dependency preparation phase; `--no-prepare` disables that behavior, `--offline` requests offline package-manager mode, and `--no-artifacts` suppresses `.proped/campaign/` output. Sandbox selection is safe-by-default for the host: Linux keeps strict isolation, macOS selects the constrained Seatbelt backend because Linux-equivalent strict process/home isolation is unavailable there, and no platform silently falls back to `caller-enforced`. The lower-level `web run` command remains non-installing and still requires preparation to be explicit.
+
 ## Explicit Web project preparation
 
 `web run` never installs target dependencies implicitly. If a generated manifest has an install command and the target dependency artifact is missing, `web run` exits with `prepare_required`. Run the explicit setup phase first:

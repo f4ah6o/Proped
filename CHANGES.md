@@ -22,6 +22,7 @@
 
 ### Added
 
+- Added `proped web campaign <project>` as a manifest-free unknown-project production path that composes blind inspection, installed runtime selection, safe automatic dependency preparation, host-safe sandbox selection (Linux strict, macOS constrained without implicit caller-enforced downgrade), Generic Browser exploration, replay/failure classification, and stable onboarding metrics (`autoOnboarded`, human interventions, canonical failure classes, replay determinism, and exploration counts). Dependency readiness now also recognizes dependency-free package projects without requiring a nonexistent `node_modules` completion marker.
 - Added explicit `proped setup` managed-runtime bootstrap with pinned/checksummed Node fallback, lockfile-only Proped JavaScript dependency preparation, managed Playwright Chromium installation, per-user runtime/cache roots, launch-based verification, stable JSON diagnostics, idempotent reuse, and macOS/Linux/Windows distribution CI coverage.
 - Added a Rust-native `proped` product shell with CalVer/provenance output, product doctor, and shell-free forwarding to the existing Node/Playwright Web dispatcher while preserving stdout/stderr/exit codes.
 - Closed unknown-Web onboarding acceptance with 6/6 pinned real-browser failure recall (TodoMVC 3/3 + drawDB 3/3) and a deterministic 10,000-transition healthy benchmark with zero generic false positives plus live sensitivity controls.

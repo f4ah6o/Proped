@@ -81,6 +81,16 @@ Web onboardingのcanonical入口を`proped web`へまとめました。repositor
 
 既存`web_project_*` / `web_semantic_*` scriptsは互換入口として残します。
 
+## 未知project campaign
+
+`web campaign`は未知Web projectを1 commandで扱うproduction-orientedな入口です。read-only inspectionとmanifest推定、既存Node/package-manager runtimeの解決、必要時のdependency preparation、manifest compile、Generic Browser探索、candidate failure replayまでを束ね、手書きmanifestなしで安定したcampaign summaryを返します。
+
+```bash
+./target/debug/proped web campaign .
+```
+
+完走時は`autoOnboarded`、`humanInterventions`、`interventionReasons`、canonical `failureClasses`、replay determinism、探索したstate/transition/action数を返します。安定再現したquality failureはonboarding失敗ではなくfindingとして扱うため、`autoOnboarded: true`かつ`qualityPassed: false`になり得ます。critical inference ambiguity、互換runtime不足、prepare未完了、execution stage失敗は明示的なintervention reasonになります。campaign command自体を明示的なmutating orchestrationとして扱うため、既定では既存のcredential-filtered dependency preparationを必要時に実行します。`--no-prepare`で禁止、`--offline`でpackage-manager offline mode要求、`--no-artifacts`で`.proped/campaign/`生成を抑止できます。sandboxはhostで利用できる安全側を自動選択し、Linuxではstrict、macOSではLinux相当のstrict process/home isolationが成立しないためconstrained Seatbelt backendを使います。`caller-enforced`へ暗黙downgradeしません。lower-levelの`web run`は従来どおり暗黙installせず、prepare明示の境界を維持します。
+
 ## 明示的なWeb project preparation
 
 `web run`はtarget dependencyを暗黙installしません。生成manifestにinstall commandがあり、dependency artifactが未準備なら`prepare_required`で終了します。先に明示setup phaseを実行します。

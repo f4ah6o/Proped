@@ -10,6 +10,31 @@ function inside(parent, child) {
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
+function declaredDependencyCount(projectRoot) {
+  const packageFile = path.join(projectRoot, "package.json");
+  if (!fs.existsSync(packageFile)) return null;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(packageFile, "utf8"));
+    const names = new Set();
+    for (const field of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
+      const dependencies = pkg?.[field];
+      if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) continue;
+      for (const name of Object.keys(dependencies)) names.add(name);
+    }
+    return names.size;
+  } catch {
+    return null;
+  }
+}
+
+function isCanonicalPackageManagerInstall(manifest) {
+  const command = manifest?.bootstrap?.install;
+  const manager = manifest?.project?.packageManager;
+  if (!Array.isArray(command) || command.length === 0 || !manager) return false;
+  if (command[0] === manager) return true;
+  return command[0] === "corepack" && command[1] === manager;
+}
+
 function resolvedProjectRoot(repositoryRoot, manifest) {
   const root = fs.realpathSync(repositoryRoot);
   const project = path.resolve(root, manifest.project.root);
@@ -29,6 +54,10 @@ export function webProjectDependencyReadiness(repositoryRoot, manifest, { forRun
   }
   const manager = manifest.project.packageManager;
   const evidence = [];
+  const dependencyCount = declaredDependencyCount(projectRoot);
+  if (dependencyCount === 0 && isCanonicalPackageManagerInstall(manifest)) {
+    return { ready: true, reason: `${manager ?? "project"}-no-dependencies`, projectRoot, evidence: ["declared-dependencies:0"] };
+  }
   const nodeModules = path.join(projectRoot, "node_modules");
   const pnpmModules = path.join(nodeModules, ".modules.yaml");
   const npmHiddenLock = path.join(nodeModules, ".package-lock.json");

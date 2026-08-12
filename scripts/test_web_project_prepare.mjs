@@ -13,6 +13,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, ".tmp/web-project-prepare-test");
 const PROJECT = path.join(TMP, "fixture");
 const CONFLICT_PROJECT = path.join(TMP, "conflicting-node-fixture");
+const ZERO_DEP_PROJECT = path.join(TMP, "zero-dependency-fixture");
 const MANIFEST = path.join(PROJECT, "proped.web.json");
 const CLI = path.join(ROOT, "scripts/proped.mjs");
 
@@ -60,6 +61,25 @@ try {
     hooks: { reset: null, readOnly: [] },
   };
   fs.writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  fs.mkdirSync(ZERO_DEP_PROJECT, { recursive: true });
+  fs.writeFileSync(path.join(ZERO_DEP_PROJECT, "index.html"), "<!doctype html><main>zero deps</main>\n");
+  fs.writeFileSync(path.join(ZERO_DEP_PROJECT, "package.json"), `${JSON.stringify({
+    name: "zero-dependency-fixture",
+    scripts: { build: "node -e \"\"" },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(ZERO_DEP_PROJECT, "package-lock.json"), `${JSON.stringify({
+    name: "zero-dependency-fixture",
+    lockfileVersion: 3,
+    requires: true,
+    packages: { "": { name: "zero-dependency-fixture" } },
+  }, null, 2)}\n`);
+  const zeroInspection = inspectWebProject(ZERO_DEP_PROJECT);
+  const zeroManifest = createWebProjectManifestV2FromInspection(zeroInspection, { projectRoot: ".", id: "zero-dependency-fixture" });
+  const zeroReadiness = webProjectDependencyReadiness(ZERO_DEP_PROJECT, zeroManifest, { forRun: true });
+  assert.equal(zeroReadiness.ready, true);
+  assert.equal(zeroReadiness.reason, "npm-no-dependencies");
+  assert.deepEqual(zeroReadiness.evidence, ["declared-dependencies:0"]);
 
   fs.mkdirSync(CONFLICT_PROJECT, { recursive: true });
   fs.writeFileSync(path.join(CONFLICT_PROJECT, "package.json"), `${JSON.stringify({

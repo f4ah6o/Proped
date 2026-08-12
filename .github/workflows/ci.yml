@@ -32,6 +32,9 @@ jobs:
       - name: Show toolchain versions
         run: moon version --all
 
+      - name: Update package registry
+        run: moon update
+
       - name: Rust native CLI
         run: |
           cargo fmt --all -- --check
@@ -41,9 +44,6 @@ jobs:
           cargo build --release -p proped-cli
           node scripts/test_version_consistency.mjs
           python3 scripts/test_native_package.py
-
-      - name: Update package registry
-        run: moon update
 
       - name: Public disclosure check
         run: python3 scripts/check_public_disclosure.py

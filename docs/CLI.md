@@ -1,6 +1,6 @@
 # CLI contract
 
-The Proped Rabbita CLI is designed for interactive use, CI, and LLM-driven automation. Human output is the default. `--json` switches commands to stable JSON envelopes.
+The Proped CLI is designed for interactive use, CI, and LLM-driven automation. Human output is the default. `--json` switches commands to stable JSON envelopes.
 
 ## Invocation
 

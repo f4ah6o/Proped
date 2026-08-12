@@ -1,5 +1,5 @@
 {
-  "name": "@proped-rabbita/playwright-browser-fixture",
+  "name": "@proped/playwright-browser-fixture",
   "version": "0.1.0",
   "private": true,
   "type": "module",

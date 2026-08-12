@@ -1,5 +1,5 @@
 {
-  "name": "@proped-rabbita/vue-component-fixture",
+  "name": "@proped/vue-component-fixture",
   "version": "0.1.0",
   "private": true,
   "type": "module",

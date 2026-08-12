@@ -113,7 +113,7 @@ fn issue_markdown(spec : FindingHandoff) -> String {
   "## Verification\n\n" +
   bullet_lines(spec.verification) +
   "\n" +
-  "---\n\nGenerated locally by Proped Rabbita. No upstream issue, pull request, comment, or commit was created.\n"
+  "---\n\nGenerated locally by Proped. No upstream issue, pull request, comment, or commit was created.\n"
 }
 
 ///|

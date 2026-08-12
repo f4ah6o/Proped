@@ -157,7 +157,7 @@ pub fn report_to_html(report : RunReport) -> String {
       #|<head>
       #|<meta charset="utf-8">
       #|<meta name="viewport" content="width=device-width,initial-scale=1">
-      #|<title>Proped Rabbita Atlas</title>
+      #|<title>Proped Atlas</title>
       #|<style>
       #|:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#eef2f6;color-scheme:light}
       #|*{box-sizing:border-box}
@@ -215,7 +215,7 @@ pub fn report_to_html(report : RunReport) -> String {
       #|</style>
       #|</head>
       #|<body>
-      #|<header><div><h1>Proped Rabbita Atlas</h1><p><span data-lang="en">Interactive Flow Canvas report for the explored UI state graph.</span><span data-lang="ja" hidden>探索したUI状態グラフの対話型Flow Canvasレポートです。</span></p></div><div class="toolbar" role="group" aria-label="Language"><button class="locale-button" type="button" data-locale="en" aria-pressed="true">English</button><button class="locale-button" type="button" data-locale="ja" aria-pressed="false">日本語</button></div></header>
+      #|<header><div><h1>Proped Atlas</h1><p><span data-lang="en">Interactive Flow Canvas report for the explored UI state graph.</span><span data-lang="ja" hidden>探索したUI状態グラフの対話型Flow Canvasレポートです。</span></p></div><div class="toolbar" role="group" aria-label="Language"><button class="locale-button" type="button" data-locale="en" aria-pressed="true">English</button><button class="locale-button" type="button" data-locale="ja" aria-pressed="false">日本語</button></div></header>
       #|<main>
       #|<section class="panel" aria-labelledby="overview-title"><h2 id="overview-title"><span data-lang="en">Overview</span><span data-lang="ja" hidden>概要</span></h2><dl class="stats">
     ),

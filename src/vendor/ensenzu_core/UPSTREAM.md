@@ -10,6 +10,6 @@ The non-test MoonBit calculation and SVG rendering sources are preserved
 without semantic modification so the application adapter can execute natively
 without relying on an unpublished registry package. The package path changes
 from `shiguri-01/ensenzu` to
-`f4ah6o/proped-rabbita/vendor/ensenzu_core`.
+`f4ah6o/proped/vendor/ensenzu_core`.
 
 No write is made to the upstream repository.

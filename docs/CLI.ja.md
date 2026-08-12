@@ -1,6 +1,6 @@
 # CLI契約
 
-Proped Rabbita CLIは、対話利用、CI、LLMによる自動操作を同じcommandで扱います。既定は人間向け出力で、`--json` を付けると安定したJSON envelopeを返します。
+Proped CLIは、対話利用、CI、LLMによる自動操作を同じcommandで扱います。既定は人間向け出力で、`--json` を付けると安定したJSON envelopeを返します。
 
 ## 実行形式
 

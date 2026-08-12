@@ -1,5 +1,5 @@
 {
-  "name": "@proped-rabbita/next-ssr-hydration-fixture",
+  "name": "@proped/next-ssr-hydration-fixture",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -16,7 +16,7 @@ if (!argv.length || argv.includes("--help") || argv.includes("-h")) usage();
 let manifestFile = null;
 let output = null;
 let propedRef = null;
-let repository = "f4ah6o/Proped-Rabbita";
+let repository = "f4ah6o/Proped";
 for (let index = 0; index < argv.length; index += 1) {
   const arg = argv[index];
   if (["--output", "--proped-ref", "--repository"].includes(arg)) {

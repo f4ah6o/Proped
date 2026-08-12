@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita/vendor/rabbita_counter"
+package "f4ah6o/proped/vendor/rabbita_counter"
 
 import {
-  "f4ah6o/proped-rabbita",
+  "f4ah6o/proped",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/html",
   "moonbitlang/core/debug",
@@ -13,7 +13,7 @@ pub fn action_id(Msg) -> String
 
 pub fn actions(Int) -> Array[Msg]
 
-pub fn default_config() -> @proped-rabbita.RunConfig
+pub fn default_config() -> @proped.RunConfig
 
 pub fn dependencies(Int) -> Array[String]
 
@@ -23,9 +23,9 @@ pub fn fingerprint(Int) -> String
 
 pub fn initial() -> Int
 
-pub fn machine() -> @proped-rabbita.Machine[Int, Msg]
+pub fn machine() -> @proped.Machine[Int, Msg]
 
-pub fn properties() -> Array[@proped-rabbita.Property[Int, Msg]]
+pub fn properties() -> Array[@proped.Property[Int, Msg]]
 
 pub fn shrink(Msg) -> Array[Msg]
 

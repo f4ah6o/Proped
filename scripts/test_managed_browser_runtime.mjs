@@ -8,7 +8,7 @@ import { managedBrowserRuntimeDetails } from "../web/playwright-browser/managed-
 import { GenericPlaywrightBrowserDriver } from "../web/playwright-browser/generic-browser-driver.mjs";
 
 const runtime = managedBrowserRuntimeDetails({ includePaths: true });
-assert.equal(runtime.provider, "proped-rabbita");
+assert.equal(runtime.provider, "proped");
 assert.equal(runtime.ownership, "managed");
 assert.equal(runtime.targetProjectDependencyRequired, false);
 assert.equal(runtime.playwrightVersion, "1.62.0");
@@ -37,7 +37,7 @@ const url = `http://127.0.0.1:${server.address().port}/`;
 const driver = new GenericPlaywrightBrowserDriver({ url, timeoutMs: 2_000 });
 try {
   const snapshot = await driver.reset();
-  assert.equal(snapshot.browser.managedRuntime.provider, "proped-rabbita");
+  assert.equal(snapshot.browser.managedRuntime.provider, "proped");
   assert.equal(snapshot.browser.managedRuntime.playwrightVersion, "1.62.0");
   assert.equal(snapshot.browser.managedRuntime.chromiumRevision, "1234");
   assert.equal(snapshot.browser.managedRuntime.targetProjectDependencyRequired, false);

@@ -1,7 +1,7 @@
 ///|
 test "CLI parsing skips executable and accepts machine flags anywhere" {
   let parsed = parse_args([
-    "/tmp/proped-rabbita", "demo", "run", "all", "--json", "--output", "artifacts",
+    "/tmp/proped", "demo", "run", "all", "--json", "--output", "artifacts",
   ])
   assert_true(parsed.json)
   assert_true(!parsed.help)
@@ -12,9 +12,7 @@ test "CLI parsing skips executable and accepts machine flags anywhere" {
 
 ///|
 test "CLI parsing treats help as a global flag" {
-  let parsed = parse_args([
-    "/tmp/proped-rabbita", "demo", "run", "all", "--help",
-  ])
+  let parsed = parse_args(["/tmp/proped", "demo", "run", "all", "--help"])
   assert_true(parsed.help)
   assert_eq(parsed.positionals, ["demo", "run", "all"])
   assert_eq(parsed.error, None)
@@ -22,15 +20,13 @@ test "CLI parsing treats help as a global flag" {
 
 ///|
 test "CLI parsing reports a missing output directory" {
-  let parsed = parse_args([
-    "/tmp/proped-rabbita", "demo", "run", "all", "--output",
-  ])
+  let parsed = parse_args(["/tmp/proped", "demo", "run", "all", "--output"])
   assert_eq(parsed.error, Some("--output requires a directory"))
 }
 
 ///|
 test "CLI parsing rejects unknown options" {
-  let parsed = parse_args(["/tmp/proped-rabbita", "demo", "list", "--yaml"])
+  let parsed = parse_args(["/tmp/proped", "demo", "list", "--yaml"])
   assert_eq(parsed.error, Some("unknown option: --yaml"))
 }
 

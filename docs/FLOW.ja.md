@@ -2,7 +2,7 @@
 
 [English](FLOW.md) | 日本語
 
-Proped Rabbita に、React Flow 風の小さなグラフ基盤を MoonBit で追加しています。
+Proped に、React Flow 風の小さなグラフ基盤を MoonBit で追加しています。
 
 初期実装はブラウザ非依存です。型付き Node／Edge、決定論的レイアウト、Viewport 状態、単一選択、直交 Edge routing、standalone SVG 出力を native／JS の両ターゲットで扱います。
 

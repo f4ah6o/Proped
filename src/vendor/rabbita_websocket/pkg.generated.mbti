@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita/vendor/rabbita_websocket"
+package "f4ah6o/proped/vendor/rabbita_websocket"
 
 import {
-  "f4ah6o/proped-rabbita",
+  "f4ah6o/proped",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/html",
   "moonbitlang/core/debug",
@@ -15,7 +15,7 @@ pub fn actions(Model) -> Array[Msg]
 
 pub fn client_connecting(String) -> Bool
 
-pub fn default_config() -> @proped-rabbita.RunConfig
+pub fn default_config() -> @proped.RunConfig
 
 pub fn dependencies(Model) -> Array[String]
 
@@ -25,9 +25,9 @@ pub fn fingerprint(Model) -> String
 
 pub fn initial() -> Model
 
-pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+pub fn machine() -> @proped.Machine[Model, Msg]
 
-pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+pub fn properties() -> Array[@proped.Property[Model, Msg]]
 
 pub fn shrink(Msg) -> Array[Msg]
 

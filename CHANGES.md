@@ -18,6 +18,7 @@
 
 ### Added
 
+- Added explicit `proped setup` managed-runtime bootstrap with pinned/checksummed Node fallback, lockfile-only Proped JavaScript dependency preparation, managed Playwright Chromium installation, per-user runtime/cache roots, launch-based verification, stable JSON diagnostics, idempotent reuse, and macOS/Linux/Windows distribution CI coverage.
 - Added a Rust-native `proped` product shell with CalVer/provenance output, product doctor, and shell-free forwarding to the existing Node/Playwright Web dispatcher while preserving stdout/stderr/exit codes.
 - Closed unknown-Web onboarding acceptance with 6/6 pinned real-browser failure recall (TodoMVC 3/3 + drawDB 3/3) and a deterministic 10,000-transition healthy benchmark with zero generic false positives plus live sensitivity controls.
 - Added a human semantic-approval workflow with review-hash pinning, stable candidate refs, approve/reject/defer decisions, explicit high-risk acknowledgement, stale/tamper rejection, and deterministic human-approved hint compilation without automatic activation.
@@ -30,7 +31,7 @@
 - Added deterministic coverage-guided Web exploration that reconstructs frontier states by fresh-context trace replay and prioritizes discovery novelty plus globally unexecuted semantic actions.
 - Added deterministic Web state-novelty weighting across fingerprint, route family, storage-key shape, IndexedDB schema shape, and accessible action frontier, while ignoring volatile values and dynamic route IDs.
 - Added a semantic selector-survival benchmark that compares discovered locator contracts across minor DOM revisions; wrapper/class/generated-ID changes retain 100% survival in the fixture while deliberate accessibility-contract breakage is detected below the 95% target.
-- Added a v2 Web project runner CLI and a stdout-first GitHub Actions workflow generator that pins Proped Rabbita by full commit SHA, keeps workflow permissions read-only, separates project bootstrap from strict execution, installs the managed Chromium runtime, and uploads Proped artifacts on success or failure.
+- Added a v2 Web project runner CLI and a stdout-first GitHub Actions workflow generator that pins Proped by full commit SHA, keeps workflow permissions read-only, separates project bootstrap from strict execution, installs the managed Chromium runtime, and uploads Proped artifacts on success or failure.
 - Added a fresh-campaign replay gate that promotes a candidate Web failure to a quality failure only when the same canonical failure class reproduces across the configured replay attempts (v2 defaults to 3); unstable candidates become nondeterminism diagnostics.
 - Added canonical Web failure classification and clustering from oracle family, normalized action pattern, semantic evidence paths, route family, and exception kind; runner summaries and Atlas now retain stable canonical failure-class IDs alongside human-facing failure codes.
 - Added no-action fresh-context volatility mining that proposes reviewable normalization candidates by semantic path and confidence without emitting raw volatile values or automatically applying any rule; storage/form/domain-state volatility is always review-required.
@@ -53,6 +54,7 @@
 
 ### Changed
 
+- Renamed the product and repository identity from Proped Rabbita / `Proped-Rabbita` to Proped / `Proped`, including MoonBit module coordinates, generated workflow defaults, package metadata, schema identifiers, and active documentation.
 - Kept the React/Vue component benchmark gate at 60 seconds by default, while allowing the hosted CI quality run to use an explicit 150-second environment-specific ceiling and a 180-second stage timeout so runner contention does not masquerade as a functional regression.
 - Updated the Nuxt SSR/hydration fixture to Nuxt 4.5.2 so the pinned CI dependency set clears the production `npm audit` gate while preserving the hydration regression contract.
 - Adopted CalVer `2026.8.0` as the product/package version while keeping Git SHA as separate CLI provenance.

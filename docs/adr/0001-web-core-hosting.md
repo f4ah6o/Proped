@@ -5,7 +5,7 @@
 
 ## Context
 
-React, Vue, Playwright, Next.js, and Nuxt expose asynchronous runtimes, while Proped Rabbita already owns deterministic exploration, shrinking, collision diagnostics, and report generation. Reimplementing this core in TypeScript would create semantic drift. Compiling the core to JavaScript keeps one process but couples lifecycle, abort, dependency, and framework failures to the explorer.
+React, Vue, Playwright, Next.js, and Nuxt expose asynchronous runtimes, while Proped already owns deterministic exploration, shrinking, collision diagnostics, and report generation. Reimplementing this core in TypeScript would create semantic drift. Compiling the core to JavaScript keeps one process but couples lifecycle, abort, dependency, and framework failures to the explorer.
 
 ## Spike
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/f4ah6o/Proped-Rabbita/external/schema/manifest.schema.json",
-  "title": "Proped Rabbita external application manifest",
+  "$id": "https://github.com/f4ah6o/Proped/external/schema/manifest.schema.json",
+  "title": "Proped external application manifest",
   "type": "object",
   "additionalProperties": false,
   "required": [

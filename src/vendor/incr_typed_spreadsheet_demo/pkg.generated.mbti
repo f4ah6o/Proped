@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_demo"
+package "f4ah6o/proped/vendor/incr_typed_spreadsheet_demo"
 
 import {
-  "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_core",
+  "f4ah6o/proped/vendor/incr_typed_spreadsheet_core",
   "moonbitlang/core/debug",
 }
 

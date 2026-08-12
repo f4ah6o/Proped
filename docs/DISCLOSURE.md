@@ -1,6 +1,6 @@
 # External finding disclosure policy
 
-Proped Rabbita treats every external repository as a read-only input. It never
+Proped treats every external repository as a read-only input. It never
 creates an upstream issue, pull request, review, comment, commit, or branch.
 Generated handoff files are local drafts only.
 

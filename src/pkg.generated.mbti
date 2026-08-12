@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita"
+package "f4ah6o/proped"
 
 import {
   "moonbit-community/rabbita",

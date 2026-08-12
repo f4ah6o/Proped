@@ -613,7 +613,7 @@ test "atlas exporters include discovered graph" {
   assert_true(json.contains("\"dependencies\""))
   assert_true(dot.contains("digraph ui_states"))
   assert_true(html.contains("<html lang=\"en\">"))
-  assert_true(html.contains("Proped Rabbita Atlas"))
+  assert_true(html.contains("Proped Atlas"))
   assert_true(html.contains("Flow Canvas"))
   assert_true(html.contains("flow-arrow"))
   assert_true(html.contains("flow-node"))

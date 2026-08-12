@@ -1,4 +1,4 @@
-name = "f4ah6o/proped-rabbita"
+name = "f4ah6o/proped"
 
 version = "2026.8.0"
 
@@ -6,7 +6,7 @@ source = "src"
 
 readme = "README.md"
 
-repository = "https://github.com/f4ah6o/Proped-Rabbita"
+repository = "https://github.com/f4ah6o/Proped"
 
 license = "Apache-2.0"
 

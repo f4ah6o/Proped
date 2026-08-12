@@ -1,5 +1,5 @@
 {
-  "name": "@proped-rabbita/nuxt-ssr-hydration-fixture",
+  "name": "@proped/nuxt-ssr-hydration-fixture",
   "version": "0.1.0",
   "private": true,
   "type": "module",

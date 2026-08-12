@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita/disclosure"
+package "f4ah6o/proped/disclosure"
 
 import {
   "moonbitlang/core/debug",

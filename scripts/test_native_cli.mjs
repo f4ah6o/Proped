@@ -49,6 +49,18 @@ assert.equal(doctorReport.version, expectedVersion);
 assert.equal(doctorReport.webRuntime.dispatcher.ready, true);
 assert.equal(doctorReport.webRuntime.node.ready, true);
 assert.equal(doctorReport.webRuntime.managedBrowser.executableReady, true);
+assert.equal(typeof doctorReport.managedPaths.runtimeRoot, "string");
+assert.equal(typeof doctorReport.managedPaths.cacheRoot, "string");
+assert.equal(typeof doctorReport.managedPaths.nodeRoot, "string");
+assert.equal(typeof doctorReport.managedPaths.jsRuntimeRoot, "string");
+assert.equal(typeof doctorReport.managedPaths.browserRoot, "string");
+
+const setupHelp = runNative(["setup", "--help"]);
+assert.equal(setupHelp.status, 0, setupHelp.stderr);
+assert.match(setupHelp.stdout, /proped setup \[--json\]/);
+const setupInvalid = runNative(["setup", "--unknown"]);
+assert.equal(setupInvalid.status, 2);
+assert.equal(JSON.parse(setupInvalid.stderr).error, "invalid_arguments");
 
 const invalid = runNative(["unknown"]);
 assert.equal(invalid.status, 2);

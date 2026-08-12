@@ -2,7 +2,7 @@
 
 ## Rabbita counter example
 
-Proped Rabbita includes and adapts source from the Rabbita project:
+Proped includes and adapts source from the Rabbita project:
 
 - Project: `moonbit-community/rabbita`
 - Source path: `examples/counter`
@@ -15,7 +15,7 @@ The upstream Apache License 2.0 text is included at `src/vendor/rabbita_counter/
 
 ## Rabbita todo example
 
-Proped Rabbita includes and adapts source from the Rabbita project:
+Proped includes and adapts source from the Rabbita project:
 
 - Project: `moonbit-community/rabbita`
 - Source path: `examples/todo`
@@ -97,7 +97,7 @@ The Apache License 2.0 text is included in both vendor directories. The calculat
 - Relevant paths: `frontend/model.mbt`, `frontend/update.mbt`, `frontend/commands.mbt`
 - Adapter: `src/vendor/signal_reader/signal_reader.mbt`
 
-The pinned revision does not include a standalone LICENSE file. No upstream source is included in Proped Rabbita. The adapter is a clean-room finite behavioral model; exact source hashes and the modeled boundary are recorded in `src/vendor/signal_reader/UPSTREAM.md`.
+The pinned revision does not include a standalone LICENSE file. No upstream source is included in Proped. The adapter is a clean-room finite behavioral model; exact source hashes and the modeled boundary are recorded in `src/vendor/signal_reader/UPSTREAM.md`.
 
 
 ## MoonBit Editor file tree
@@ -164,7 +164,7 @@ The Apache License 2.0 text is included in each vendor package. The adapter limi
 - Relevant paths: `web/state/`, `web/updater/`, and `web/task/`
 - Adapter: `src/vendor/circular_state/circular_state.mbt`
 
-The pinned revision has no standalone LICENSE file. No upstream source is included in Proped Rabbita. The adapter is a clean-room finite behavioral model; exact source hashes, the temporary pinned-source verification, and the modeled boundary are recorded in `src/vendor/circular_state/UPSTREAM.md`.
+The pinned revision has no standalone LICENSE file. No upstream source is included in Proped. The adapter is a clean-room finite behavioral model; exact source hashes, the temporary pinned-source verification, and the modeled boundary are recorded in `src/vendor/circular_state/UPSTREAM.md`.
 
 ## Isomorphic suite behavioral reference
 
@@ -174,7 +174,7 @@ The pinned revision has no standalone LICENSE file. No upstream source is includ
 - Module-declared license: Apache-2.0 in each application's `moon.mod.json`
 - Adapter: `src/vendor/isomorphic_suite/isomorphic_suite.mbt`
 
-The pinned repository has no standalone LICENSE file. No upstream source is included in Proped Rabbita. The adapter is a clean-room finite behavioral model; exact source and module-metadata hashes, modeled response boundaries, and the remaining application checklist are recorded in `src/vendor/isomorphic_suite/UPSTREAM.md` and the closed exploration issue.
+The pinned repository has no standalone LICENSE file. No upstream source is included in Proped. The adapter is a clean-room finite behavioral model; exact source and module-metadata hashes, modeled response boundaries, and the remaining application checklist are recorded in `src/vendor/isomorphic_suite/UPSTREAM.md` and the closed exploration issue.
 
 ## Rabbita xterm managed state
 

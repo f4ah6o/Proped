@@ -72,6 +72,7 @@ def main() -> None:
         runtime_root = package_root / "lib" / "proped"
         for required in [
             packaged_binary,
+            runtime_root / "runtime-metadata.txt",
             runtime_root / "scripts" / "proped.mjs",
             runtime_root / "protocol" / "web-project-inspect.mjs",
             runtime_root / "web" / "playwright-browser" / "managed-browser-runtime.mjs",
@@ -82,6 +83,9 @@ def main() -> None:
         version = run([str(packaged_binary), "-V"], cwd=tmp)
         if version.returncode != 0 or not version.stdout.startswith("proped "):
             raise SystemExit(version.stderr or version.stdout)
+        setup_help = run([str(packaged_binary), "setup", "--help"], cwd=tmp)
+        if setup_help.returncode != 0 or "proped setup [--json]" not in setup_help.stdout:
+            raise SystemExit(setup_help.stderr or setup_help.stdout)
 
         project = tmp / "fixture"
         (project / "src").mkdir(parents=True)

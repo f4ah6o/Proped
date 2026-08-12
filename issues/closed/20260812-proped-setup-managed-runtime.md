@@ -1,6 +1,6 @@
 # `proped setup` managed runtime bootstrap
 
-Status: open
+Status: closed
 
 ## Goal
 
@@ -154,39 +154,39 @@ This separation preserves the existing prepare-vs-run safety model at the produc
 
 ### Slice 1 — setup contract and managed paths
 
-- [ ] add `proped setup` / `proped setup --json` to the Rust CLI
-- [ ] define stable setup result/diagnostic schema
-- [ ] resolve per-user managed runtime/cache roots on macOS/Linux/Windows
-- [ ] make reruns idempotent
-- [ ] expose managed paths/readiness through `proped doctor --json`
+- [x] add `proped setup` / `proped setup --json` to the Rust CLI
+- [x] define stable setup result/diagnostic schema
+- [x] resolve per-user managed runtime/cache roots on macOS/Linux/Windows
+- [x] make reruns idempotent
+- [x] expose managed paths/readiness through `proped doctor --json`
 
 ### Slice 2 — Node runtime
 
-- [ ] reuse a compatible discovered Node when available
-- [ ] define pinned managed-Node release metadata
-- [ ] acquire managed Node only from explicit `setup`
-- [ ] verify artifact integrity before installation
-- [ ] atomically install/reuse managed Node without changing global user configuration
-- [ ] cover unsupported platform/architecture and acquisition failures
+- [x] reuse a compatible discovered Node when available
+- [x] define pinned managed-Node release metadata
+- [x] acquire managed Node only from explicit `setup`
+- [x] verify artifact integrity before installation
+- [x] atomically install/reuse managed Node without changing global user configuration
+- [x] cover unsupported platform/architecture and acquisition failures
 
 ### Slice 3 — Proped JS runtime + Chromium
 
-- [ ] prepare Proped's own lockfile-pinned JS dependencies without touching the target project
-- [ ] preserve the lifecycle-script safety policy
-- [ ] install/reuse the release-pinned Playwright Chromium
-- [ ] verify browser readiness by actual headless launch
-- [ ] keep normal Web execution download-free
+- [x] prepare Proped's own lockfile-pinned JS dependencies without touching the target project
+- [x] preserve the lifecycle-script safety policy
+- [x] install/reuse the release-pinned Playwright Chromium
+- [x] verify browser readiness by actual headless launch
+- [x] keep normal Web execution download-free
 
 ### Slice 4 — distribution regression
 
-- [ ] package a native release archive without `node_modules` or Chromium
-- [ ] install it into a temporary read-only-style product prefix
-- [ ] run `proped setup` using only per-user writable managed paths
-- [ ] run `proped doctor --json`
-- [ ] run native `proped web inspect` against a temporary unknown Web fixture
-- [ ] prove second `proped setup` is idempotent
-- [ ] prove `doctor` and `run` do not perform implicit runtime downloads
-- [ ] cover macOS/Linux in CI and keep Windows behavior covered where hosted CI permits
+- [x] package a native release archive without `node_modules` or Chromium
+- [x] install it into a temporary read-only-style product prefix
+- [x] run `proped setup` using only per-user writable managed paths
+- [x] run `proped doctor --json`
+- [x] run native `proped web inspect` against a temporary unknown Web fixture
+- [x] prove second `proped setup` is idempotent
+- [x] prove `doctor` and `run` do not perform implicit runtime downloads
+- [x] cover macOS/Linux in CI and keep Windows behavior covered where hosted CI permits
 
 ## Acceptance
 

@@ -12,7 +12,7 @@ The unmodified upstream entry point and stylesheet are preserved under `upstream
 
 `todo.mbt` is an adapter-oriented derivative. It preserves the upstream model concepts and message semantics for title changes, add, delete, toggle, and tab selection. The item store is bounded to two generated items and the title corpus is finite so native property exploration terminates deterministically.
 
-The upstream update guard rejects only `title == ""`. Consequently, a whitespace-only title is accepted. Proped Rabbita detects this behavior with the property `stored todo titles are not blank` and shrinks the reproducer to:
+The upstream update guard rejects only `title == ""`. Consequently, a whitespace-only title is accepted. Proped detects this behavior with the property `stored todo titles are not blank` and shrinks the reproducer to:
 
 1. `TitleChanged(" ")`
 2. `Add`

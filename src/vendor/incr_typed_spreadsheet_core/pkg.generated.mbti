@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_core"
+package "f4ah6o/proped/vendor/incr_typed_spreadsheet_core"
 
 import {
   "dowdiness/incr/cells",

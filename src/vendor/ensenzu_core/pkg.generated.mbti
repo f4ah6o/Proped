@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita/vendor/ensenzu_core"
+package "f4ah6o/proped/vendor/ensenzu_core"
 
 import {
   "moonbitlang/core/debug",

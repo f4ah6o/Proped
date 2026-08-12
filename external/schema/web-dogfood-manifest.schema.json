@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/f4ah6o/Proped-Rabbita/external/schema/web-dogfood-manifest.schema.json",
-  "title": "Proped Rabbita external Web dogfood target",
+  "$id": "https://github.com/f4ah6o/Proped/external/schema/web-dogfood-manifest.schema.json",
+  "title": "Proped external Web dogfood target",
   "type": "object",
   "additionalProperties": false,
   "required": [

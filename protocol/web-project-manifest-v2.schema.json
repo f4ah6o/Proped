@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://proped-rabbita.local/schema/web-project-manifest-v2.json",
-  "title": "Proped Rabbita Web Project Manifest v2",
+  "$id": "https://proped.local/schema/web-project-manifest-v2.json",
+  "title": "Proped Web Project Manifest v2",
   "type": "object",
   "additionalProperties": false,
   "required": [

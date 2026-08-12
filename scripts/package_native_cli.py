@@ -80,6 +80,7 @@ def main() -> None:
 
     with tarfile.open(archive, "w:gz") as tar:
         tar.add(executable, arcname=f"{stem}/bin/{executable_name}")
+        tar.add(ROOT / "runtime-metadata.txt", arcname=f"{stem}/lib/proped/runtime-metadata.txt")
         tar.add(ROOT / "scripts", arcname=f"{stem}/lib/proped/scripts", filter=runtime_filter)
         tar.add(ROOT / "protocol", arcname=f"{stem}/lib/proped/protocol", filter=runtime_filter)
         tar.add(

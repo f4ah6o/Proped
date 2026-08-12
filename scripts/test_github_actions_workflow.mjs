@@ -28,7 +28,7 @@ const manifest = validateWebProjectManifestV2({
 const generated = generateGitHubActionsWorkflow(manifest, { propedRef: REF, toolRoot: process.cwd() });
 assert.equal(generated.metadata.propedRef, REF);
 assert.equal(generated.metadata.strictSandbox, true);
-assert.match(generated.workflow, /repository: 'f4ah6o\/Proped-Rabbita'/);
+assert.match(generated.workflow, /repository: 'f4ah6o\/Proped'/);
 assert.match(generated.workflow, new RegExp(`ref: '${REF}'`));
 assert.match(generated.workflow, /corepack enable/);
 assert.match(generated.workflow, /pnpm install --frozen-lockfile/);

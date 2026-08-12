@@ -152,50 +152,50 @@ jobs:
 
       - name: CLI smoke test
         run: |
-          moon run src/cli -- schema --json > /tmp/proped-rabbita-schema.json
-          moon run src/cli -- demo run all --json > /tmp/proped-rabbita-run.json
+          moon run src/cli -- schema --json > /tmp/proped-schema.json
+          moon run src/cli -- demo run all --json > /tmp/proped-run.json
           node scripts/test_atlas_interaction.mjs demo/out/rabbita-todo/atlas.html
-          moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json > /tmp/proped-rabbita-inspection.json
-          moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json > /tmp/proped-rabbita-ensenzu-inspection.json
-          moon run src/cli -- external inspect signal-reader --json > /tmp/proped-rabbita-signal-inspection.json
-          moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json > /tmp/proped-rabbita-editor-inspection.json
-          moon run src/cli -- external inspect canopy-components --json > /tmp/proped-rabbita-canopy-inspection.json
-          moon run src/cli -- external inspect canopy-editor-integration --json > /tmp/proped-rabbita-canopy-editor-inspection.json
-          moon run src/cli -- external inspect rabbita-utility-batch --json > /tmp/proped-rabbita-utility-inspection.json
-          moon run src/cli -- external inspect incr-typed-spreadsheet --json > /tmp/proped-rabbita-incr-inspection.json
-          moon run src/cli -- external inspect circular-state --json > /tmp/proped-rabbita-circular-inspection.json
-          moon run src/cli -- external inspect isomorphic-suite --json > /tmp/proped-rabbita-isomorphic-inspection.json
-          moon run src/cli -- external inspect rabbita-xterm-lifecycle --json > /tmp/proped-rabbita-xterm-inspection.json
-          moon run src/cli -- external inspect moonclaw-job --json > /tmp/proped-rabbita-moonclaw-inspection.json
-          moon run src/cli -- external inspect mooncakes-official-ui --json > /tmp/proped-rabbita-mooncakes-inspection.json
-          moon run src/cli -- external inspect selene-editor-assets --json > /tmp/proped-rabbita-selene-inspection.json
-          moon run src/cli -- external inspect openseek-desktop-lifecycle --json > /tmp/proped-rabbita-openseek-inspection.json
-          moon run src/cli -- external run all --json > /tmp/proped-rabbita-external.json
-          moon run src/cli -- external handoff all --output /tmp/proped-rabbita-handoff --json > /tmp/proped-rabbita-handoff.json
+          moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json > /tmp/proped-inspection.json
+          moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json > /tmp/proped-ensenzu-inspection.json
+          moon run src/cli -- external inspect signal-reader --json > /tmp/proped-signal-inspection.json
+          moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json > /tmp/proped-editor-inspection.json
+          moon run src/cli -- external inspect canopy-components --json > /tmp/proped-canopy-inspection.json
+          moon run src/cli -- external inspect canopy-editor-integration --json > /tmp/proped-canopy-editor-inspection.json
+          moon run src/cli -- external inspect rabbita-utility-batch --json > /tmp/proped-utility-inspection.json
+          moon run src/cli -- external inspect incr-typed-spreadsheet --json > /tmp/proped-incr-inspection.json
+          moon run src/cli -- external inspect circular-state --json > /tmp/proped-circular-inspection.json
+          moon run src/cli -- external inspect isomorphic-suite --json > /tmp/proped-isomorphic-inspection.json
+          moon run src/cli -- external inspect rabbita-xterm-lifecycle --json > /tmp/proped-xterm-inspection.json
+          moon run src/cli -- external inspect moonclaw-job --json > /tmp/proped-moonclaw-inspection.json
+          moon run src/cli -- external inspect mooncakes-official-ui --json > /tmp/proped-mooncakes-inspection.json
+          moon run src/cli -- external inspect selene-editor-assets --json > /tmp/proped-selene-inspection.json
+          moon run src/cli -- external inspect openseek-desktop-lifecycle --json > /tmp/proped-openseek-inspection.json
+          moon run src/cli -- external run all --json > /tmp/proped-external.json
+          moon run src/cli -- external handoff all --output /tmp/proped-handoff --json > /tmp/proped-handoff.json
           python3 - <<'PY'
           import hashlib
           import json
           from pathlib import Path
 
-          schema = json.loads(Path('/tmp/proped-rabbita-schema.json').read_text())
-          result = json.loads(Path('/tmp/proped-rabbita-run.json').read_text())
-          inspection = json.loads(Path('/tmp/proped-rabbita-inspection.json').read_text())
-          ensenzu_inspection = json.loads(Path('/tmp/proped-rabbita-ensenzu-inspection.json').read_text())
-          signal_inspection = json.loads(Path('/tmp/proped-rabbita-signal-inspection.json').read_text())
-          editor_inspection = json.loads(Path('/tmp/proped-rabbita-editor-inspection.json').read_text())
-          canopy_inspection = json.loads(Path('/tmp/proped-rabbita-canopy-inspection.json').read_text())
-          canopy_editor_inspection = json.loads(Path('/tmp/proped-rabbita-canopy-editor-inspection.json').read_text())
-          utility_inspection = json.loads(Path('/tmp/proped-rabbita-utility-inspection.json').read_text())
-          incr_inspection = json.loads(Path('/tmp/proped-rabbita-incr-inspection.json').read_text())
-          circular_inspection = json.loads(Path('/tmp/proped-rabbita-circular-inspection.json').read_text())
-          isomorphic_inspection = json.loads(Path('/tmp/proped-rabbita-isomorphic-inspection.json').read_text())
-          xterm_inspection = json.loads(Path('/tmp/proped-rabbita-xterm-inspection.json').read_text())
-          moonclaw_inspection = json.loads(Path('/tmp/proped-rabbita-moonclaw-inspection.json').read_text())
-          mooncakes_inspection = json.loads(Path('/tmp/proped-rabbita-mooncakes-inspection.json').read_text())
-          selene_inspection = json.loads(Path('/tmp/proped-rabbita-selene-inspection.json').read_text())
-          openseek_inspection = json.loads(Path('/tmp/proped-rabbita-openseek-inspection.json').read_text())
-          external = json.loads(Path('/tmp/proped-rabbita-external.json').read_text())
-          handoff = json.loads(Path('/tmp/proped-rabbita-handoff.json').read_text())
+          schema = json.loads(Path('/tmp/proped-schema.json').read_text())
+          result = json.loads(Path('/tmp/proped-run.json').read_text())
+          inspection = json.loads(Path('/tmp/proped-inspection.json').read_text())
+          ensenzu_inspection = json.loads(Path('/tmp/proped-ensenzu-inspection.json').read_text())
+          signal_inspection = json.loads(Path('/tmp/proped-signal-inspection.json').read_text())
+          editor_inspection = json.loads(Path('/tmp/proped-editor-inspection.json').read_text())
+          canopy_inspection = json.loads(Path('/tmp/proped-canopy-inspection.json').read_text())
+          canopy_editor_inspection = json.loads(Path('/tmp/proped-canopy-editor-inspection.json').read_text())
+          utility_inspection = json.loads(Path('/tmp/proped-utility-inspection.json').read_text())
+          incr_inspection = json.loads(Path('/tmp/proped-incr-inspection.json').read_text())
+          circular_inspection = json.loads(Path('/tmp/proped-circular-inspection.json').read_text())
+          isomorphic_inspection = json.loads(Path('/tmp/proped-isomorphic-inspection.json').read_text())
+          xterm_inspection = json.loads(Path('/tmp/proped-xterm-inspection.json').read_text())
+          moonclaw_inspection = json.loads(Path('/tmp/proped-moonclaw-inspection.json').read_text())
+          mooncakes_inspection = json.loads(Path('/tmp/proped-mooncakes-inspection.json').read_text())
+          selene_inspection = json.loads(Path('/tmp/proped-selene-inspection.json').read_text())
+          openseek_inspection = json.loads(Path('/tmp/proped-openseek-inspection.json').read_text())
+          external = json.loads(Path('/tmp/proped-external.json').read_text())
+          handoff = json.loads(Path('/tmp/proped-handoff.json').read_text())
           expected_ids = [
               'newsletter',
               'rabbita-counter',
@@ -221,7 +221,7 @@ jobs:
               'selene-editor-assets',
               'openseek-desktop-lifecycle',
           ]
-          assert schema['name'] == 'proped-rabbita'
+          assert schema['name'] == 'proped'
           import re
           moon_mod = Path('moon.mod').read_text()
           expected_version = re.search(r'^version = \"([^\"]+)\"$', moon_mod, re.MULTILINE).group(1)
@@ -949,7 +949,7 @@ jobs:
 
       - name: Run external target
         run: |
-          moon run src/cli -- external run "${{ matrix.target }}" --output /tmp/proped-rabbita-matrix --json > /tmp/external-run.json
+          moon run src/cli -- external run "${{ matrix.target }}" --output /tmp/proped-matrix --json > /tmp/external-run.json
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -965,6 +965,45 @@ jobs:
           for artifact in run['artifacts']:
               assert (Path(run['output']) / artifact).is_file()
           PY
+
+  managed-runtime-distribution:
+    name: Managed runtime (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            setup_args: --force-managed-node
+          - os: macos-latest
+            setup_args: ""
+          - os: windows-latest
+            setup_args: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Chromium system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          npm ci --prefix web/playwright-browser --ignore-scripts
+          npx --prefix web/playwright-browser playwright install-deps chromium
+
+      - name: Build native release shell
+        run: cargo build --release -p proped-cli
+
+      - name: Verify managed runtime distribution flow
+        run: python scripts/test_managed_setup.py ${{ matrix.setup_args }}
 
   sandbox-policy:
     runs-on: ubuntu-latest

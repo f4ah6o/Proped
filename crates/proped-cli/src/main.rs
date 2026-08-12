@@ -1,3 +1,5 @@
+mod setup;
+
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -21,6 +23,7 @@ fn run(args: Vec<String>) -> u8 {
     }
 
     match args[0].as_str() {
+        "setup" => setup_command(&args[1..]),
         "web" => dispatch_web(&args),
         "doctor" => doctor(&args[1..]),
         other => invalid_arguments(&format!("unknown top-level command: {other}")),
@@ -28,7 +31,7 @@ fn run(args: Vec<String>) -> u8 {
 }
 
 fn help() -> &'static str {
-    "Proped Rabbita\n\nUsage:\n  proped <command> [arguments]\n  proped web <command> [arguments]\n\nCommands:\n  doctor [--json]                             Check Proped product/runtime readiness\n  web inspect <project>                       Read-only project classification\n  web init <project>                          Generate manifest v2\n  web doctor <manifest>                       Validate onboarding/runtime prerequisites\n  web prepare <manifest>                      Explicitly prepare project dependencies\n  web compile <manifest>                      Compile manifest v2 to the v1 stage graph\n  web review <project>                        Propose review-only semantic candidates\n  web approve <init|decide|compile> ...       Record explicit human semantic decisions\n  web apply <manifest> <semantic-hints>       Attach approved semantics to manifest v2\n  web run <manifest>                          Run the managed Web quality campaign\n\nOptions:\n  -V, --version                               Show CalVer and source provenance\n  -h, --help                                  Show this help\n"
+    "Proped\n\nUsage:\n  proped <command> [arguments]\n  proped web <command> [arguments]\n\nCommands:\n  setup [--json]                              Prepare the managed product runtime\n  doctor [--json]                             Check Proped product/runtime readiness\n  web inspect <project>                       Read-only project classification\n  web init <project>                          Generate manifest v2\n  web doctor <manifest>                       Validate onboarding/runtime prerequisites\n  web prepare <manifest>                      Explicitly prepare project dependencies\n  web compile <manifest>                      Compile manifest v2 to the v1 stage graph\n  web review <project>                        Propose review-only semantic candidates\n  web approve <init|decide|compile> ...       Record explicit human semantic decisions\n  web apply <manifest> <semantic-hints>       Attach approved semantics to manifest v2\n  web run <manifest>                          Run the managed Web quality campaign\n\nOptions:\n  -V, --version                               Show CalVer and source provenance\n  -h, --help                                  Show this help\n"
 }
 
 fn version_line() -> String {
@@ -44,14 +47,35 @@ fn is_short_sha(value: &str) -> bool {
     value.len() == 7 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
+fn setup_command(args: &[String]) -> u8 {
+    if args.iter().any(|arg| arg == "--help" || arg == "-h") {
+        println!("Usage: proped setup [--json]");
+        return 0;
+    }
+    if args.iter().any(|arg| arg != "--json") {
+        return invalid_arguments("setup accepts only --json");
+    }
+    let json = args.iter().any(|arg| arg == "--json");
+    let root = match runtime_root() {
+        Ok(root) => root,
+        Err(message) => return runtime_error("runtime_not_found", &message),
+    };
+    setup::run_setup(&root, VERSION, provenance(), json)
+}
+
 fn dispatch_web(args: &[String]) -> u8 {
     let root = match runtime_root() {
         Ok(root) => root,
         Err(message) => return runtime_error("runtime_not_found", &message),
     };
     let dispatcher = root.join("scripts").join("proped.mjs");
-    let node = env::var_os("PROPED_NODE").unwrap_or_else(|| "node".into());
-    let status = Command::new(node).arg(dispatcher).args(args).status();
+    let runtime = match setup::resolve_runtime(&root, VERSION) {
+        Ok(runtime) => runtime,
+        Err(error) => return runtime_error(error.code, &error.message),
+    };
+    let mut command = Command::new(&runtime.node);
+    runtime.apply(&mut command);
+    let status = command.arg(dispatcher).args(args).status();
 
     match status {
         Ok(status) => status
@@ -70,6 +94,7 @@ fn doctor(args: &[String]) -> u8 {
     if args.iter().any(|arg| arg != "--json") {
         return invalid_arguments("doctor accepts only --json");
     }
+    let json = args.iter().any(|arg| arg == "--json");
 
     let root = match runtime_root() {
         Ok(root) => root,
@@ -83,13 +108,19 @@ fn doctor(args: &[String]) -> u8 {
         );
     }
 
-    let node = env::var_os("PROPED_NODE").unwrap_or_else(|| "node".into());
-    let mut command = Command::new(node);
+    let runtime = match setup::resolve_runtime(&root, VERSION) {
+        Ok(runtime) => runtime,
+        Err(error) => return setup::print_doctor_failure(json, VERSION, provenance(), &error),
+    };
+    let mut command = Command::new(&runtime.node);
+    runtime.apply(&mut command);
     command
         .arg(probe)
         .env("PROPED_PRODUCT_VERSION", VERSION)
-        .env("PROPED_PRODUCT_PROVENANCE", provenance());
-    if args.iter().any(|arg| arg == "--json") {
+        .env("PROPED_PRODUCT_PROVENANCE", provenance())
+        .env("PROPED_NODE_VERSION", &runtime.node_version)
+        .env("PROPED_NODE_SOURCE", &runtime.node_source);
+    if json {
         command.arg("--json");
     }
 
@@ -224,6 +255,7 @@ mod tests {
     fn development_tree_is_a_runtime_root() {
         let root = find_runtime_root_from(Path::new(env!("CARGO_MANIFEST_DIR"))).unwrap();
         assert!(root.join("scripts/proped.mjs").is_file());
+        assert!(root.join("runtime-metadata.txt").is_file());
     }
 
     #[test]

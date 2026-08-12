@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Proped Rabbita Next fixture",
+  title: "Proped Next fixture",
 };
 
 export default function RootLayout({ children }) {

@@ -1,8 +1,8 @@
-# Proped Rabbita
+# Proped
 
 日本語 | [English](README.md)
 
-Proped Rabbita は、Rabbita UI の到達可能状態を探索し、モデルと遷移のプロパティを検証し、failure traceを縮約して、決定的なHTML・SVG・JSON・Graphviz Atlasを出力します。
+Proped は、Rabbita UI の到達可能状態を探索し、モデルと遷移のプロパティを検証し、failure traceを縮約して、決定的なHTML・SVG・JSON・Graphviz Atlasを出力します。
 
 ## Native CLI
 
@@ -11,13 +11,14 @@ Proped Rabbita は、Rabbita UI の到達可能状態を探索し、モデルと
 ```bash
 cargo build -p proped-cli
 ./target/debug/proped -V
+./target/debug/proped setup
 ./target/debug/proped doctor --json
 ./target/debug/proped web inspect . --json
 ```
 
 development buildはCalVer package versionを`proped 2026.8.0 (dev)`として表示します。release buildではsource commitの7文字SHAをpackage versionとは分離して埋め込み、`proped 2026.8.0 (abcdef0)`のように表示します。native shellはWeb command dispatchでshellを使わず、既存dispatcherのstdout/stderr/exit statusを保持します。`PROPED_RUNTIME_ROOT`で`scripts/proped.mjs`を含むProped runtime treeを明示指定できます。
 
-release archiveにはnative shellと`lib/proped`以下のProped JavaScript runtime sourceを含めるため、system Nodeがあれば展開済みlayoutから`proped web inspect`のようなread-only commandを実行できます。Node本体とmanaged Playwright/Chromium installationはarchiveへ内包せず、`proped doctor`がこれらのruntime prerequisiteを明示的に診断します。
+release archiveにはnative shellと`lib/proped`以下のread-onlyなJavaScript runtime sourceを含めますが、Node、`node_modules`、Chromiumは意図的に内包しません。`proped setup`だけがproduct runtimeを明示取得します。互換Nodeが既にあれば再利用し、無ければreleaseでpinしたmanaged NodeをSHA-256検証後に導入します。Proped自身のlockfile固定JavaScript dependencyはlifecycle scriptを無効にして準備し、pin済みPlaywright Chromiumもuser単位のmanaged storageへ導入した後、実browser launchでreadinessを検証します。healthyな2回目のsetupは準備済みruntimeを再利用します。`proped doctor --json`は観測専用でresolved managed pathも返し、`doctor`や通常の`web` commandがProped runtimeを暗黙repair/downloadすることはありません。
 
 ## MoonBit探索CLI
 
@@ -44,7 +45,7 @@ moon run src/cli -- schema --json
 
 ## 未知Webプロジェクトのinspection
 
-Proped Rabbitaは未知のWebプロジェクトに対して、install/build/start scriptを実行せずread-only inspectionできます。package manager、framework、build/serve command、render mode、output directory、routing、storage/IndexedDB、WebSocket、service worker、authenticationのhintを推定し、無言で断定せずconfidenceとambiguityを返します。
+Propedは未知のWebプロジェクトに対して、install/build/start scriptを実行せずread-only inspectionできます。package manager、framework、build/serve command、render mode、output directory、routing、storage/IndexedDB、WebSocket、service worker、authenticationのhintを推定し、無言で断定せずconfidenceとambiguityを返します。
 
 ```bash
 ./target/debug/proped web inspect .
@@ -62,7 +63,7 @@ node scripts/web_project_ci.mjs proped.web.json > proped-web.yml
 node scripts/web_project_ci.mjs proped.web.json --output .github/workflows/proped-web.yml
 ```
 
-generated workflowはProped Rabbitaを**full commit SHA**でpinし、repository permissionをread-onlyに保ち、project dependency bootstrapをstrict executionから分離します。その後Proped-managed Playwright/Chromium、bubblewrap、`web_project_run_v2.mjs`を実行し、quality gate失敗時も`.proped/out`をuploadします。
+generated workflowはPropedを**full commit SHA**でpinし、repository permissionをread-onlyに保ち、project dependency bootstrapをstrict executionから分離します。その後Proped-managed Playwright/Chromium、bubblewrap、`web_project_run_v2.mjs`を実行し、quality gate失敗時も`.proped/out`をuploadします。
 
 ## Unified Web CLI
 
@@ -357,7 +358,7 @@ initial Model
   = 検証済みの到達可能UI状態graph
 ```
 
-`Machine::actions` は、そのmodelで有効なmessageだけを返します。Proped Rabbitaは型付きtransitionを実行し、各modelをbrowserなしでrenderし、状態・遷移propertyを検証して、失敗したaction列を最小化します。実用規模のrunでは、生成caseごとに同じfailureを繰り返さず、propertyごとに最短のcounterexampleだけを保持します。
+`Machine::actions` は、そのmodelで有効なmessageだけを返します。Propedは型付きtransitionを実行し、各modelをbrowserなしでrenderし、状態・遷移propertyを検証して、失敗したaction列を最小化します。実用規模のrunでは、生成caseごとに同じfailureを繰り返さず、propertyごとに最短のcounterexampleだけを保持します。
 
 ```moonbit
 let machine = rabbita_machine_with_action_id(
@@ -441,4 +442,4 @@ Rabbita upstreamではserver-side rendererがexperimental扱いのため、`moon
 
 ## License
 
-Proped Rabbita は Apache-2.0 です。vendorしたコードの帰属は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記録しています。
+Proped は Apache-2.0 です。vendorしたコードの帰属は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記録しています。

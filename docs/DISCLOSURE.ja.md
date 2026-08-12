@@ -1,6 +1,6 @@
 # 外部findingの公開・連絡ポリシー
 
-Proped Rabbitaは外部repositoryを常にread-only inputとして扱います。相手側に
+Propedは外部repositoryを常にread-only inputとして扱います。相手側に
 issue、pull request、review、comment、commit、branchを作成しません。生成する
 handoff fileはローカル下書きだけです。
 

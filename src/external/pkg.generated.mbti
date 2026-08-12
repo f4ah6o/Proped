@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita/external"
+package "f4ah6o/proped/external"
 
 import {
-  "f4ah6o/proped-rabbita",
-  "f4ah6o/proped-rabbita/disclosure",
+  "f4ah6o/proped",
+  "f4ah6o/proped/disclosure",
   "moonbitlang/core/debug",
 }
 
@@ -40,7 +40,7 @@ pub fn isomorphic_suite_handoff() -> @disclosure.FindingHandoff
 
 pub fn isomorphic_suite_manifest() -> ExternalManifest
 
-pub fn[Model, Msg] monotonic_int_property(String, (Model) -> Int, (Msg) -> Bool) -> @proped-rabbita.Property[Model, Msg]
+pub fn[Model, Msg] monotonic_int_property(String, (Model) -> Int, (Msg) -> Bool) -> @proped.Property[Model, Msg]
 
 pub fn mooncakes_official_ui_handoff() -> @disclosure.FindingHandoff
 
@@ -76,7 +76,7 @@ pub fn signal_reader_handoff() -> @disclosure.FindingHandoff
 
 pub fn signal_reader_manifest() -> ExternalManifest
 
-pub fn[Model, Msg] unique_effect_ids_property(String, (Model) -> Array[EffectDescriptor]) -> @proped-rabbita.Property[Model, Msg]
+pub fn[Model, Msg] unique_effect_ids_property(String, (Model) -> Array[EffectDescriptor]) -> @proped.Property[Model, Msg]
 
 pub fn validate_manifest(ExternalManifest) -> Array[ManifestError]
 

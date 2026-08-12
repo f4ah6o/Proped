@@ -14,4 +14,4 @@ Preserved source hashes:
 - `sheet.mbt`: `610553c1dd2819b0e8c5d6212c213e344e5a40d0fc3fcee83d79780e425917b3`
 
 These files are preserved without semantic changes. Package import paths are
-adapted to the Proped Rabbita module namespace.
+adapted to the Proped module namespace.

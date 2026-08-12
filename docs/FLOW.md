@@ -2,7 +2,7 @@
 
 [日本語](FLOW.ja.md) | English
 
-Proped Rabbita includes a small React Flow-like graph foundation implemented in MoonBit.
+Proped includes a small React Flow-like graph foundation implemented in MoonBit.
 
 The initial implementation is deliberately browser-independent. It provides typed nodes and edges, deterministic layout, viewport state, single-item selection, orthogonal edge routing, and standalone SVG output on both native and JS targets.
 

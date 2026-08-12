@@ -1,9 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { chromium } from "playwright";
 
-const require = createRequire(import.meta.url);
+const managedJsRoot = process.env.PROPED_JS_RUNTIME_ROOT ?? null;
+const require = managedJsRoot
+  ? createRequire(path.join(managedJsRoot, "package.json"))
+  : createRequire(import.meta.url);
+const { chromium } = require("playwright");
 const PLAYWRIGHT_PACKAGE_FILE = require.resolve("playwright/package.json");
 const PLAYWRIGHT_PACKAGE_ROOT = path.dirname(PLAYWRIGHT_PACKAGE_FILE);
 const PLAYWRIGHT_PACKAGE = JSON.parse(fs.readFileSync(PLAYWRIGHT_PACKAGE_FILE, "utf8"));
@@ -19,7 +22,7 @@ if (!CHROMIUM) throw new Error("managed browser runtime: chromium metadata is mi
 
 export function managedBrowserRuntimeDetails({ includePaths = false } = {}) {
   const details = {
-    provider: "proped-rabbita",
+    provider: "proped",
     ownership: "managed",
     targetProjectDependencyRequired: false,
     playwrightVersion: PLAYWRIGHT_PACKAGE.version,
@@ -33,6 +36,7 @@ export function managedBrowserRuntimeDetails({ includePaths = false } = {}) {
     details.playwrightPackageRoot = PLAYWRIGHT_PACKAGE_ROOT;
     details.playwrightCoreRoot = PLAYWRIGHT_CORE_ROOT;
     details.browsersFile = BROWSERS_FILE;
+    details.jsRuntimeRoot = managedJsRoot;
   }
   return details;
 }

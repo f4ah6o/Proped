@@ -1,5 +1,5 @@
 import {
-  "f4ah6o/proped-rabbita/vendor/incr_typed_spreadsheet_core" @typed_spreadsheet,
+  "f4ah6o/proped/vendor/incr_typed_spreadsheet_core" @typed_spreadsheet,
   "moonbitlang/core/string",
 }
 

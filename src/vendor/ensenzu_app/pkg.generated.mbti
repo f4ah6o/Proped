@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "f4ah6o/proped-rabbita/vendor/ensenzu_app"
+package "f4ah6o/proped/vendor/ensenzu_app"
 
 import {
-  "f4ah6o/proped-rabbita",
-  "f4ah6o/proped-rabbita/external",
-  "f4ah6o/proped-rabbita/vendor/ensenzu_core",
+  "f4ah6o/proped",
+  "f4ah6o/proped/external",
+  "f4ah6o/proped/vendor/ensenzu_core",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/html",
   "moonbitlang/core/debug",
@@ -21,7 +21,7 @@ pub fn default_app_fields() -> AppFields
 
 pub fn default_app_params() -> AppParams
 
-pub fn default_config() -> @proped-rabbita.RunConfig
+pub fn default_config() -> @proped.RunConfig
 
 pub fn dependencies(Model) -> Array[String]
 
@@ -35,9 +35,9 @@ pub fn initial() -> Model
 
 pub fn input_corpus() -> Array[String]
 
-pub fn machine() -> @proped-rabbita.Machine[Model, Msg]
+pub fn machine() -> @proped.Machine[Model, Msg]
 
-pub fn properties() -> Array[@proped-rabbita.Property[Model, Msg]]
+pub fn properties() -> Array[@proped.Property[Model, Msg]]
 
 pub fn shrink(Msg) -> Array[Msg]
 

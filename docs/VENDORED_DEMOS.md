@@ -1,6 +1,6 @@
 # Vendored demo policy
 
-Proped Rabbita vendors upstream applications when preserving their source materially improves adapter testing, reproducibility, and demonstration value. Every vendor directory records the pinned revision, upstream license, unmodified source, SHA-256 hashes, adaptation boundary, finite exploration constraints, and expected outcome.
+Proped vendors upstream applications when preserving their source materially improves adapter testing, reproducibility, and demonstration value. Every vendor directory records the pinned revision, upstream license, unmodified source, SHA-256 hashes, adaptation boundary, finite exploration constraints, and expected outcome.
 
 All current Rabbita examples are pinned to revision `67e8169efa1bb2e8bd17018b62b41211cbc4c357`.
 
@@ -148,7 +148,7 @@ A real runtime probe also fixes the intended backdating distinction for input 4â
 
 ## Circular clean-room state adapter
 
-Circular is pinned at revision `bf8549a9c13505f3dc5632347acfffbba864c406`. Its `moon.mod` declares Apache-2.0, but the revision has no standalone LICENSE file, so Proped Rabbita does not copy upstream source. The adapter preserves the public state/message shape and selected private updater semantics in a finite clean-room model.
+Circular is pinned at revision `bf8549a9c13505f3dc5632347acfffbba864c406`. Its `moon.mod` declares Apache-2.0, but the revision has no standalone LICENSE file, so Proped does not copy upstream source. The adapter preserves the public state/message shape and selected private updater semantics in a finite clean-room model.
 
 A pinned-source wbtest opened `TaskModal` for `TSK-1` and then called `sync_workspace` with a task-free workspace. The updater cleared `selection.task_id` but preserved `TaskModal`. The external target minimizes the equivalent behavior to:
 
@@ -159,7 +159,7 @@ The run explores 580 states and 2,456 transitions with one retained failure and 
 
 ## Isomorphic suite
 
-The Kanban, Todo, and Note applications are pinned at revision `590ac1c4de71050419cc6643942e0d1f181301aa`. Each application declares Apache-2.0 in `moon.mod.json`, but the pinned repository has no standalone license file, so Proped Rabbita stores no upstream source and uses a clean-room finite adapter.
+The Kanban, Todo, and Note applications are pinned at revision `590ac1c4de71050419cc6643942e0d1f181301aa`. Each application declares Apache-2.0 in `moon.mod.json`, but the pinned repository has no standalone license file, so Proped stores no upstream source and uses a clean-room finite adapter.
 
 One matrix harness preserves the three Elm/MVU response branches and replaces HTTP work with stable per-application request descriptors. The run reaches 1,400 states and 2,288 transitions with four retained failures and zero diagnostics:
 

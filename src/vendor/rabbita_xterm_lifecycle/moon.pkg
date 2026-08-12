@@ -1,5 +1,5 @@
 import {
-  "f4ah6o/proped-rabbita" @proped,
+  "f4ah6o/proped",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/html",
 }

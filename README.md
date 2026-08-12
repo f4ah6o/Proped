@@ -1,8 +1,8 @@
-# Proped Rabbita
+# Proped
 
 [日本語](README.ja.md) | English
 
-Proped Rabbita explores reachable Rabbita UI states, checks model and transition properties, shrinks failures, and exports deterministic HTML, SVG, JSON, and Graphviz atlases.
+Proped explores reachable Rabbita UI states, checks model and transition properties, shrinks failures, and exports deterministic HTML, SVG, JSON, and Graphviz atlases.
 
 ## Native CLI
 
@@ -11,13 +11,14 @@ Proped Rabbita explores reachable Rabbita UI states, checks model and transition
 ```bash
 cargo build -p proped-cli
 ./target/debug/proped -V
+./target/debug/proped setup
 ./target/debug/proped doctor --json
 ./target/debug/proped web inspect . --json
 ```
 
 Development builds report the CalVer package version as `proped 2026.8.0 (dev)`. Release builds embed a separate seven-character source SHA provenance, for example `proped 2026.8.0 (abcdef0)`; the Git SHA is not part of the package version. The native shell does not use a shell when it dispatches Web commands and preserves the existing dispatcher stdout, stderr, and exit status. `PROPED_RUNTIME_ROOT` can explicitly point at a Proped runtime tree containing `scripts/proped.mjs`.
 
-The release archive contains the native shell plus the Proped JavaScript runtime source under `lib/proped`, so read-only commands such as `proped web inspect` work from the extracted layout with a system Node runtime. Node itself and the managed Playwright/Chromium installation are not embedded in the archive; `proped doctor` reports those runtime prerequisites explicitly.
+Release archives contain the native shell and read-only Proped JavaScript runtime sources under `lib/proped`, but intentionally exclude Node, `node_modules`, and Chromium. `proped setup` is the explicit product-runtime acquisition command: it reuses a compatible installed Node when possible, otherwise installs the release-pinned managed Node after SHA-256 verification, prepares Proped's lockfile-pinned JavaScript dependencies with lifecycle scripts disabled, installs the pinned Playwright Chromium into per-user managed storage, and verifies readiness by launching the browser. A healthy second setup reuses the prepared runtime. `proped doctor --json` is observational and exposes the resolved managed paths; `doctor` and normal `web` commands never repair or download the Proped runtime implicitly.
 
 ## MoonBit exploration CLI
 
@@ -44,7 +45,7 @@ See [docs/CLI.md](docs/CLI.md) for the complete MoonBit command and output contr
 
 ## Unknown Web project inspection
 
-Proped Rabbita can inspect an unknown Web project without running install, build, or start scripts. The read-only inspector infers package manager, Node engine requirement, framework, build/serve commands, render mode, output directory, routing, storage/IndexedDB, WebSocket, service-worker, authentication, and server-side framework/persistence/API hints, and reports confidence plus ambiguities instead of silently guessing.
+Proped can inspect an unknown Web project without running install, build, or start scripts. The read-only inspector infers package manager, Node engine requirement, framework, build/serve commands, render mode, output directory, routing, storage/IndexedDB, WebSocket, service-worker, authentication, and server-side framework/persistence/API hints, and reports confidence plus ambiguities instead of silently guessing.
 
 ```bash
 ./target/debug/proped web inspect .
@@ -62,7 +63,7 @@ node scripts/web_project_ci.mjs proped.web.json > proped-web.yml
 node scripts/web_project_ci.mjs proped.web.json --output .github/workflows/proped-web.yml
 ```
 
-The generated workflow checks out Proped Rabbita at a **full commit SHA**, uses read-only repository permissions, runs project dependency bootstrap separately, installs the Proped-managed Playwright/Chromium runtime, installs bubblewrap for strict execution, runs `web_project_run_v2.mjs`, and uploads `.proped/out` even when the quality gate fails.
+The generated workflow checks out Proped at a **full commit SHA**, uses read-only repository permissions, runs project dependency bootstrap separately, installs the Proped-managed Playwright/Chromium runtime, installs bubblewrap for strict execution, runs `web_project_run_v2.mjs`, and uploads `.proped/out` even when the quality gate fails.
 
 ## Unified Web CLI
 
@@ -357,7 +358,7 @@ initial Model
   = verified reachable UI state graph
 ```
 
-`Machine::actions` returns only messages valid for the supplied model. Proped Rabbita executes typed transitions, renders each discovered model without a browser, checks state and transition properties, and minimizes failing action traces. For practical runs, the runner retains the shortest counterexample per property instead of repeating equivalent failures from many generated cases.
+`Machine::actions` returns only messages valid for the supplied model. Proped executes typed transitions, renders each discovered model without a browser, checks state and transition properties, and minimizes failing action traces. For practical runs, the runner retains the shortest counterexample per property instead of repeating equivalent failures from many generated cases.
 
 ```moonbit
 let machine = rabbita_machine_with_action_id(
@@ -441,4 +442,4 @@ The server-side Rabbita renderer is marked experimental upstream, so `moon check
 
 ## License
 
-Proped Rabbita is Apache-2.0. Vendored attribution is recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Proped is Apache-2.0. Vendored attribution is recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

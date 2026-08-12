@@ -16,7 +16,7 @@ pub fn view(model : Model) -> @rabbita.Val[@rabbita.Html] {
   }
   let page = @html.main_(class="newsletter-demo", [
     @html.h1("Newsletter signup"),
-    @html.p("A small Rabbita model rendered by Proped Rabbita."),
+    @html.p("A small Rabbita model rendered by Proped."),
     @html.div(class="state", [
       @html.strong("State: "),
       @html.text(current_phase),

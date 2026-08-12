@@ -3,6 +3,7 @@ import path from "node:path";
 import { criticalWebProjectInferenceAmbiguities, loadWebProjectManifestV2 } from "../protocol/web-project-manifest-v2.mjs";
 import { prepareWebProject } from "../protocol/web-project-bootstrap.mjs";
 import { applyNodeRuntimeToEnvironment, blockingNodeRequirementAmbiguities, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "../protocol/web-node-runtime.mjs";
+import { applyPackageManagerRuntimeEnvironment, probePackageManagerRuntime } from "../protocol/web-package-manager-runtime.mjs";
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
@@ -47,9 +48,11 @@ try {
     console.error(JSON.stringify({ ok: false, error: "node_runtime_required", message: `no installed Node runtime satisfies ${manifest.project.nodeRequirement}`, nodeRuntime: nodeRuntimeSummary }));
     process.exit(2);
   }
-  const sourceEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
+  let sourceEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
+  sourceEnvironment = applyPackageManagerRuntimeEnvironment(manifest, sourceEnvironment, { allowNetwork: !offline });
   const result = prepareWebProject(root, manifest, { offline, sourceEnvironment });
   result.nodeRuntime = nodeRuntimeSummary;
+  result.packageManagerRuntime = probePackageManagerRuntime(root, manifest, sourceEnvironment);
   (result.ok ? console.log : console.error)(JSON.stringify(result));
   process.exitCode = result.ok ? 0 : 1;
 } catch (error) {

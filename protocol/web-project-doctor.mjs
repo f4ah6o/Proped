@@ -5,6 +5,7 @@ import { compileWebProjectManifestV2, criticalWebProjectInferenceAmbiguities, va
 import { strictSandboxCapabilities } from "./web-execution-sandbox.mjs";
 import { managedBrowserRuntimeDetails } from "../web/playwright-browser/managed-browser-runtime.mjs";
 import { applyNodeRuntimeToEnvironment, blockingNodeRequirementAmbiguities, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "./web-node-runtime.mjs";
+import { applyPackageManagerRuntimeEnvironment, probePackageManagerRuntime } from "./web-package-manager-runtime.mjs";
 import { webProjectDependencyReadiness } from "./web-project-bootstrap.mjs";
 
 function executableAvailable(command, environment = process.env) {
@@ -34,12 +35,18 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
   const nodeAmbiguities = blockingNodeRequirementAmbiguities(manifest);
   const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null);
   const nodeRuntimeSummary = summarizeNodeRuntimeResolution(nodeRuntime);
-  const targetEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
+  let targetEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
+  targetEnvironment = applyPackageManagerRuntimeEnvironment(manifest, targetEnvironment, { allowNetwork: false });
 
   if (manifest.project.packageManager) {
-    checks.push(executableAvailable(manifest.project.packageManager, targetEnvironment)
-      ? check("package-manager", "pass", `${manifest.project.packageManager} is available`)
-      : check("package-manager", "fail", `${manifest.project.packageManager} is not available`));
+    const packageManagerRuntime = probePackageManagerRuntime(repositoryRoot, manifest, targetEnvironment);
+    if (packageManagerRuntime.status === "ready") {
+      checks.push(check("package-manager", "pass", `${manifest.project.packageManagerReference ?? manifest.project.packageManager} is ready`, { packageManagerRuntime }));
+    } else if (packageManagerRuntime.status === "prepare-required") {
+      checks.push(check("package-manager", "pending", `${manifest.project.packageManagerReference} is not cached by Corepack; explicit web prepare is required`, { packageManagerRuntime, prepareRequired: true }));
+    } else {
+      checks.push(check("package-manager", "fail", `${manifest.project.packageManagerReference ?? manifest.project.packageManager} runtime is unavailable`, { packageManagerRuntime }));
+    }
   } else checks.push(check("package-manager", "warning", "package manager is unresolved"));
 
   if (nodeAmbiguities.length > 0) {

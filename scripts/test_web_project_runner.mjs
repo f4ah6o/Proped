@@ -195,6 +195,13 @@ try {
   assert.equal(custom.ok, true);
   assert.equal(fs.existsSync(path.join(TMP, "custom/summary.json")), true);
 
+  const corepackEnvironment = runWebProject(
+    ROOT,
+    manifest([stage("corepack-env", [process.execPath, "-e", "if(process.env.COREPACK_ENABLE_NETWORK!=='0')process.exit(7);console.log(JSON.stringify({ok:true,semanticHash:'corepack'}))"])]),
+    { writeArtifacts: false, sourceEnvironment: { ...process.env, COREPACK_ENABLE_NETWORK: "0" } },
+  );
+  assert.equal(corepackEnvironment.ok, true);
+
   const tempManifest = path.join(TMP, "cli-manifest.json");
   fs.writeFileSync(tempManifest, `${JSON.stringify(manifest([
     stage("cli-pass", [process.execPath, "-e", "console.log(JSON.stringify({ok:true,semanticHash:'fff'}))"]),

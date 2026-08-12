@@ -30,7 +30,6 @@ try {
   fs.mkdirSync(PROJECT, { recursive: true });
   fs.writeFileSync(path.join(PROJECT, "package.json"), `${JSON.stringify({
     name: "prepare-fixture",
-    packageManager: "npm@11.0.0",
   }, null, 2)}\n`);
   fs.writeFileSync(path.join(PROJECT, "package-lock.json"), "{}\n");
   fs.writeFileSync(path.join(PROJECT, "install-fixture.mjs"), `
@@ -42,6 +41,7 @@ try {
       secretSeen: Boolean(process.env.PROPED_TEST_SECRET || process.env.NPM_TOKEN),
       networkPolicy: process.env.PROPED_NETWORK_POLICY ?? null,
       credentialPolicy: process.env.PROPED_CREDENTIAL_POLICY ?? null,
+      corepackNetwork: process.env.COREPACK_ENABLE_NETWORK ?? null,
     }));
   `);
 
@@ -108,11 +108,13 @@ try {
   assert.equal(prepareReport.networkPolicy, "explicit-network-allowed");
   assert.equal(prepareReport.credentials, "environment-allowlist-deny");
   assert.equal(prepareReport.readinessAfter.ready, true);
+  assert.equal(prepareReport.packageManagerRuntime.status, "ready");
   assert.equal(fs.existsSync(path.join(PROJECT, "node_modules/.prepared")), true);
   const childEnvironment = JSON.parse(fs.readFileSync(path.join(PROJECT, "prepared-env.json"), "utf8"));
   assert.equal(childEnvironment.secretSeen, false);
   assert.equal(childEnvironment.networkPolicy, "explicit-bootstrap-network-allowed");
   assert.equal(childEnvironment.credentialPolicy, "environment-allowlist-deny");
+  assert.equal(childEnvironment.corepackNetwork, "1");
 
   fs.rmSync(path.join(PROJECT, "node_modules"), { recursive: true, force: true });
   fs.rmSync(path.join(PROJECT, "prepared-env.json"), { force: true });
@@ -122,6 +124,7 @@ try {
   assert.equal(offlineReport.networkPolicy, "offline-requested");
   const offlineEnvironment = JSON.parse(fs.readFileSync(path.join(PROJECT, "prepared-env.json"), "utf8"));
   assert.equal(offlineEnvironment.networkPolicy, "bootstrap-offline-requested");
+  assert.equal(offlineEnvironment.corepackNetwork, "0");
 
   console.log(JSON.stringify({
     ok: true,

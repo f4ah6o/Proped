@@ -1,4 +1,5 @@
 # Changes
+- Added exact package-manager runtime selection for declared npm/pnpm/yarn versions: generated commands use Corepack, explicit `web prepare` may acquire an uncached manager, run/build/preview force Corepack network deny, and the cache path remains visible inside strict sandbox execution.
 - Hardened read-only Node requirement discovery from `engines.node`, `volta.node`, `.nvmrc`, and `.node-version`: shorthand selectors are normalized, compatible exact pins remain canonical, and critical inference ambiguities fail closed before compile/prepare/run.
 - Added installed Node-runtime selection for unknown Web projects: current/NVM/Volta/FNM/asdf runtimes are inventoried read-only, the highest compatible runtime is injected only into target subprocess PATHs, and no runtime is downloaded implicitly.
 - Added a managed command-server runtime with reserved-port hints plus loopback-only stdout/stderr endpoint discovery, credential-filtered child environments, split-log URL recovery, and mandatory process cleanup on readiness failure.

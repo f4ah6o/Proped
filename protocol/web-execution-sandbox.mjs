@@ -11,6 +11,8 @@ const ENV_ALLOWLIST = Object.freeze([
   "COMSPEC",
   "PATHEXT",
   "PLAYWRIGHT_BROWSERS_PATH",
+  "COREPACK_ENABLE_NETWORK",
+  "COREPACK_HOME",
 ]);
 
 function inside(parent, child) {

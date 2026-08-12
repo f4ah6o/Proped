@@ -37,6 +37,11 @@ function json(value) {
   });
   const report = inspectWebProject(root);
   assert.equal(report.packageManager.name, "pnpm");
+  assert.equal(report.packageManager.reference, "pnpm@10.0.0");
+  assert.equal(report.packageManager.version, "10.0.0");
+  assert.equal(report.packageManager.corepack, true);
+  assert.deepEqual(report.commands.install.argv, ["corepack", "pnpm", "install", "--frozen-lockfile"]);
+  assert.deepEqual(report.commands.build.argv, ["corepack", "pnpm", "run", "build"]);
   assert.equal(report.framework.name, "react-vite");
   assert.equal(report.project.mode, "spa");
   assert.equal(report.project.outputDir, "dist");
@@ -48,6 +53,47 @@ function json(value) {
   assert.deepEqual(report.runtime.server.persistenceDependencies, ["drizzle-orm"]);
   assert.equal(report.runtime.server.relativeApiCalls, 1);
   assert.equal(report.safety.packageScriptsExecuted, false);
+}
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "pnpm-integrity",
+      packageManager: "pnpm@9.15.0+sha512-deadbeef",
+      scripts: { build: "vite build" },
+      dependencies: { vite: "6.0.0" },
+    }),
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.packageManager.reference, "pnpm@9.15.0+sha512-deadbeef");
+  assert.equal(report.packageManager.version, "9.15.0");
+  assert.equal(report.packageManager.corepack, true);
+  assert.deepEqual(report.commands.build.argv, ["corepack", "pnpm", "run", "build"]);
+}
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "yarn-classic",
+      packageManager: "yarn@1.22.22",
+    }),
+    "yarn.lock": "# yarn lockfile v1\n",
+  });
+  const report = inspectWebProject(root);
+  assert.deepEqual(report.commands.install.argv, ["corepack", "yarn", "install", "--frozen-lockfile"]);
+}
+
+{
+  const root = fixture({
+    "package.json": json({ name: "pnpm-unpinned", packageManager: "pnpm@latest" }),
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.packageManager.corepack, false);
+  assert.ok(report.ambiguities.some((item) => item.code === "package-manager-version-unpinned" && item.severity === "error"));
+  const manifest = createWebProjectManifestV2FromInspection(report, { projectRoot: ".", id: "pnpm-unpinned" });
+  assert.throws(() => compileWebProjectManifestV2(manifest, root), /critical inference ambiguity requires review/);
 }
 
 {

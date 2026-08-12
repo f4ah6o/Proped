@@ -4,6 +4,7 @@ import { compileWebProjectManifestV2, criticalWebProjectInferenceAmbiguities, lo
 import { runWebProject } from "../protocol/web-project-runner.mjs";
 import { webProjectDependencyReadiness } from "../protocol/web-project-bootstrap.mjs";
 import { applyNodeRuntimeToEnvironment, blockingNodeRequirementAmbiguities, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "../protocol/web-node-runtime.mjs";
+import { applyPackageManagerRuntimeEnvironment, probePackageManagerRuntime } from "../protocol/web-package-manager-runtime.mjs";
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
@@ -51,7 +52,17 @@ try {
     console.error(JSON.stringify({ ok: false, error: "node_runtime_required", message: `no installed Node runtime satisfies ${manifest.project.nodeRequirement}`, nodeRuntime: nodeRuntimeSummary, manifestVersion: 2 }));
     process.exit(2);
   }
-  const sourceEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
+  let sourceEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
+  sourceEnvironment = applyPackageManagerRuntimeEnvironment(manifest, sourceEnvironment, { allowNetwork: false });
+  const packageManagerRuntime = probePackageManagerRuntime(root, manifest, sourceEnvironment);
+  if (packageManagerRuntime.status === "prepare-required") {
+    console.error(JSON.stringify({ ok: false, error: "package_manager_prepare_required", message: `${manifest.project.packageManagerReference} is not cached by Corepack; run web prepare explicitly`, packageManagerRuntime, nodeRuntime: nodeRuntimeSummary, manifestVersion: 2 }));
+    process.exit(2);
+  }
+  if (packageManagerRuntime.status === "unavailable") {
+    console.error(JSON.stringify({ ok: false, error: "package_manager_runtime_unavailable", message: `${manifest.project.packageManagerReference ?? manifest.project.packageManager} runtime is unavailable`, packageManagerRuntime, nodeRuntime: nodeRuntimeSummary, manifestVersion: 2 }));
+    process.exit(2);
+  }
   const dependencyReadiness = webProjectDependencyReadiness(root, manifest, { forRun: true });
   if (dependencyReadiness.ready === false) {
     const result = {
@@ -79,6 +90,7 @@ try {
     sandboxRequested: strict ? "strict" : "caller-enforced",
     bootstrapInstall: compiled.execution.bootstrapInstall,
     nodeRuntime: nodeRuntimeSummary,
+    packageManagerRuntime,
   };
   (result.ok ? console.log : console.error)(JSON.stringify(result));
   process.exitCode = result.ok ? 0 : 1;

@@ -74,6 +74,7 @@ export function prepareWebProject(repositoryRoot, manifest, { offline = false, s
   }
   const environment = safeExecutionEnvironment(sourceEnvironment, { osEnforced: false });
   environment.PROPED_NETWORK_POLICY = offline ? "bootstrap-offline-requested" : "explicit-bootstrap-network-allowed";
+  environment.COREPACK_ENABLE_NETWORK = offline ? "0" : "1";
   if (offline) {
     environment.npm_config_offline = "true";
     environment.YARN_ENABLE_NETWORK = "0";

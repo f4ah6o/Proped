@@ -61,10 +61,16 @@ function ancestorDirectories(start, stop) {
   return result;
 }
 
-function packageManagerFromField(value) {
+function packageManagerDeclaration(value) {
   if (typeof value !== "string") return null;
-  const match = /^(npm|pnpm|yarn|bun)@/.exec(value.trim());
-  return match?.[1] ?? null;
+  const raw = value.trim();
+  const match = /^(npm|pnpm|yarn|bun)@(.+)$/.exec(raw);
+  if (!match) return null;
+  const name = match[1];
+  const selector = match[2];
+  const exact = /^(\d+)\.(\d+)\.(\d+)(?:\+.*)?$/.exec(selector);
+  const version = exact ? `${exact[1]}.${exact[2]}.${exact[3]}` : null;
+  return { name, raw, selector, version, corepack: ["npm", "pnpm", "yarn"].includes(name) && version !== null };
 }
 
 function normalizeNodeSelector(value) {
@@ -185,7 +191,15 @@ function detectNodeRequirement(root, pkg, ambiguities, evidence) {
 }
 
 function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
-  const declared = packageManagerFromField(pkg?.packageManager);
+  const declaration = packageManagerDeclaration(pkg?.packageManager);
+  const declared = declaration?.name ?? null;
+  if (declaration && ["npm", "pnpm", "yarn"].includes(declaration.name) && !declaration.version) {
+    ambiguities.push({
+      code: "package-manager-version-unpinned",
+      message: `packageManager must pin an exact ${declaration.name} version for reproducible Corepack execution: ${declaration.raw}`,
+      severity: "error",
+    });
+  }
   const searchRoot = gitRoot && pathInsideOrEqual(gitRoot, root) ? gitRoot : root;
   const found = [];
   for (const directory of ancestorDirectories(root, searchRoot)) {
@@ -233,11 +247,15 @@ function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
     });
   }
   if (name) evidence.push(`package-manager:${name}:${source}`);
+  if (declaration?.raw) evidence.push(`package-manager-reference:${declaration.raw}`);
   return {
     name,
     source,
     confidence,
     lockfile: nearest[0] ? path.relative(root, nearest[0].file) || path.basename(nearest[0].file) : null,
+    reference: declaration?.raw ?? null,
+    version: declaration?.version ?? null,
+    corepack: declaration?.corepack ?? false,
   };
 }
 
@@ -393,14 +411,18 @@ function inferModeAndOutput(root, framework, pkg, evidence, ambiguities) {
   return { mode, modeConfidence, outputDir, outputConfidence };
 }
 
-function inferCommands(pkg, manager, framework, mode, ambiguities) {
+function inferCommands(pkg, packageManager, framework, mode, ambiguities) {
   const scripts = pkg?.scripts ?? {};
-  const run = (script) => manager ? [manager, "run", script] : null;
+  const manager = packageManager?.name ?? null;
+  const prefix = manager ? (packageManager.corepack ? ["corepack", manager] : [manager]) : null;
+  const run = (script) => prefix ? [...prefix, "run", script] : null;
   let install = null;
-  if (manager === "npm") install = ["npm", "ci"];
-  else if (manager === "pnpm") install = ["pnpm", "install", "--frozen-lockfile"];
-  else if (manager === "yarn") install = ["yarn", "install", "--immutable"];
-  else if (manager === "bun") install = ["bun", "install", "--frozen-lockfile"];
+  if (manager === "npm") install = [...prefix, "ci"];
+  else if (manager === "pnpm") install = [...prefix, "install", "--frozen-lockfile"];
+  else if (manager === "yarn") {
+    const major = Number(packageManager.version?.split(".")[0] ?? 0);
+    install = [...prefix, "install", major > 0 && major < 2 ? "--frozen-lockfile" : "--immutable"];
+  } else if (manager === "bun") install = ["bun", "install", "--frozen-lockfile"];
 
   const build = scripts.build ? run("build") : null;
   let serve = null;
@@ -553,7 +575,7 @@ export function inspectWebProject(targetPath, options = {}) {
   const packageManager = detectPackageManager(root, gitRoot, pkg, ambiguities, evidence);
   const framework = detectFramework(root, pkg, evidence, ambiguities);
   const project = inferModeAndOutput(root, framework, pkg, evidence, ambiguities);
-  const commands = inferCommands(pkg, packageManager.name, framework, project.mode, ambiguities);
+  const commands = inferCommands(pkg, packageManager, framework, project.mode, ambiguities);
   const runtime = detectRuntimeHints(root, pkg, evidence);
 
   const nodeRequirementResolution = detectNodeRequirement(root, pkg, ambiguities, evidence);

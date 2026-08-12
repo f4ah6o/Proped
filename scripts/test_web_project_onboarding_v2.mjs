@@ -33,7 +33,6 @@ try {
   fs.mkdirSync(path.join(PROJECT, "dist"), { recursive: true });
   fs.writeFileSync(path.join(PROJECT, "package.json"), `${JSON.stringify({
     name: "unknown-vite-app",
-    packageManager: "npm@11.0.0",
     scripts: { build: "vite build", preview: "vite preview" },
     dependencies: { vite: "8.0.0" },
   }, null, 2)}\n`);

@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { GenericPlaywrightBrowserDriver } from "../web/playwright-browser/generic-browser-driver.mjs";
 import { semanticHash } from "../protocol/ui-driver-v1.mjs";
+import { createPropertyHintContract, createProjectionHintContract } from "../protocol/web-domain-hint-contract.mjs";
 import {
   applyApprovedSemanticNormalizers,
   projectApprovedSemanticState,
@@ -26,18 +27,21 @@ const approved = [
     ref: "property:saved-state-survives-reload", id: "saved-state-survives-reload", kind: "property",
     confidence: 0.98, confidenceBand: "high", approvedByHuman: true, riskAcknowledged: false,
     note: "expected persistence", activation: "human-approved",
+    contract: createPropertyHintContract({ inputKind: "generic-property-pack", inputId: "reload-persistence", predicateOp: "no-failures" }),
   },
   {
     ref: "projection:route-identity", id: "route-identity", kind: "projection",
     confidence: 0.96, confidenceBand: "high", approvedByHuman: true, riskAcknowledged: false,
     note: null, activation: "human-approved",
     projection: { kind: "state-projection", name: "route-identity", outputShape: { type: "route-family" }, executableCode: null },
+    contract: createProjectionHintContract({ selector: "route-identity" }),
   },
   {
     ref: "projection:persistence-summary", id: "persistence-summary", kind: "projection",
     confidence: 0.92, confidenceBand: "high", approvedByHuman: true, riskAcknowledged: false,
     note: null, activation: "human-approved",
     projection: { kind: "state-projection", name: "persistence-summary", outputShape: { type: "metadata" }, executableCode: null },
+    contract: createProjectionHintContract({ selector: "persistence-summary" }),
   },
   {
     ref: "normalizer:generated-id:$.semanticDom.attributes.id", id: "generated-id:$.semanticDom.attributes.id", kind: "normalizer",
@@ -72,6 +76,23 @@ assert.deepEqual(runtime.properties.map((item) => item.ref), ["property:saved-st
 assert.deepEqual(runtime.projections.map((item) => item.id), ["route-identity", "persistence-summary"]);
 assert.equal(runtime.normalizers.length, 1);
 assert.equal(runtime.diagnostics.length, 0);
+
+const unsupportedApproved = [{
+  ref: "property:undo-redo-inverse", id: "undo-redo-inverse", kind: "property",
+  confidence: 0.9, confidenceBand: "high", approvedByHuman: true, riskAcknowledged: false,
+  note: null, activation: "human-approved",
+  contract: createPropertyHintContract({ inputKind: "semantic-transition", inputId: "undo-redo-inverse", predicateOp: "domain-invariant", predicateId: "undo-redo-inverse" }),
+}];
+const unsupportedStable = { reviewSemanticHash: "unsupported-review", approved: unsupportedApproved, rejected: [], deferred: [], pending: [] };
+const unsupportedHints = {
+  ok: true, runtime: "web-semantic-approved-hints", version: "1", reviewSemanticHash: unsupportedStable.reviewSemanticHash,
+  approvalPlanSemanticHash: "unsupported-plan", counts: { approved: 1, rejected: 0, deferred: 0, pending: 0 },
+  ...unsupportedStable, automaticActivation: false, semanticHash: semanticHash(unsupportedStable),
+};
+const unsupportedRuntime = resolveApprovedSemanticRuntime(unsupportedHints);
+assert.deepEqual(unsupportedRuntime.propertyPacks, []);
+assert.deepEqual(unsupportedRuntime.properties, []);
+assert.equal(unsupportedRuntime.diagnostics[0].kind, "approved_semantic_contract_unsupported");
 
 const normalized = applyApprovedSemanticNormalizers({ semanticDom: { attributes: { id: "volatile-123" } } }, runtime);
 assert.equal(normalized.semanticDom.attributes.id, "<generated-id>");

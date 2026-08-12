@@ -85,6 +85,12 @@ export function decideWebSemanticCandidate(review, plan, { ref, decision, riskAc
   if (decision === "approve" && candidate.semanticRisk === "high" && !riskAcknowledged) {
     fail(`high-risk candidate ${ref} requires explicit risk acknowledgement`);
   }
+  if (decision === "approve" && candidate.kind === "property" && !candidate.proposedChange) {
+    fail(`property candidate ${ref} has no machine-readable contract to approve`);
+  }
+  if (decision === "approve" && candidate.kind === "projection" && !candidate.proposedChange?.contract) {
+    fail(`projection candidate ${ref} has no machine-readable contract to approve`);
+  }
   if (decision === "approve" && candidate.kind === "normalizer" && !candidate.proposedChange) {
     fail(`normalizer candidate ${ref} has no concrete replacement rule to approve`);
   }
@@ -113,8 +119,8 @@ function approvedHint(candidate, decision) {
     note: decision.note,
     activation: "human-approved",
   };
-  if (candidate.kind === "property") return { ...base, kind: "property" };
-  if (candidate.kind === "projection") return { ...base, kind: "projection", projection: candidate.proposedChange };
+  if (candidate.kind === "property") return { ...base, kind: "property", contract: candidate.proposedChange };
+  if (candidate.kind === "projection") return { ...base, kind: "projection", projection: candidate.proposedChange, contract: candidate.proposedChange.contract };
   if (candidate.kind === "normalizer") return { ...base, kind: "normalizer", normalizer: candidate.proposedChange };
   if (candidate.kind === "server-hook") return { ...base, kind: "server-hook", serverHook: candidate.proposedChange };
   fail(`unsupported candidate kind ${candidate.kind}`);

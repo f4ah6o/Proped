@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { buildWebSemanticOracleBoundary } from "../protocol/web-semantic-oracle-boundary.mjs";
+import { createPropertyHintContract, createProjectionHintContract } from "../protocol/web-domain-hint-contract.mjs";
 
 const cleanCampaign = {
   ok: true,
@@ -36,6 +37,7 @@ const routeProjection = {
   kind: "projection",
   approvedByHuman: true,
   activation: "human-approved",
+  contract: createProjectionHintContract({ selector: "route-identity" }),
 };
 const projectionOnly = buildWebSemanticOracleBoundary({
   semanticHints: { approved: [routeProjection] },
@@ -60,6 +62,7 @@ const persistenceProperty = {
   kind: "property",
   approvedByHuman: true,
   activation: "human-approved",
+  contract: createPropertyHintContract({ inputKind: "generic-property-pack", inputId: "reload-persistence", predicateOp: "no-failures" }),
 };
 const verified = buildWebSemanticOracleBoundary({
   semanticHints: { approved: [routeProjection, persistenceProperty] },

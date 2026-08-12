@@ -1,4 +1,5 @@
 import { semanticHash } from "./ui-driver-v1.mjs";
+import { createProjectionHintContract } from "./web-domain-hint-contract.mjs";
 import { collectWebSemanticSignals } from "./web-semantic-property-candidates.mjs";
 import { inspectWebProject } from "./web-project-inspect.mjs";
 
@@ -130,6 +131,7 @@ export function proposeWebSemanticProjections(signals, inspection) {
         name: rule.id,
         outputShape: rule.shape,
         executableCode: null,
+        contract: createProjectionHintContract({ selector: rule.id }),
       },
       automaticActivation: false,
     });

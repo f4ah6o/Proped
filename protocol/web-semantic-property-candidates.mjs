@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { semanticHash } from "./ui-driver-v1.mjs";
+import { createPropertyHintContract } from "./web-domain-hint-contract.mjs";
 
 export const WEB_SEMANTIC_PROPERTY_CANDIDATES_VERSION = "1";
 const SKIP_DIRECTORIES = new Set([".git", "node_modules", "dist", "build", ".next", ".nuxt", ".output", "coverage", "protocol", ".proped"]);
@@ -161,6 +162,9 @@ export function proposeWebSemanticProperties(signals) {
     if (evidence.length === 0) continue;
     const kinds = new Set(evidence.map((item) => item.kind));
     const confidence = Math.min(0.98, 0.5 + (sourceEvidence.length ? 0.18 : 0) + (testEvidence.length ? 0.2 : 0) + (uiEvidence.length ? 0.1 : 0));
+    const suggestedPredicate = rule.id === "saved-state-survives-reload"
+      ? createPropertyHintContract({ inputKind: "generic-property-pack", inputId: "reload-persistence", predicateOp: "no-failures" })
+      : createPropertyHintContract({ inputKind: "semantic-transition", inputId: rule.id, predicateOp: "domain-invariant", predicateId: rule.id });
     candidates.push({
       id: rule.id,
       title: rule.title,
@@ -169,6 +173,7 @@ export function proposeWebSemanticProperties(signals) {
       confidence: Number(confidence.toFixed(2)),
       evidenceKinds: [...kinds].sort(),
       evidence,
+      suggestedPredicate,
       automaticActivation: false,
     });
   }
@@ -189,7 +194,7 @@ export function proposeWebSemanticProperties(signals) {
     scan: report.scan,
     uiVocabularyCount: report.uiVocabularyCount,
     testTitleCount: report.testTitleCount,
-    candidates: candidates.map(({ id, oracleFamily, status, confidence, evidenceKinds, automaticActivation }) => ({ id, oracleFamily, status, confidence, evidenceKinds, automaticActivation })),
+    candidates: candidates.map(({ id, oracleFamily, status, confidence, evidenceKinds, suggestedPredicate, automaticActivation }) => ({ id, oracleFamily, status, confidence, evidenceKinds, suggestedPredicate, automaticActivation })),
   });
   return report;
 }

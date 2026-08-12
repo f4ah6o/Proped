@@ -33,11 +33,15 @@ try {
     assert.ok(byId.has(id), `missing ${id}`);
     assert.equal(byId.get(id).status, "review-only");
     assert.equal(byId.get(id).automaticActivation, false);
+    assert.equal(byId.get(id).suggestedPredicate.version, "1");
+    assert.equal(byId.get(id).suggestedPredicate.kind, "property");
     assert.ok(byId.get(id).confidence >= 0.7);
   }
   assert.ok(byId.get("undo-redo-inverse").evidenceKinds.includes("source"));
   assert.ok(byId.get("undo-redo-inverse").evidenceKinds.includes("test-title"));
   assert.ok(byId.get("undo-redo-inverse").evidenceKinds.includes("ui-vocabulary"));
+  assert.equal(byId.get("saved-state-survives-reload").suggestedPredicate.input.kind, "generic-property-pack");
+  assert.equal(byId.get("undo-redo-inverse").suggestedPredicate.input.kind, "semantic-transition");
   assert.equal(report.automaticActivationCount, 0);
 
   console.log(JSON.stringify({

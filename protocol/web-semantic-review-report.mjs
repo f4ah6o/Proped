@@ -41,7 +41,7 @@ function normalizeCandidate(kind, candidate) {
     evidenceKinds: [...new Set(evidence.map((item) => item.kind))].sort(),
     evidence,
     automaticActivation: candidate.automaticActivation === true,
-    proposedChange: kind === "normalizer" ? candidate.proposedRule ?? null : kind === "projection" ? candidate.suggestedHook ?? null : kind === "server-hook" ? candidate.proposedHook ?? null : null,
+    proposedChange: kind === "property" ? candidate.suggestedPredicate ?? null : kind === "normalizer" ? candidate.proposedRule ?? null : kind === "projection" ? candidate.suggestedHook ?? null : kind === "server-hook" ? candidate.proposedHook ?? null : null,
   };
 }
 

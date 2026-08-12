@@ -34,6 +34,9 @@ try {
     assert.equal(byId.get(id).status, "review-only");
     assert.equal(byId.get(id).automaticActivation, false);
     assert.equal(byId.get(id).suggestedHook.executableCode, null);
+    assert.equal(byId.get(id).suggestedHook.contract.version, "1");
+    assert.equal(byId.get(id).suggestedHook.contract.kind, "projection");
+    assert.equal(byId.get(id).suggestedHook.contract.source.selector, id);
     assert.ok(byId.get(id).confidence >= 0.6);
   }
   assert.ok(byId.get("persistence-summary").evidenceKinds.includes("runtime-inspection"));

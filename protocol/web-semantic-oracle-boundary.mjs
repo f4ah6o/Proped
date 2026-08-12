@@ -1,4 +1,5 @@
 import { semanticHash } from "./ui-driver-v1.mjs";
+import { evaluateWebDomainPropertyContract } from "./web-domain-hint-contract.mjs";
 
 export const WEB_SEMANTIC_ORACLE_BOUNDARY_VERSION = "1";
 
@@ -8,15 +9,6 @@ function approvedDomainHints(hints) {
     item?.activation === "human-approved" &&
     ["property", "projection"].includes(item.kind),
   );
-}
-
-function propertyResultByPack(propertyCampaign) {
-  return new Map((propertyCampaign?.results ?? []).map((result) => [result.id, result]));
-}
-
-function propertyPackForId(id) {
-  if (id === "saved-state-survives-reload") return "reload-persistence";
-  return null;
 }
 
 export function buildWebSemanticOracleBoundary({
@@ -40,23 +32,23 @@ export function buildWebSemanticOracleBoundary({
   };
 
   const approved = approvedDomainHints(semanticHints);
-  const runtimePropertyRefs = new Set((approvedSemanticRuntime?.properties ?? []).map((item) => item.ref));
+  const runtimeProperties = new Map((approvedSemanticRuntime?.properties ?? []).map((item) => [item.ref, item]));
   const runtimeProjectionRefs = new Set((approvedSemanticRuntime?.projections ?? []).map((item) => item.ref));
   const unsupportedApprovedRefs = (approvedSemanticRuntime?.diagnostics ?? [])
-    .filter((item) => item.kind === "approved_semantic_runtime_unsupported" && typeof item.ref === "string")
+    .filter((item) => ["approved_semantic_contract_unsupported", "approved_semantic_contract_missing", "approved_semantic_runtime_unsupported"].includes(item.kind) && typeof item.ref === "string")
     .map((item) => item.ref)
     .sort();
 
-  const packResults = propertyResultByPack(propertyCampaign);
   const verifiedPropertyRefs = [];
   const failedPropertyRefs = [];
+  const notExecutedPropertyRefs = [];
   for (const item of approved.filter((candidate) => candidate.kind === "property")) {
-    if (!runtimePropertyRefs.has(item.ref)) continue;
-    const pack = propertyPackForId(item.id);
-    const result = pack ? packResults.get(pack) : null;
-    if (!result) continue;
-    if ((result.failures ?? []).length > 0) failedPropertyRefs.push(item.ref);
-    else verifiedPropertyRefs.push(item.ref);
+    const runtimeItem = runtimeProperties.get(item.ref);
+    if (!runtimeItem?.contract) continue;
+    const result = evaluateWebDomainPropertyContract(runtimeItem.contract, propertyCampaign);
+    if (result.status === "fail") failedPropertyRefs.push(item.ref);
+    else if (result.status === "pass") verifiedPropertyRefs.push(item.ref);
+    else if (result.status === "not_executed") notExecutedPropertyRefs.push(item.ref);
   }
 
   const semanticProjections = snapshot?.applicationState?.semanticProjections ?? {};
@@ -75,6 +67,7 @@ export function buildWebSemanticOracleBoundary({
     approvedHintCount: approved.length,
     verifiedPropertyRefs: verifiedPropertyRefs.sort(),
     failedPropertyRefs: failedPropertyRefs.sort(),
+    notExecutedPropertyRefs: notExecutedPropertyRefs.sort(),
     observedProjectionRefs,
     unsupportedApprovedRefs,
     automaticOracle: false,

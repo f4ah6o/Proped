@@ -1,10 +1,12 @@
 import { semanticHash } from "./ui-driver-v1.mjs";
 import { validateWebServerHooks } from "./web-server-hooks.mjs";
+import {
+  projectWebDomainHintContract,
+  validateWebDomainHintContract,
+  webDomainHintContractSupport,
+} from "./web-domain-hint-contract.mjs";
 
 export const WEB_APPROVED_SEMANTICS_RUNTIME_VERSION = "1";
-
-const SUPPORTED_PROPERTIES = new Set(["saved-state-survives-reload"]);
-const SUPPORTED_PROJECTIONS = new Set(["route-identity", "persistence-summary"]);
 
 function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -35,6 +37,7 @@ export function validateApprovedSemanticHints(hints) {
     if (!item || item.approvedByHuman !== true || item.activation !== "human-approved") throw new Error("semantic hint must be human-approved");
     if (!["property", "projection", "normalizer", "server-hook"].includes(item.kind)) throw new Error(`unsupported semantic hint kind: ${item.kind}`);
     if (typeof item.ref !== "string" || typeof item.id !== "string") throw new Error("semantic hint identity is invalid");
+    if (["property", "projection"].includes(item.kind) && item.contract != null) validateWebDomainHintContract(item.contract, item.kind);
     if (item.kind === "normalizer" && (!item.normalizer || item.normalizer.action !== "replace" || typeof item.normalizer.path !== "string")) {
       throw new Error(`approved normalizer ${item.ref} has no concrete replacement rule`);
     }
@@ -54,18 +57,33 @@ export function resolveApprovedSemanticRuntime(hints) {
   const normalizers = approvedList(hints, "normalizer");
   const propertyPacks = [];
   const activeProperties = [];
-  const diagnostics = [];
-  for (const item of properties) {
-    if (SUPPORTED_PROPERTIES.has(item.id)) {
-      propertyPacks.push("reload-persistence");
-      activeProperties.push(item);
-    } else diagnostics.push({ kind: "approved_semantic_runtime_unsupported", ref: item.ref, semanticKind: item.kind, message: "approved property is preserved but has no generic runtime executor yet" });
-  }
   const activeProjections = [];
-  for (const item of projections) {
-    if (SUPPORTED_PROJECTIONS.has(item.id)) activeProjections.push(item);
-    else diagnostics.push({ kind: "approved_semantic_runtime_unsupported", ref: item.ref, semanticKind: item.kind, message: "approved projection is preserved but cannot be derived from generic browser state yet" });
+  const diagnostics = [];
+
+  for (const item of properties) {
+    if (!item.contract) {
+      diagnostics.push({ kind: "approved_semantic_contract_missing", ref: item.ref, semanticKind: item.kind, message: "approved property has no versioned machine-readable contract" });
+      continue;
+    }
+    const support = webDomainHintContractSupport(item.contract);
+    if (support.executable) {
+      propertyPacks.push(item.contract.input.id);
+      activeProperties.push(item);
+    } else {
+      diagnostics.push({ kind: "approved_semantic_contract_unsupported", ref: item.ref, semanticKind: item.kind, contractSemanticHash: item.contract.semanticHash, message: "approved property contract is preserved but has no runtime executor" });
+    }
   }
+
+  for (const item of projections) {
+    if (!item.contract) {
+      diagnostics.push({ kind: "approved_semantic_contract_missing", ref: item.ref, semanticKind: item.kind, message: "approved projection has no versioned machine-readable contract" });
+      continue;
+    }
+    const support = webDomainHintContractSupport(item.contract);
+    if (support.executable) activeProjections.push(item);
+    else diagnostics.push({ kind: "approved_semantic_contract_unsupported", ref: item.ref, semanticKind: item.kind, contractSemanticHash: item.contract.semanticHash, message: "approved projection contract is preserved but has no runtime projector" });
+  }
+
   const result = {
     version: WEB_APPROVED_SEMANTICS_RUNTIME_VERSION,
     approvedHintSemanticHash: hints?.semanticHash ?? null,
@@ -78,32 +96,11 @@ export function resolveApprovedSemanticRuntime(hints) {
   return { ...result, semanticHash: semanticHash(result) };
 }
 
-function routeIdentity(urlValue) {
-  const url = new URL(urlValue, "http://proped.invalid");
-  return {
-    pathname: url.pathname,
-    queryKeys: [...new Set([...url.searchParams.keys()])].sort(),
-    fragmentPresent: Boolean(url.hash),
-  };
-}
-
-function persistenceSummary({ storage, indexedDB }) {
-  return {
-    localStorageKeys: Object.keys(storage?.local ?? {}).sort(),
-    sessionStorageKeys: Object.keys(storage?.session ?? {}).sort(),
-    databases: (indexedDB?.databases ?? []).map((database) => ({
-      name: database.name,
-      version: database.version,
-      stores: (database.stores ?? []).map((store) => ({ name: store.name, count: store.count ?? null })).sort((a, b) => a.name.localeCompare(b.name)),
-    })).sort((a, b) => String(a.name).localeCompare(String(b.name))),
-  };
-}
-
 export function projectApprovedSemanticState(runtime, { url, storage, indexedDB } = {}) {
   const output = {};
   for (const item of runtime?.projections ?? []) {
-    if (item.id === "route-identity") output[item.id] = routeIdentity(url ?? "/");
-    else if (item.id === "persistence-summary") output[item.id] = persistenceSummary({ storage, indexedDB });
+    const projected = projectWebDomainHintContract(item.contract, { url, storage, indexedDB });
+    if (projected.status === "projected") output[item.id] = projected.value;
   }
   return Object.keys(output).length ? output : null;
 }

@@ -125,6 +125,7 @@ jobs:
           node scripts/test_web_healthy_transition_benchmark.mjs
           node scripts/test_unknown_web_onboarding_acceptance.mjs
           node scripts/test_web_generic_property_packs.mjs
+          node scripts/test_web_stateful_server_pack.mjs
           node scripts/test_web_project_onboarding_v2.mjs
           node scripts/test_web_project_prepare.mjs
           node scripts/test_web_node_engine.mjs

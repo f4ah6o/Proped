@@ -130,7 +130,7 @@ Web failureには人間向けfailure codeとは別にstableなcanonical classを
 
 ## Generic Web property packs
 
-Low-config Generic Browser Modeでは現在`browser-safety`、`navigation`、`reload-persistence`を提供します。false positive抑制のため保守的に判定し、uncaught exceptionや観測可能なlocal/session storage driftだけをquality failureにします。storage evidenceなしでreload後にvisible stateが消える場合は自動CI failureではなくadvisory candidateに留めます。
+Low-config Generic Browser Modeでは現在`browser-safety`、`navigation`、`reload-persistence`、`stateful-server`を提供します。false positive抑制のため保守的に判定し、uncaught exceptionや観測可能なlocal/session storage driftだけをquality failureにします。storage evidenceなしでreload後にvisible stateが消える場合は自動CI failureではなくadvisory candidateに留めます。`stateful-server`は発見したCreate/Read/Update/Delete候補、invalid input、reload、managed server restart、session境界、replayを扱いますが、DOM・IndexedDB・browser storageではなくread-only server hook projectionでserver stateの変化と永続化を確認できた場合だけ`generic-covered`へ昇格します。
 
 このgeneric discoveryだけで、TodoMVC React/Vueのreload state lossをTodoMVC固有Playwright adapter/semantic contractなしにsurfaceできています。
 
@@ -185,7 +185,7 @@ node scripts/web_semantic_approval.mjs compile review.json approvals.json --outp
 
 ## Coverage-guided Generic Browser exploration
 
-生成manifest v2は小さくboundedなcoverage-guided explorationを既定で有効化し、`maxStates=32` / `maxTransitions=64` / `maxDepth=4`から開始します。frontierはsemantic state noveltyと未実行actionを優先し、各stateはfresh contextへtrace replayして再構成します。**destructive actionは常に探索対象外**で、bounded mutationもself-containedな`static-output`実行時だけ許可します。server/external modeではsafe actionだけを探索します。探索failureは、発見したtraceそのものをfresh contextで再実行し、全attemptで同じfailure classが再現した場合だけquality failureへ昇格します。flaky candidateはdiagnosticのままです。
+生成manifest v2は小さくboundedなcoverage-guided explorationを既定で有効化し、`maxStates=32` / `maxTransitions=64` / `maxDepth=4`から開始します。frontierはsemantic state noveltyと未実行actionを優先し、各stateはfresh contextへtrace replayして再構成します。**destructive actionは常に探索対象外**です。bounded mutationはself-containedな`static-output`実行に加え、managed command serverでmanifest v2が`server.mutationPolicy = "bounded-managed"`を明示した場合だけ許可します。command modeはそれ以外deny-by-default、external serverはsafe actionのみです。探索failureは、発見したtraceそのものをfresh contextで再実行し、全attemptで同じfailure classが再現した場合だけquality failureへ昇格します。flaky candidateはdiagnosticのままです。
 
 ## Approved semantic runtime integration
 

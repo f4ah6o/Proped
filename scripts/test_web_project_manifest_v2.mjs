@@ -18,6 +18,7 @@ assert.equal(generated.project.framework, "next");
 assert.equal(generated.server.mode, "review-required");
 assert.equal(generated.server.start, null);
 assert.deepEqual(generated.server.hooks, { reset: null, readOnly: [] });
+assert.equal(generated.server.mutationPolicy, "deny");
 assert.equal(generated.replay.attempts, 3);
 assert.equal(generated.sandbox.mode, "strict");
 assert.ok(generated.properties.packs.includes("browser-safety"));
@@ -38,6 +39,17 @@ const browserArgv = compiled.manifest.stages[1].command;
 const hookArgIndex = browserArgv.indexOf("--server-hooks-json");
 assert.ok(hookArgIndex > 0);
 assert.deepEqual(JSON.parse(browserArgv[hookArgIndex + 1]), { reset: null, readOnly: [] });
+const mutationArgIndex = browserArgv.indexOf("--allow-managed-mutations");
+assert.ok(mutationArgIndex > 0);
+assert.equal(browserArgv[mutationArgIndex + 1], "false");
+assert.throws(() => validateWebProjectManifestV2({ ...generated, server: { ...generated.server, mode: "external", mutationPolicy: "bounded-managed", url: "http://127.0.0.1:3000", outputDir: null, start: null } }), /requires command server mode/);
+const boundedManaged = {
+  ...generated,
+  server: { ...generated.server, mode: "command", mutationPolicy: "bounded-managed", outputDir: null, url: null, start: ["node", "server.mjs"] },
+};
+validateWebProjectManifestV2(boundedManaged);
+const boundedCommand = compileWebProjectManifestV2(boundedManaged, ROOT).manifest.stages.at(-1).command;
+assert.equal(boundedCommand[boundedCommand.indexOf("--allow-managed-mutations") + 1], "true");
 assert.throws(() => validateWebProjectManifestV2({ ...generated, server: { ...generated.server, hooks: { reset: null, readOnly: [{ id: "bad", method: "POST", path: "/x", expectedStatus: [200], timeoutMs: 1, maxBytes: 1 }] } } }), /GET or HEAD/);
 
 const optional = [

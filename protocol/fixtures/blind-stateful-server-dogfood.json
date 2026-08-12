@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-12",
+  "issue": "20260812-blind-stateful-server-dogfood.md",
+  "realTargets": [
+    {
+      "id": "osc2026",
+      "repository": "moonbitlang/OSC2026",
+      "revision": "ef740c25e924d873b5be760923f02262e98d9c24",
+      "sourceModified": false,
+      "projectAdapterLoc": 0,
+      "inspection": {
+        "framework": "python-http-server",
+        "mode": "server-rendered",
+        "serve": [
+          "python3",
+          "server.py"
+        ],
+        "serverFrameworks": [
+          "python-http.server"
+        ],
+        "persistence": [
+          "python-sqlite3"
+        ],
+        "authSurfaceDetected": true
+      },
+      "managedLaunch": {
+        "status": "pass",
+        "loopbackOnly": true
+      },
+      "browserDogfood": {
+        "status": "pass",
+        "selfHostOriginInputDiscovered": true,
+        "adminConnectionEstablished": true,
+        "readSurfaceObserved": true,
+        "sessionBoundarySurfaces": [
+          "GitHub administrator login",
+          "GitHub OAuth session storage"
+        ],
+        "mutationSurfaces": [
+          "create registration",
+          "save status",
+          "archive record"
+        ],
+        "durableStateSurface": "SQLite"
+      },
+      "verdict": "generic-unverified-without-approved-server-projection",
+      "note": "Real OSS validates blind runtime/server/browser discovery and stateful surfaces. Full server-state correctness is intentionally not promoted without a read-only server projection."
+    },
+    {
+      "id": "taskflow",
+      "repository": "moonbit-community/isomorphic/taskflow",
+      "revision": "590ac1c4de71050419cc6643942e0d1f181301aa",
+      "sourceModified": false,
+      "projectAdapterLoc": 0,
+      "targetCapabilities": [
+        "browser UI",
+        "SQLite",
+        "register/login session",
+        "task CRUD",
+        "invalid status transition"
+      ],
+      "prepare": {
+        "status": "dependency-toolchain-drift",
+        "scratchDependencyCompatibilityShimOnly": true
+      },
+      "managedLaunch": {
+        "status": "blocked-upstream-runtime",
+        "failureClass": "mocket-native-bytesview-compatibility",
+        "evidence": "server reaches listen; first HTTP request panics in mocket native Bytes::view/from_cstr"
+      },
+      "verdict": "target-runtime-incompatible"
+    }
+  ],
+  "genericAcceptance": {
+    "test": "scripts/test_web_stateful_server_pack.mjs",
+    "serverProjectionRequired": true,
+    "crudFamilies": [
+      "create",
+      "read",
+      "update",
+      "delete"
+    ],
+    "reloadPersistence": true,
+    "serverRestartPersistence": true,
+    "invalidOperation": "generic-safe-rejection",
+    "sessionBoundary": true,
+    "replayAttempts": 3,
+    "replayProjectionDeterministic": true,
+    "managedMutationDefault": "deny",
+    "managedMutationOptIn": "bounded-managed"
+  },
+  "safety": {
+    "hostCredentialEnvironment": "deny",
+    "externalSyncRisk": "destructive",
+    "domainUnverifiedSilentPass": false
+  }
+}

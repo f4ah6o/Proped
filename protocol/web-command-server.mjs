@@ -2,7 +2,7 @@ import net from "node:net";
 import { spawn } from "node:child_process";
 import { safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
 
-export const WEB_COMMAND_SERVER_VERSION = "1";
+export const WEB_COMMAND_SERVER_VERSION = "2";
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function boundedAppend(current, chunk, maximum = 8192) {
@@ -63,12 +63,7 @@ function candidateRecord(url, source) {
   return { url, source };
 }
 
-export async function startWebCommandServer(projectRoot, argv, timeoutMs, options = {}) {
-  if (!Array.isArray(argv) || argv.length === 0 || argv.some((part) => typeof part !== "string" || !part)) throw new Error("command server requires non-empty argv");
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) throw new Error("command server timeout must be a positive integer");
-  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  if (typeof fetchImpl !== "function") throw new Error("command server requires fetch");
-  const requestedPort = options.requestedPort ?? await reservePort();
+async function startReadyChild(projectRoot, argv, timeoutMs, { fetchImpl, requestedPort }) {
   let stdoutTail = "";
   let stderrTail = "";
   const candidates = new Map();
@@ -126,15 +121,43 @@ export async function startWebCommandServer(projectRoot, argv, timeoutMs, option
     throw error;
   }
   return {
+    child,
     url: selected.url,
-    stop: async () => stopChild(child),
-    diagnostics: [{
+    diagnostic: {
       kind: "server-command",
       argv,
       requestedPort,
       selectedUrlSource: selected.source,
       discoveredLoopbackUrls: [...candidates.values()].map((candidate) => ({ url: candidate.url, source: candidate.source })),
       credentialEnvironment: "environment-allowlist-deny",
-    }],
+    },
+  };
+}
+
+export async function startWebCommandServer(projectRoot, argv, timeoutMs, options = {}) {
+  if (!Array.isArray(argv) || argv.length === 0 || argv.some((part) => typeof part !== "string" || !part)) throw new Error("command server requires non-empty argv");
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) throw new Error("command server timeout must be a positive integer");
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== "function") throw new Error("command server requires fetch");
+  const requestedPort = options.requestedPort ?? await reservePort();
+  const diagnostics = [];
+  let generation = 0;
+  let current = await startReadyChild(projectRoot, argv, timeoutMs, { fetchImpl, requestedPort });
+  generation += 1;
+  diagnostics.push({ ...current.diagnostic, generation });
+
+  return {
+    get url() { return current.url; },
+    get generation() { return generation; },
+    diagnostics,
+    stop: async () => stopChild(current.child),
+    restart: async () => {
+      const previousUrl = current.url;
+      await stopChild(current.child);
+      current = await startReadyChild(projectRoot, argv, timeoutMs, { fetchImpl, requestedPort });
+      generation += 1;
+      diagnostics.push({ ...current.diagnostic, kind: "server-command-restart", generation, previousUrl, stableOrigin: new URL(previousUrl).origin === new URL(current.url).origin });
+      return { url: current.url, generation };
+    },
   };
 }

@@ -264,6 +264,39 @@ function json(value) {
   assert.deepEqual(report.runtime.server.frameworks, ["hono"]);
 }
 
+
+{
+  const root = fixture({
+    "index.html": "<!doctype html><script>fetch('/api/items')</script>",
+    "server.py": `
+import os
+import sqlite3
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+PORT = int(os.environ.get("PORT", "4174"))
+SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self): pass
+    def do_POST(self): pass
+    def do_PUT(self): pass
+    def do_DELETE(self): pass
+ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+`,
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "python-http-server");
+  assert.equal(report.project.mode, "server-rendered");
+  assert.deepEqual(report.commands.serve.argv, ["python3", "server.py"]);
+  assert.equal(report.runtime.server.detected, true);
+  assert.ok(report.runtime.server.frameworks.includes("python-http.server"));
+  assert.ok(report.runtime.server.persistenceDependencies.includes("python-sqlite3"));
+  assert.equal(report.runtime.auth.detected, true);
+  assert.equal(report.runtime.server.relativeApiCalls, 1);
+  assert.ok(report.runtime.environment.variables.some((item) => item.name === "SESSION_SECRET" && item.exposure === "sensitive-candidate"));
+  const manifest = createWebProjectManifestV2FromInspection(report, { projectRoot: ".", id: "python-stateful" });
+  assert.equal(manifest.server.mode, "command");
+  assert.equal(manifest.server.mutationPolicy, "deny");
+}
+
 const committed = [
   ["web/next-ssr-hydration", "next"],
   ["web/nuxt-ssr-hydration", "nuxt"],

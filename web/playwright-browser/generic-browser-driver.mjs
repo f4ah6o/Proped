@@ -39,9 +39,13 @@ function targetKey(target) {
 
 function riskFor(action) {
   const text = `${action.target?.name ?? ""} ${action.label ?? ""}`.toLowerCase();
-  if (/\b(delete account|purchase|buy|pay|send message|send email|logout|log out|sign out)\b/.test(text)) return "destructive";
-  if (/\b(delete|remove|clear|archive|submit|save|create|add)\b/.test(text)) return "bounded-mutation";
+  if (/\b(delete account|purchase|buy|pay|send message|send email|notify|sync|approve|publish|release|grant|logout|log out|sign out)\b|永久删除|付款|支付|购买|发送邮件|发送消息|通知|同步|通过|批准|审核|发放|上架|下架|批量|导入|退出登录|注销/.test(text)) return "destructive";
+  if (/\b(delete|remove|clear|archive|submit|save|create|add|update|edit)\b|删除|移除|清除|归档|提交|保存|创建|新增|添加|更新|修改|编辑|调整|恢复/.test(text)) return "bounded-mutation";
   return "safe";
+}
+
+function isNavigationRace(error) {
+  return /Execution context was destroyed|most likely because of a navigation|Target page, context or browser has been closed/.test(String(error?.message ?? error));
 }
 
 export class GenericPlaywrightBrowserDriver {
@@ -60,12 +64,13 @@ export class GenericPlaywrightBrowserDriver {
     indexedDBAdapter = null,
     beforeReset = null,
     readOnlyStateProbe = null,
+    restartServer = null,
     approvedSemanticRuntime = null,
   } = {}) {
     if (!url) throw new Error("GenericPlaywrightBrowserDriver requires url");
     this.url = new URL(url).href;
     this.origin = new URL(this.url).origin;
-    this.inputCorpus = inputCorpus;
+    this.inputCorpus = [...new Set([...inputCorpus, this.origin, this.url])];
     this.timeoutMs = timeoutMs;
     this.headless = headless;
     this.viewport = viewport;
@@ -85,8 +90,10 @@ export class GenericPlaywrightBrowserDriver {
     this.indexedDBAdapter = indexedDBAdapter;
     if (beforeReset !== null && typeof beforeReset !== "function") throw new Error("beforeReset must be a function or null");
     if (readOnlyStateProbe !== null && typeof readOnlyStateProbe !== "function") throw new Error("readOnlyStateProbe must be a function or null");
+    if (restartServer !== null && typeof restartServer !== "function") throw new Error("restartServer must be a function or null");
     this.beforeReset = beforeReset;
     this.readOnlyStateProbe = readOnlyStateProbe;
+    this.restartServerHook = restartServer;
     this.approvedSemanticRuntime = approvedSemanticRuntime;
     this.consoleEntries = [];
     this.routeEntries = [];
@@ -458,6 +465,36 @@ export class GenericPlaywrightBrowserDriver {
     return this.locatorFromResolver(target, resolver);
   }
 
+  async settleAfterPossibleNavigation() {
+    let lastError = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        return await this.settle();
+      } catch (error) {
+        if (!isNavigationRace(error)) throw error;
+        lastError = error;
+        await this.page.waitForTimeout(25 * (attempt + 1));
+        await this.page.waitForLoadState("domcontentloaded", { timeout: Math.min(this.timeoutMs, 1_000) }).catch(() => {});
+      }
+    }
+    throw lastError ?? new Error("semantic settle failed after navigation");
+  }
+
+  async snapshotAfterPossibleNavigation() {
+    let lastError = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        return await this.snapshot();
+      } catch (error) {
+        if (!isNavigationRace(error)) throw error;
+        lastError = error;
+        await this.page.waitForTimeout(25 * (attempt + 1));
+        await this.page.waitForLoadState("domcontentloaded", { timeout: Math.min(this.timeoutMs, 1_000) }).catch(() => {});
+      }
+    }
+    throw lastError ?? new Error("semantic snapshot failed after navigation");
+  }
+
   async execute(action) {
     if (!this.page) throw new Error("generic browser session is not active");
     const before = await this.snapshot();
@@ -477,9 +514,9 @@ export class GenericPlaywrightBrowserDriver {
     } else if (action.kind === "press") await locator.press(String(action.input));
     else throw new Error(`unsupported generic browser action: ${action.kind}`);
 
-    const settle = await this.settle();
+    const settle = await this.settleAfterPossibleNavigation();
     this.lastSettle = settle;
-    const after = await this.snapshot();
+    const after = await this.snapshotAfterPossibleNavigation();
     return {
       snapshot: after,
       settle,
@@ -490,6 +527,18 @@ export class GenericPlaywrightBrowserDriver {
   async reload() {
     await this.page.reload({ waitUntil: "domcontentloaded" });
     this.lastSettle = await this.settle();
+    return this.snapshot();
+  }
+
+  async restartManagedServer() {
+    if (!this.restartServerHook) throw new Error("managed server restart is not available");
+    if (!this.page) throw new Error("generic browser session is not active");
+    const restarted = await this.restartServerHook();
+    if (restarted?.url && new URL(restarted.url).origin !== this.origin) {
+      throw new Error("managed server restart changed origin");
+    }
+    await this.page.reload({ waitUntil: "domcontentloaded", timeout: this.timeoutMs });
+    await this.settle();
     return this.snapshot();
   }
 

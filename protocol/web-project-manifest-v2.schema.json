@@ -238,6 +238,12 @@
               }
             }
           }
+        },
+        "mutationPolicy": {
+          "enum": [
+            "deny",
+            "bounded-managed"
+          ]
         }
       }
     },

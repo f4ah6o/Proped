@@ -15,7 +15,7 @@ import { buildWebSemanticOracleBoundary } from "../protocol/web-semantic-oracle-
 import { startWebCommandServer } from "../protocol/web-command-server.mjs";
 
 function usage(message) {
-  const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --server-hooks-json <json-object>\n  --property-packs-json <json-array>\n  --semantic-hints-json <json|null>\n  --exploration-json <json-object>\n`;
+  const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --allow-managed-mutations <true|false>\n  --server-hooks-json <json-object>\n  --property-packs-json <json-array>\n  --semantic-hints-json <json|null>\n  --exploration-json <json-object>\n`;
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
   else console.log(help);
   process.exit(message ? 2 : 0);
@@ -34,6 +34,7 @@ function parseArgs(argv) {
     locale: "en-US",
     timezone: "UTC",
     readinessTimeoutMs: 30_000,
+    allowManagedMutations: false,
     propertyPacks: [],
     semanticHints: null,
     exploration: { mode: "off", maxStates: 32, maxTransitions: 64, maxDepth: 4, seed: 1 },
@@ -62,6 +63,7 @@ function parseArgs(argv) {
     } else if (key === "--locale") options.locale = value;
     else if (key === "--timezone") options.timezone = value;
     else if (key === "--readiness-timeout") options.readinessTimeoutMs = Number(value);
+    else if (key === "--allow-managed-mutations") options.allowManagedMutations = value === "true";
     else if (key === "--server-hooks-json") options.serverHooks = JSON.parse(value);
     else if (key === "--property-packs-json") options.propertyPacks = JSON.parse(value);
     else if (key === "--semantic-hints-json") options.semanticHints = JSON.parse(value);
@@ -78,6 +80,7 @@ function parseArgs(argv) {
   if (options.serverMode === "command" && (!Array.isArray(options.start) || options.start.length === 0)) usage("command mode requires --start-json");
   if (options.serverMode === "external" && !options.url) usage("external mode requires --url");
   if (!Number.isSafeInteger(options.readinessTimeoutMs) || options.readinessTimeoutMs < 1) usage("--readiness-timeout must be a positive integer");
+  if (options.allowManagedMutations && options.serverMode !== "command") usage("--allow-managed-mutations is limited to managed command servers");
   try { options.serverHooks = validateWebServerHooks(options.serverHooks); } catch (error) { usage(error.message); }
   if (!Array.isArray(options.propertyPacks) || options.propertyPacks.some((pack) => typeof pack !== "string")) usage("--property-packs-json must be a string array");
   try { options.semanticHints = validateApprovedSemanticHints(options.semanticHints); } catch (error) { usage(error.message); }
@@ -165,6 +168,7 @@ try {
     indexedDBAdapter: options.indexedDBAdapter,
     beforeReset: options.serverHooks.reset ? async () => { await hookClient.reset(); } : null,
     readOnlyStateProbe: options.serverHooks.readOnly.length ? async () => hookClient.readOnlyState() : null,
+    restartServer: options.serverMode === "command" ? async () => server.restart() : null,
     approvedSemanticRuntime,
   });
   const snapshot = await driver.reset();
@@ -174,7 +178,7 @@ try {
     : { ok: true, runtime: "web-volatility-miner", runs: options.volatilityProbeRuns, candidateCount: 0, likelyNoiseCount: 0, reviewRequiredCount: 0, candidates: [], appliedCount: 0, semanticHash: semanticHash({ runs: options.volatilityProbeRuns, candidates: [] }) };
   const campaignOptions = {
     packs: [...new Set([...options.propertyPacks, ...approvedSemanticRuntime.propertyPacks])],
-    allowBoundedMutations: options.serverMode === "static-output",
+    allowBoundedMutations: options.serverMode === "static-output" || (options.serverMode === "command" && options.allowManagedMutations),
     maxProbes: 12,
   };
   const propertyCampaign = await runGenericPropertyPacks(driver, campaignOptions);
@@ -187,7 +191,8 @@ try {
     counts[action.destructiveRisk] = (counts[action.destructiveRisk] ?? 0) + 1;
     return counts;
   }, {});
-  const allowedExplorationRisks = new Set(options.serverMode === "static-output" ? ["safe", "bounded-mutation"] : ["safe"]);
+  const allowBoundedExploration = options.serverMode === "static-output" || (options.serverMode === "command" && options.allowManagedMutations);
+  const allowedExplorationRisks = new Set(allowBoundedExploration ? ["safe", "bounded-mutation"] : ["safe"]);
   const exploration = options.exploration.mode === "coverage-guided"
     ? await exploreWebCoverageGuided(driver, {
       maxStates: options.exploration.maxStates,

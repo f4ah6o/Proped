@@ -21,8 +21,13 @@ export function evaluateFailureReplayCampaigns(campaigns) {
       failureCount: campaign?.failures?.length ?? 0,
       canonicalFailureClassIds: [...entries.keys()].sort(),
       campaignSemanticHash: campaign?.semanticHash ?? null,
+      replayProjectionHash: campaign?.replayProjectionHash ?? null,
     };
   });
+  const replayProjectionHashes = runs.map((run) => run.replayProjectionHash).filter(Boolean);
+  const replayProjectionDeterministic = replayProjectionHashes.length === runs.length
+    ? new Set(replayProjectionHashes).size === 1
+    : null;
   const allIds = [...new Set(runs.flatMap((run) => run.canonicalFailureClassIds))].sort();
   const stableIds = allIds.filter((id) => runs.every((run) => run.canonicalFailureClassIds.includes(id)));
   const unstableIds = allIds.filter((id) => !stableIds.includes(id));
@@ -43,6 +48,7 @@ export function evaluateFailureReplayCampaigns(campaigns) {
     version: WEB_REPLAY_GATE_VERSION,
     attempts: campaigns.length,
     deterministic: unstableIds.length === 0,
+    replayProjectionDeterministic,
     stableFailureCount: stableFailures.length,
     stableFailureClassIds: stableIds,
     unstableFailureClassIds: unstableIds,
@@ -54,9 +60,10 @@ export function evaluateFailureReplayCampaigns(campaigns) {
     version: report.version,
     attempts: report.attempts,
     deterministic: report.deterministic,
+    replayProjectionDeterministic: report.replayProjectionDeterministic,
     stableFailureClassIds: report.stableFailureClassIds,
     unstableFailureClassIds: report.unstableFailureClassIds,
-    runs: report.runs.map(({ attempt, canonicalFailureClassIds }) => ({ attempt, canonicalFailureClassIds })),
+    runs: report.runs.map(({ attempt, canonicalFailureClassIds, replayProjectionHash }) => ({ attempt, canonicalFailureClassIds, replayProjectionHash })),
   });
   return report;
 }

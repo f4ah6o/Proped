@@ -14,7 +14,7 @@ const LOCKFILES = Object.freeze([
   ["npm-shrinkwrap.json", "npm"],
 ]);
 
-const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".vue", ".html"]);
+const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".vue", ".html", ".py"]);
 const SKIP_DIRECTORIES = new Set([
   ".git",
   "node_modules",
@@ -277,6 +277,8 @@ function detectFramework(root, pkg, evidence, ambiguities) {
   const dependencies = allDependencies(pkg);
   const has = (name) => hasDependency(dependencies, name);
   const candidates = [];
+  const serverPy = readTextIfSmall(path.join(root, "server.py"));
+  if (serverPy && /\b(?:ThreadingHTTPServer|HTTPServer)\b/.test(serverPy)) candidates.push({ name: "python-http-server", confidence: 0.99, evidence: "source:server.py:http.server" });
   if (has("@docusaurus/core")) candidates.push({ name: "docusaurus", confidence: 1, evidence: "dependency:@docusaurus/core" });
   if (has("waku")) candidates.push({ name: "waku", confidence: 1, evidence: "dependency:waku" });
   if (has("next")) candidates.push({ name: "next", confidence: 1, evidence: "dependency:next" });
@@ -298,7 +300,7 @@ function detectFramework(root, pkg, evidence, ambiguities) {
   if (candidates.length === 0) candidates.push({ name: "unknown", confidence: 0, evidence: "no-known-framework-signal" });
 
   const ranked = candidates.sort((a, b) => {
-    const priority = (name) => ["next", "nuxt", "docusaurus", "waku"].includes(name) ? 3 : name.startsWith("react") || name.startsWith("vue") ? 2 : 1;
+    const priority = (name) => ["next", "nuxt", "docusaurus", "waku", "python-http-server"].includes(name) ? 3 : name.startsWith("react") || name.startsWith("vue") ? 2 : 1;
     return priority(b.name) - priority(a.name) || b.confidence - a.confidence;
   });
   const primary = ranked[0];
@@ -346,7 +348,13 @@ function inferModeAndOutput(root, framework, pkg, evidence, ambiguities) {
   let outputDir = null;
   let outputConfidence = 0;
 
-  if (framework.name === "waku") {
+  if (framework.name === "python-http-server") {
+    mode = "server-rendered";
+    modeConfidence = 0.99;
+    outputDir = null;
+    outputConfidence = 0;
+    evidence.push("python-http-server:managed-server-runtime");
+  } else if (framework.name === "waku") {
     mode = "server-rendered";
     modeConfidence = 0.99;
     outputDir = null;
@@ -414,6 +422,13 @@ function inferModeAndOutput(root, framework, pkg, evidence, ambiguities) {
 
 function inferCommands(pkg, packageManager, framework, mode, ambiguities) {
   const scripts = pkg?.scripts ?? {};
+  if (framework.name === "python-http-server") {
+    return {
+      install: { argv: null, confidence: 1, source: "stdlib" },
+      build: { argv: null, confidence: 1, source: "none-required" },
+      serve: { argv: ["python3", "server.py"], confidence: 0.99, source: "server.py" },
+    };
+  }
   const manager = packageManager?.name ?? null;
   const prefix = manager ? (packageManager.corepack ? ["corepack", manager] : [manager]) : null;
   const run = (script) => prefix ? [...prefix, "run", script] : null;
@@ -504,6 +519,9 @@ function detectEnvironmentRequirements(root, source, evidence) {
     /\bprocess\.env\[\s*["']([A-Z_][A-Z0-9_]*)["']\s*\]/g,
     /\bimport\.meta\.env\.([A-Z_][A-Z0-9_]*)\b/g,
     /\bimport\.meta\.env\[\s*["']([A-Z_][A-Z0-9_]*)["']\s*\]/g,
+    /\bos\.environ\.get\(\s*["']([A-Z_][A-Z0-9_]*)["']/g,
+    /\bos\.getenv\(\s*["']([A-Z_][A-Z0-9_]*)["']/g,
+    /\bos\.environ\[\s*["']([A-Z_][A-Z0-9_]*)["']\s*\]/g,
   ];
   for (const pattern of patterns) for (const match of source.matchAll(pattern)) add(match[1], "source");
 
@@ -578,10 +596,13 @@ function detectRuntimeHints(root, pkg, evidence) {
   const authDependencies = [
     "next-auth", "@auth/core", "@clerk/nextjs", "@clerk/react", "lucia", "@supabase/supabase-js", "firebase",
   ].filter(hasDep);
+  const sourceAuthDetected = /(?:\boauth\b|\bsession(?:[_-]|\b)|\bset-cookie\b|\bsimplecookie\b|\bauthorization\b)/i.test(source);
   const serverFrameworks = ["hono", "express", "fastify", "koa", "@hapi/hapi"].filter(hasDep);
+  if (/\b(?:ThreadingHTTPServer|HTTPServer)\b/.test(source)) serverFrameworks.push("python-http.server");
   const serverPersistenceDependencies = ["drizzle-orm", "prisma", "@prisma/client", "better-sqlite3", "sqlite3", "pg", "mysql2", "mongodb", "redis", "ioredis"].filter(hasDep);
+  if (/\b(?:import\s+sqlite3|from\s+sqlite3\s+import)\b/.test(source) && !serverPersistenceDependencies.includes("python-sqlite3")) serverPersistenceDependencies.push("python-sqlite3");
   const relativeApiCalls = (source.match(/\bfetch\s*\(\s*["'`]\/(?:api|rpc|trpc)(?:[\/"'`?]|$)/g) ?? []).length;
-  const serverRouteSyntaxDetected = /\bnew\s+Hono\s*\(|\b(?:app|router)\.(?:get|post|put|patch|delete)\s*\(/.test(source);
+  const serverRouteSyntaxDetected = /\bnew\s+Hono\s*\(|\b(?:app|router)\.(?:get|post|put|patch|delete)\s*\(|\bdo_(?:GET|POST|PUT|PATCH|DELETE)\s*\(/.test(source);
   const serverDetected = serverFrameworks.length > 0 || serverPersistenceDependencies.length > 0 || serverRouteSyntaxDetected;
   let routeModel = "unknown";
   if (hasDep("react-router-dom") || hasDep("react-router")) routeModel = "react-router";
@@ -593,6 +614,7 @@ function detectRuntimeHints(root, pkg, evidence) {
   if (dexie) evidence.push("state:dexie");
   if (websocket) evidence.push("runtime:websocket");
   if (authDependencies.length) evidence.push(`auth:${authDependencies.join(",")}`);
+  if (sourceAuthDetected) evidence.push("auth:source-session-signal");
   if (serverFrameworks.length) evidence.push(`server-framework:${serverFrameworks.join(",")}`);
   if (serverPersistenceDependencies.length) evidence.push(`server-persistence:${serverPersistenceDependencies.join(",")}`);
   if (relativeApiCalls > 0) evidence.push(`runtime:relative-api-calls:${relativeApiCalls}`);
@@ -610,7 +632,7 @@ function detectRuntimeHints(root, pkg, evidence) {
     routing: { model: routeModel, confidence: routeModel === "unknown" ? 0 : 0.95 },
     websocket: { detected: websocket, confidence: websocket ? 0.9 : 0 },
     serviceWorker: { detected: serviceWorker, confidence: serviceWorker ? 0.85 : 0 },
-    auth: { detected: authDependencies.length > 0, dependencies: authDependencies, confidence: authDependencies.length ? 0.95 : 0 },
+    auth: { detected: authDependencies.length > 0 || sourceAuthDetected, dependencies: authDependencies, confidence: authDependencies.length ? 0.95 : sourceAuthDetected ? 0.8 : 0 },
     server: {
       detected: serverDetected,
       frameworks: serverFrameworks,

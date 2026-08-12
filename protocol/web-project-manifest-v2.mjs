@@ -82,7 +82,7 @@ export function validateWebProjectManifestV2(manifest) {
   command(manifest.bootstrap.install, "bootstrap.install");
   command(manifest.bootstrap.build, "bootstrap.build");
 
-  exactKeys(manifest.server, new Set(["mode", "outputDir", "start", "url", "readiness", "hooks"]), "server");
+  exactKeys(manifest.server, new Set(["mode", "outputDir", "start", "url", "readiness", "hooks", "mutationPolicy"]), "server");
   if (!["static-output", "command", "external", "review-required"].includes(manifest.server.mode)) fail("server.mode is invalid");
   string(manifest.server.outputDir, "server.outputDir", { nullable: true });
   command(manifest.server.start, "server.start");
@@ -91,6 +91,8 @@ export function validateWebProjectManifestV2(manifest) {
   if (manifest.server.readiness.strategy !== "semantic-quiescence") fail("server.readiness.strategy must be semantic-quiescence");
   positiveInt(manifest.server.readiness.timeoutMs, "server.readiness.timeoutMs");
   validateWebServerHooks(manifest.server.hooks);
+  if (manifest.server.mutationPolicy !== undefined && !["deny", "bounded-managed"].includes(manifest.server.mutationPolicy)) fail("server.mutationPolicy is invalid");
+  if (manifest.server.mutationPolicy === "bounded-managed" && manifest.server.mode !== "command") fail("bounded-managed mutation policy requires command server mode");
   if (manifest.server.mode === "static-output" && !manifest.server.outputDir) fail("static-output server requires outputDir");
   if (manifest.server.mode === "command" && !manifest.server.start) fail("command server requires start argv");
   if (manifest.server.mode === "external" && !manifest.server.url) fail("external server requires url");
@@ -228,6 +230,7 @@ export function createWebProjectManifestV2FromInspection(inspection, { projectRo
       url: null,
       readiness: { strategy: "semantic-quiescence", timeoutMs: 30_000 },
       hooks: { reset: null, readOnly: [] },
+      mutationPolicy: "deny",
     },
     browser: {
       engine: "chromium",
@@ -305,6 +308,7 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
     "--locale", manifest.browser.locale,
     "--timezone", manifest.browser.timezone,
     "--readiness-timeout", String(manifest.server.readiness.timeoutMs),
+    "--allow-managed-mutations", String(manifest.server.mutationPolicy === "bounded-managed"),
     "--server-hooks-json", JSON.stringify(manifest.server.hooks),
     "--property-packs-json", JSON.stringify(manifest.properties.packs),
     "--semantic-hints-json", JSON.stringify(manifest.semantics?.approved ?? null),

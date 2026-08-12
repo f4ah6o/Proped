@@ -130,7 +130,7 @@ Every Web failure can be assigned a stable canonical class in addition to its hu
 
 ## Generic Web property packs
 
-Low-config Generic Browser Mode currently ships `browser-safety`, `navigation`, and `reload-persistence`. The packs are deliberately conservative: uncaught exceptions and observable local/session-storage drift are quality failures; visible state that disappears on reload without persistence evidence is an advisory candidate rather than an automatic CI failure.
+Low-config Generic Browser Mode currently ships `browser-safety`, `navigation`, `reload-persistence`, and `stateful-server`. The packs are deliberately conservative: uncaught exceptions and observable local/session-storage drift are quality failures; visible state that disappears on reload without persistence evidence is an advisory candidate rather than an automatic CI failure. `stateful-server` can exercise discovered Create/Read/Update/Delete candidates, invalid input, reload, managed server restart, session boundaries, and replay, but it reaches `generic-covered` only when an approved read-only server hook projection proves that server state—not merely DOM, IndexedDB, or browser storage—changed and persisted.
 
 This already surfaces TodoMVC React and Vue reload-state loss from generic discovery alone, with no TodoMVC-specific Playwright adapter or semantic contract.
 
@@ -185,7 +185,7 @@ node scripts/web_semantic_approval.mjs compile review.json approvals.json --outp
 
 ## Coverage-guided Generic Browser exploration
 
-Generated manifest v2 enables a small bounded coverage-guided campaign by default, starting with `maxStates=32`, `maxTransitions=64`, and `maxDepth=4`. The frontier prioritizes semantic-state novelty and previously unseen actions, reconstructing each state by replaying its trace in a fresh context. **Destructive actions are always excluded**; bounded mutations are allowed only for self-contained `static-output` runs, while command/external servers explore safe actions only. Exploration failures are promoted only when the exact discovered trace reproduces the same failure class in every fresh replay attempt; flaky candidates remain diagnostics.
+Generated manifest v2 enables a small bounded coverage-guided campaign by default, starting with `maxStates=32`, `maxTransitions=64`, and `maxDepth=4`. The frontier prioritizes semantic-state novelty and previously unseen actions, reconstructing each state by replaying its trace in a fresh context. **Destructive actions are always excluded**. Bounded mutations are allowed for self-contained `static-output` runs and, for managed command servers only, when manifest v2 explicitly sets `server.mutationPolicy = "bounded-managed"`; command mode otherwise remains deny-by-default and external servers remain safe-action-only. Exploration failures are promoted only when the exact discovered trace reproduces the same failure class in every fresh replay attempt; flaky candidates remain diagnostics.
 
 ## Approved semantic runtime integration
 

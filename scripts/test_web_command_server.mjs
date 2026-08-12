@@ -17,7 +17,7 @@ try {
       if (req.url === '/app/') { res.writeHead(200, {'content-type':'text/plain'}); res.end('ok'); return; }
       res.writeHead(404); res.end('no');
     });
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(Number(process.env.PORT), '127.0.0.1', () => {
       const address = server.address();
       console.log('Local: http://127.0.0.1:' + address.port + '/app/');
       console.log('External: https://example.invalid:' + address.port + '/');
@@ -32,9 +32,14 @@ try {
   let server;
   try {
     server = await startWebCommandServer(root, [process.execPath, child], 5000, { requestedPort: 39123 });
-    assert.match(server.url, /^http:\/\/127\.0\.0\.1:\d+\/app\/$/);
-    assert.notEqual(server.url, "http://127.0.0.1:39123/");
-    assert.equal(server.diagnostics[0].selectedUrlSource, "stdout");
+    assert.equal(server.url, "http://127.0.0.1:39123/");
+    assert.equal(server.generation, 1);
+    const restarted = await server.restart();
+    assert.equal(restarted.url, server.url);
+    assert.equal(server.generation, 2);
+    assert.equal(server.diagnostics.at(-1).kind, "server-command-restart");
+    assert.equal(server.diagnostics.at(-1).stableOrigin, true);
+    assert.equal(server.diagnostics[0].selectedUrlSource, "reserved-port");
     assert.equal(server.diagnostics[0].credentialEnvironment, "environment-allowlist-deny");
     assert.equal(server.diagnostics[0].discoveredLoopbackUrls.some((candidate) => candidate.url === "https://example.invalid/"), false);
   } finally {
@@ -58,7 +63,7 @@ try {
   try { process.kill(hangingPid, 0); } catch { alive = false; }
   assert.equal(alive, false, 'readiness failure must terminate the child process');
 
-  console.log(JSON.stringify({ ok: true, runtime: "web-command-server-test", fallbackToStdoutUrl: true, splitChunkUrlDiscovery: true, loopbackOnly: true, credentialsDenied: true, cleanupOnSuccess: true, cleanupOnReadinessFailure: true }));
+  console.log(JSON.stringify({ ok: true, runtime: "web-command-server-test", fallbackToStdoutUrl: true, splitChunkUrlDiscovery: true, loopbackOnly: true, credentialsDenied: true, cleanupOnSuccess: true, cleanupOnReadinessFailure: true, restartStableOrigin: true }));
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

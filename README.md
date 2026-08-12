@@ -91,6 +91,16 @@ The existing `web_project_*` and `web_semantic_*` scripts remain compatibility e
 
 A completed campaign reports `autoOnboarded`, `humanInterventions`, `interventionReasons`, canonical `failureClasses`, replay determinism, and explored state/transition/action counts. Stable quality failures are findings, not onboarding failures: a project can be `autoOnboarded: true` while `qualityPassed: false`. Critical inference ambiguity, missing compatible runtime, incomplete preparation, or an execution-stage failure remains explicit and requires intervention. By default the command is an explicit mutating orchestration and may run the existing credential-filtered dependency preparation phase; `--no-prepare` disables that behavior, `--offline` requests offline package-manager mode, and `--no-artifacts` suppresses `.proped/campaign/` output. Sandbox selection is safe-by-default for the host: Linux keeps strict isolation, macOS selects the constrained Seatbelt backend because Linux-equivalent strict process/home isolation is unavailable there, and no platform silently falls back to `caller-enforced`. The lower-level `web run` command remains non-installing and still requires preparation to be explicit.
 
+## Multi-project production benchmark
+
+`proped web benchmark <project...>` applies the same blind campaign contract to multiple targets without stopping after one intervention-required project. It reports auto-onboarding rate, intervention projects and counts, reproducible failure classes, replay determinism, and total explored states/transitions/actions. Quality findings are intentionally independent from onboarding completion: a project can be automatically onboarded and still contribute reproducible findings without making the benchmark itself fail.
+
+```bash
+./target/debug/proped web benchmark ./targets/app-a ./targets/app-b
+```
+
+Exit 0 means every target reached campaign execution without human intervention, exit 1 means at least one target requires intervention, and exit 2 is reserved for benchmark/CLI errors. The aggregate artifact is written to `.proped/benchmark/summary.json` by default. `--no-prepare`, `--offline`, `--no-artifacts`, and the campaign sandbox modes are supported.
+
 ## Explicit Web project preparation
 
 `web run` never installs target dependencies implicitly. If a generated manifest has an install command and the target dependency artifact is missing, `web run` exits with `prepare_required`. Run the explicit setup phase first:

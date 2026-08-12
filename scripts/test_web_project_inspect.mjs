@@ -117,6 +117,36 @@ function json(value) {
 {
   const root = fixture({
     "package.json": json({
+      name: "next-server-no-start-script",
+      dependencies: { next: "16.0.0", react: "19.0.0", "react-dom": "19.0.0" },
+    }),
+    "package-lock.json": "{}\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "next");
+  assert.equal(report.project.mode, "server-rendered");
+  assert.deepEqual(report.commands.serve.argv, ["npm", "exec", "--offline", "--", "next", "start"]);
+  assert.equal(report.commands.serve.source, "framework.next-start");
+}
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "nuxt-server-no-preview-script",
+      dependencies: { nuxt: "4.5.2", vue: "3.5.0" },
+    }),
+    "package-lock.json": "{}\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "nuxt");
+  assert.equal(report.project.mode, "server-rendered");
+  assert.deepEqual(report.commands.serve.argv, ["npm", "exec", "--offline", "--", "nuxi", "preview"]);
+  assert.equal(report.commands.serve.source, "framework.nuxt-preview");
+}
+
+{
+  const root = fixture({
+    "package.json": json({
       name: "next-static-app",
       scripts: { build: "next build", start: "next start" },
       dependencies: { next: "16.0.0", react: "19.0.0", "react-dom": "19.0.0" },

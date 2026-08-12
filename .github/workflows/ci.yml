@@ -128,6 +128,7 @@ jobs:
           node scripts/test_web_stateful_server_pack.mjs
           node scripts/test_web_project_onboarding_v2.mjs
           node scripts/test_web_project_campaign.mjs
+          node scripts/test_web_project_benchmark.mjs
           node scripts/test_web_project_prepare.mjs
           node scripts/test_web_node_engine.mjs
           node scripts/test_web_node_runtime.mjs

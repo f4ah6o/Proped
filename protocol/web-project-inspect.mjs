@@ -432,6 +432,13 @@ function inferCommands(pkg, packageManager, framework, mode, ambiguities) {
   const manager = packageManager?.name ?? null;
   const prefix = manager ? (packageManager.corepack ? ["corepack", manager] : [manager]) : null;
   const run = (script) => prefix ? [...prefix, "run", script] : null;
+  const packageExec = (binary, args = []) => {
+    if (!prefix) return null;
+    if (manager === "npm") return [...prefix, "exec", "--offline", "--", binary, ...args];
+    if (manager === "pnpm") return [...prefix, "exec", binary, ...args];
+    if (manager === "yarn") return [...prefix, "run", binary, ...args];
+    return null;
+  };
   let install = null;
   if (manager === "npm") install = [...prefix, "ci"];
   else if (manager === "pnpm") install = [...prefix, "install", "--frozen-lockfile"];
@@ -451,17 +458,32 @@ function inferCommands(pkg, packageManager, framework, mode, ambiguities) {
       break;
     }
   }
+  let serveSource = serveScript ? `scripts.${serveScript}` : null;
+  let serveConfidence = serve ? (serveScript === "dev" ? 0.75 : 0.95) : 0;
+  if (!serve && mode === "server-rendered" && framework.name === "next") {
+    serve = packageExec("next", ["start"]);
+    if (serve) {
+      serveSource = "framework.next-start";
+      serveConfidence = 0.9;
+    }
+  } else if (!serve && mode === "server-rendered" && framework.name === "nuxt") {
+    serve = packageExec("nuxi", ["preview"]);
+    if (serve) {
+      serveSource = "framework.nuxt-preview";
+      serveConfidence = 0.9;
+    }
+  }
   if (!serve && pkg && mode !== "component") {
     ambiguities.push({
       code: "no-serve-script",
-      message: "no start/preview/serve/dev script was found; server lifecycle needs review",
+      message: "no safe start/preview/serve/dev lifecycle could be inferred",
       severity: "info",
     });
   }
   return {
     install: { argv: install, confidence: install ? 0.95 : 0, source: install ? "package-manager" : null },
     build: { argv: build, confidence: build ? 1 : 0, source: build ? "scripts.build" : null },
-    serve: { argv: serve, confidence: serve ? (serveScript === "dev" ? 0.75 : 0.95) : 0, source: serveScript ? `scripts.${serveScript}` : null },
+    serve: { argv: serve, confidence: serveConfidence, source: serveSource },
   };
 }
 

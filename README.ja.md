@@ -91,6 +91,16 @@ Web onboardingのcanonical入口を`proped web`へまとめました。repositor
 
 完走時は`autoOnboarded`、`humanInterventions`、`interventionReasons`、canonical `failureClasses`、replay determinism、探索したstate/transition/action数を返します。安定再現したquality failureはonboarding失敗ではなくfindingとして扱うため、`autoOnboarded: true`かつ`qualityPassed: false`になり得ます。critical inference ambiguity、互換runtime不足、prepare未完了、execution stage失敗は明示的なintervention reasonになります。campaign command自体を明示的なmutating orchestrationとして扱うため、既定では既存のcredential-filtered dependency preparationを必要時に実行します。`--no-prepare`で禁止、`--offline`でpackage-manager offline mode要求、`--no-artifacts`で`.proped/campaign/`生成を抑止できます。sandboxはhostで利用できる安全側を自動選択し、Linuxではstrict、macOSではLinux相当のstrict process/home isolationが成立しないためconstrained Seatbelt backendを使います。`caller-enforced`へ暗黙downgradeしません。lower-levelの`web run`は従来どおり暗黙installせず、prepare明示の境界を維持します。
 
+## 複数projectのproduction benchmark
+
+`proped web benchmark <project...>`は同じblind campaign contractを複数targetへ適用し、1件がintervention-requiredでも残りを継続します。auto-onboarding率、intervention project数/回数、reproducible failure class、replay determinism、総states/transitions/actionsを集約します。quality findingとonboarding completionは意図的に別軸で、完全自動オンボードされたprojectからfailureを発見してもbenchmark自体の失敗にはしません。
+
+```bash
+./target/debug/proped web benchmark ./targets/app-a ./targets/app-b
+```
+
+exit 0は全targetがhuman interventionなしでcampaign executionへ到達、exit 1は1件以上がintervention-required、exit 2はbenchmark/CLI自体のerrorです。aggregate artifactは既定で`.proped/benchmark/summary.json`へ保存します。`--no-prepare`、`--offline`、`--no-artifacts`、campaignと同じsandbox modeを利用できます。
+
 ## 明示的なWeb project preparation
 
 `web run`はtarget dependencyを暗黙installしません。生成manifestにinstall commandがあり、dependency artifactが未準備なら`prepare_required`で終了します。先に明示setup phaseを実行します。

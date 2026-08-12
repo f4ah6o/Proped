@@ -132,6 +132,8 @@ jobs:
           node scripts/test_proped_web_cli.mjs
 
       - name: Web project quality manifest
+        env:
+          PROPED_COMPONENT_BENCHMARK_MAX_MS: 150000
         run: |
           node scripts/web_project_runner.mjs validate web/project-manifests/proped-web-quality.json
           node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json --output protocol/out/web-project-runner

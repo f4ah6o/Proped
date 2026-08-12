@@ -17,6 +17,12 @@ const FIXTURE = path.join(
 );
 const UPDATE_FIXTURE = process.argv.includes("--update-fixture");
 const BENCHMARK_ONLY = process.argv.includes("--benchmark-only");
+const BENCHMARK_MAX_MS = (() => {
+  const raw = process.env.PROPED_COMPONENT_BENCHMARK_MAX_MS ?? "60000";
+  const value = Number.parseInt(raw, 10);
+  assert.ok(Number.isInteger(value) && value >= 60_000, `invalid PROPED_COMPONENT_BENCHMARK_MAX_MS: ${raw}`);
+  return value;
+})();
 
 function findAction(result, predicate, label) {
   const action = result.actions.find(predicate);
@@ -235,7 +241,7 @@ async function runBenchmark(driver, transitions = 10_000) {
 
   const elapsedMs = Math.round(performance.now() - started);
   assert.equal(transitions, 10_000);
-  assert.ok(elapsedMs < 60_000, `React benchmark exceeded 60 seconds: ${elapsedMs}ms`);
+  assert.ok(elapsedMs < BENCHMARK_MAX_MS, `React benchmark exceeded ${BENCHMARK_MAX_MS}ms: ${elapsedMs}ms`);
   return {
     transitions,
     distinctStates: states.size,

@@ -90,7 +90,7 @@
         "--prefix",
         "web/react-component"
       ],
-      "timeoutMs": 60000,
+      "timeoutMs": 120000,
       "dependsOn": [
         "web-property-pack"
       ],
@@ -106,7 +106,7 @@
         "--prefix",
         "web/vue-component"
       ],
-      "timeoutMs": 60000,
+      "timeoutMs": 120000,
       "dependsOn": [
         "web-property-pack"
       ],

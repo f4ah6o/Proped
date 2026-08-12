@@ -175,7 +175,7 @@ function detectNodeRequirement(root, pkg, ambiguities, evidence) {
       });
       return { requirement: null, sources, status: "unverified" };
     }
-    return { requirement: ranges[0] ?? pin, sources, status: "resolved" };
+    return { requirement: pin, sources, status: "resolved" };
   }
 
   const requirement = intersectNodeRequirements(ranges);

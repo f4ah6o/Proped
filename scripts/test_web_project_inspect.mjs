@@ -114,6 +114,28 @@ function json(value) {
   assert.ok(report.ambiguities.some((item) => item.code === "package-manager-declaration-lockfile-mismatch"));
 }
 
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "waku-fullstack",
+      engines: { node: "^24.0.0 || ^22.15.0" },
+      scripts: { build: "waku build", preview: "waku preview", dev: "waku dev" },
+      dependencies: { react: "19.0.0", vite: "8.0.0", waku: "1.0.0-beta.8", hono: "4.0.0" },
+    }),
+    "package-lock.json": "{}\n",
+    "src/app.tsx": "fetch('/api/status')",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "waku");
+  assert.equal(report.project.mode, "server-rendered");
+  assert.equal(report.project.outputDir, null);
+  assert.equal(report.commands.serve.source, "scripts.preview");
+  assert.equal(report.runtime.routing.model, "waku-router");
+  assert.equal(report.runtime.server.detected, true);
+  assert.deepEqual(report.runtime.server.frameworks, ["hono"]);
+}
+
 const committed = [
   ["web/next-ssr-hydration", "next"],
   ["web/nuxt-ssr-hydration", "nuxt"],
@@ -151,9 +173,22 @@ for (const [relative, expected] of optionalDogfood) {
   });
 }
 
+const canopy = path.join(ROOT, ".tmp/external-canopy/apps/web");
+let optionalCanopy = null;
+if (fs.existsSync(path.join(canopy, "package.json"))) {
+  const report = inspectWebProject(canopy);
+  assert.equal(report.framework.name, "waku");
+  assert.equal(report.project.mode, "server-rendered");
+  assert.equal(report.commands.serve.source, "scripts.preview");
+  assert.equal(report.runtime.routing.model, "waku-router");
+  assert.deepEqual(report.runtime.server.frameworks, ["hono"]);
+  optionalCanopy = { framework: report.framework.name, mode: report.project.mode, serve: report.commands.serve.source, routing: report.runtime.routing.model, serverFrameworks: report.runtime.server.frameworks };
+}
+
 console.log(JSON.stringify({
   ok: true,
   runtime: "web-project-inspect-test",
   committedTargets: committed.length,
   optionalRealTargets: real,
+  optionalCanopy,
 }));

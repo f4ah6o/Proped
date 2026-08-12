@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -70,6 +71,21 @@ for (const [relative, expectedServer, expectedFramework] of optional) {
 }
 
 assert.throws(() => validateWebProjectManifestV2({ ...generated, unexpected: true }), /unknown field unexpected/);
+
+const canopyRoot = path.join(ROOT, ".tmp/external-canopy/apps/web");
+let optionalCanopy = null;
+if (fs.existsSync(path.join(canopyRoot, "package.json"))) {
+  const inspection = inspectWebProject(canopyRoot);
+  const manifest = createWebProjectManifestV2FromInspection(inspection, { projectRoot: "." });
+  const compiled = compileWebProjectManifestV2(manifest, canopyRoot);
+  assert.equal(manifest.project.framework, "waku");
+  assert.equal(manifest.server.mode, "command");
+  assert.deepEqual(manifest.server.start, ["npm", "run", "preview"]);
+  assert.ok(manifest.properties.packs.includes("navigation"));
+  assert.ok(manifest.properties.packs.includes("reload-persistence"));
+  assert.equal(compiled.manifest.stages.find((stage) => stage.id === "generic-browser")?.command.includes("--start-json"), true);
+  optionalCanopy = { framework: manifest.project.framework, server: manifest.server.mode, start: manifest.server.start, packs: manifest.properties.packs };
+}
 
 console.log(JSON.stringify({
   ok: true,

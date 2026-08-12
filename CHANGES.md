@@ -1,4 +1,5 @@
 # Changes
+- Promoted Waku to a first-class full-stack Web framework so React/Vite-backed Waku projects compile to managed command-server lifecycle (`preview`) instead of being misclassified as static-output SPAs.
 - Added review-only server-hook mining and human-approved manifest application: literal GET/HEAD interactions can become bounded read-only hooks, reset-like POST endpoints remain high-risk with explicit acknowledgement, and ordinary mutations are never proposed automatically.
 - Blind-dogfooded a server-state candidate against pinned `dowdiness/canopy`, adding manifest-level Node engine requirements, doctor/prepare/run engine preflight, and read-only Hono/server/API runtime signals so incompatible environments fail before dependency installation.
 - Blind-dogfooded unknown Web onboarding against pinned `moonbitlang/website`, adding first-class Docusaurus inspection, storage-denied snapshot fallback, and link-href locator recovery that raised the blind app from 54.2% to 100% locator uniqueness with zero project-specific executable adapter LOC.

@@ -2,7 +2,7 @@
 import path from "node:path";
 import { loadWebProjectManifestV2 } from "../protocol/web-project-manifest-v2.mjs";
 import { prepareWebProject } from "../protocol/web-project-bootstrap.mjs";
-import { evaluateNodeEngine } from "../protocol/web-node-engine.mjs";
+import { applyNodeRuntimeToEnvironment, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "../protocol/web-node-runtime.mjs";
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
@@ -31,12 +31,15 @@ if (!manifestFile) usage("web prepare requires a manifest file");
 try {
   const root = repositoryRoot ?? path.dirname(manifestFile);
   const manifest = loadWebProjectManifestV2(manifestFile);
-  const engine = evaluateNodeEngine(manifest.project.nodeRequirement ?? null, process.version);
-  if (engine.status === "incompatible") {
-    console.error(JSON.stringify({ ok: false, error: "node_engine_incompatible", message: `Node ${process.version} does not satisfy ${manifest.project.nodeRequirement}`, engine }));
+  const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null);
+  const nodeRuntimeSummary = summarizeNodeRuntimeResolution(nodeRuntime);
+  if (nodeRuntime.status === "unavailable") {
+    console.error(JSON.stringify({ ok: false, error: "node_runtime_required", message: `no installed Node runtime satisfies ${manifest.project.nodeRequirement}`, nodeRuntime: nodeRuntimeSummary }));
     process.exit(2);
   }
-  const result = prepareWebProject(root, manifest, { offline });
+  const sourceEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
+  const result = prepareWebProject(root, manifest, { offline, sourceEnvironment });
+  result.nodeRuntime = nodeRuntimeSummary;
   (result.ok ? console.log : console.error)(JSON.stringify(result));
   process.exitCode = result.ok ? 0 : 1;
 } catch (error) {

@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { compileWebProjectManifestV2, validateWebProjectManifestV2 } from "./web-project-manifest-v2.mjs";
 import { strictSandboxCapabilities } from "./web-execution-sandbox.mjs";
 import { managedBrowserRuntimeDetails } from "../web/playwright-browser/managed-browser-runtime.mjs";
-import { evaluateNodeEngine } from "./web-node-engine.mjs";
+import { applyNodeRuntimeToEnvironment, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "./web-node-runtime.mjs";
 import { webProjectDependencyReadiness } from "./web-project-bootstrap.mjs";
 
 function executableAvailable(command, environment = process.env) {
@@ -27,17 +27,27 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
     ? check("project-root", "pass", "project root exists")
     : check("project-root", "fail", "project root does not exist", { path: projectRoot }));
 
+  const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null);
+  const nodeRuntimeSummary = summarizeNodeRuntimeResolution(nodeRuntime);
+  const targetEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
+
   if (manifest.project.packageManager) {
-    checks.push(executableAvailable(manifest.project.packageManager)
+    checks.push(executableAvailable(manifest.project.packageManager, targetEnvironment)
       ? check("package-manager", "pass", `${manifest.project.packageManager} is available`)
       : check("package-manager", "fail", `${manifest.project.packageManager} is not available`));
   } else checks.push(check("package-manager", "warning", "package manager is unresolved"));
 
   if (manifest.project.nodeRequirement) {
-    const engine = evaluateNodeEngine(manifest.project.nodeRequirement, process.version);
-    if (engine.status === "compatible") checks.push(check("node-engine", "pass", `Node ${process.version} satisfies ${manifest.project.nodeRequirement}`, { engine }));
-    else if (engine.status === "incompatible") checks.push(check("node-engine", "fail", `Node ${process.version} does not satisfy ${manifest.project.nodeRequirement}`, { engine }));
-    else checks.push(check("node-engine", "warning", `Node engine compatibility could not be proven for ${manifest.project.nodeRequirement}`, { engine }));
+    if (nodeRuntime.status === "selected") {
+      const switched = nodeRuntime.selected?.path !== process.execPath;
+      checks.push(check("node-engine", "pass", `${switched ? "selected" : "current"} Node ${nodeRuntime.selected?.version} satisfies ${manifest.project.nodeRequirement}`, { nodeRuntime: nodeRuntimeSummary }));
+    } else if (nodeRuntime.status === "unverified") {
+      checks.push(check("node-engine", "warning", `Node engine compatibility could not be proven for ${manifest.project.nodeRequirement}`, { nodeRuntime: nodeRuntimeSummary }));
+    } else {
+      checks.push(check("node-engine", "fail", `no installed Node runtime satisfies ${manifest.project.nodeRequirement}`, { nodeRuntime: nodeRuntimeSummary }));
+    }
+  } else {
+    checks.push(check("node-engine", "pass", `using current Node ${nodeRuntime.selected?.version ?? process.version}`, { nodeRuntime: nodeRuntimeSummary }));
   }
 
   const dependencyReadiness = webProjectDependencyReadiness(repositoryRoot, manifest, { forRun: true });
@@ -50,7 +60,7 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
   }
 
   if (manifest.bootstrap.build) {
-    checks.push(executableAvailable(manifest.bootstrap.build[0])
+    checks.push(executableAvailable(manifest.bootstrap.build[0], targetEnvironment)
       ? check("build-command", "pass", `build executable is available: ${manifest.bootstrap.build[0]}`)
       : check("build-command", "fail", `build executable is unavailable: ${manifest.bootstrap.build[0]}`));
   } else checks.push(check("build-command", "warning", "no build command is configured"));
@@ -63,7 +73,7 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
     else if (manifest.bootstrap.build) checks.push(check("server", "pending", "static output is not built yet", { output }));
     else checks.push(check("server", "fail", "static output is missing and no build command is configured", { output }));
   } else if (manifest.server.mode === "command") {
-    checks.push(executableAvailable(manifest.server.start?.[0])
+    checks.push(executableAvailable(manifest.server.start?.[0], targetEnvironment)
       ? check("server", "pass", `server executable is available: ${manifest.server.start[0]}`)
       : check("server", "fail", `server executable is unavailable: ${manifest.server.start?.[0] ?? "<missing>"}`));
   } else {

@@ -174,8 +174,8 @@ function trimTail(value, maximum = 4096) {
   return value.slice(value.length - maximum);
 }
 
-function childEnvironment({ osEnforced = false } = {}) {
-  return safeExecutionEnvironment(process.env, { osEnforced });
+function childEnvironment({ osEnforced = false, sourceEnvironment = process.env } = {}) {
+  return safeExecutionEnvironment(sourceEnvironment, { osEnforced });
 }
 
 function stageStatus(child) {
@@ -309,7 +309,7 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
       timeout: stage.timeoutMs,
       maxBuffer: 8 * 1024 * 1024,
       shell: false,
-      env: childEnvironment({ osEnforced: strictSandbox }),
+      env: childEnvironment({ osEnforced: strictSandbox, sourceEnvironment: options.sourceEnvironment ?? process.env }),
     });
     const durationMs = Math.round((performance.now() - started) * 1000) / 1000;
     const status = stageStatus(child);

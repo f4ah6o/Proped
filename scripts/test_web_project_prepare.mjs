@@ -65,10 +65,10 @@ try {
   fs.writeFileSync(incompatibleFile, `${JSON.stringify(incompatibleManifest, null, 2)}\n`);
   const incompatiblePrepare = run(["web", "prepare", incompatibleFile, "--repository-root", PROJECT]);
   assert.equal(incompatiblePrepare.status, 2, incompatiblePrepare.stderr || incompatiblePrepare.stdout);
-  assert.equal(JSON.parse(incompatiblePrepare.stderr.trim()).error, "node_engine_incompatible");
+  assert.equal(JSON.parse(incompatiblePrepare.stderr.trim()).error, "node_runtime_required");
   const incompatibleRun = run(["web", "run", incompatibleFile, "--repository-root", PROJECT, "--sandbox-mode", "caller-enforced", "--no-artifacts"]);
   assert.equal(incompatibleRun.status, 2, incompatibleRun.stderr || incompatibleRun.stdout);
-  assert.equal(JSON.parse(incompatibleRun.stderr.trim()).error, "node_engine_incompatible");
+  assert.equal(JSON.parse(incompatibleRun.stderr.trim()).error, "node_runtime_required");
   assert.equal(fs.existsSync(path.join(PROJECT, "node_modules")), false, "engine preflight must run before any install");
 
   const before = webProjectDependencyReadiness(PROJECT, manifest);
@@ -117,7 +117,7 @@ try {
     explicitPrepare: true,
     credentialEnvironmentDenied: true,
     offlineMode: true,
-    nodeEnginePreflight: true,
+    nodeRuntimePreflight: true,
     readinessAfter: offlineReport.readinessAfter.ready,
   }));
 } finally {

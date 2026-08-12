@@ -113,6 +113,21 @@ try {
   assert.equal(success.passedStageCount, 2);
   assert.equal(success.requiredFailureCount, 0);
   assert.equal(success.stages[1].payload.semanticHash, "bbb");
+
+  const targetBin = path.join(TMP, "target-node-bin");
+  fs.mkdirSync(targetBin, { recursive: true });
+  const targetNode = path.join(targetBin, "node");
+  fs.writeFileSync(targetNode, "#!/bin/sh\nprintf '%s\n' 'v22.22.3'\n");
+  fs.chmodSync(targetNode, 0o755);
+  const targetEnvironment = { ...process.env, PATH: `${targetBin}${path.delimiter}${process.env.PATH ?? ""}` };
+  const targetRuntimeRun = runWebProject(
+    ROOT,
+    manifest([stage("target-node", ["node", "--version"])] , ".tmp/web-project-runner-test/target-runtime"),
+    { sourceEnvironment: targetEnvironment, writeArtifacts: false },
+  );
+  assert.equal(targetRuntimeRun.ok, true);
+  assert.match(targetRuntimeRun.stages[0].stdoutTail, /v22\.22\.3/);
+
   assert.deepEqual(
     fs.readdirSync(path.join(TMP, "out")).sort(),
     ["atlas.dot", "atlas.html", "atlas.json", "atlas.svg", "summary.json"],
@@ -216,4 +231,5 @@ console.log(JSON.stringify({
   sampleManifest: sample.id,
   sampleStageCount: sample.stages.length,
   classifications: ["pass", "quality_gate_failed", "blocked", "usage_error", "execution_failed", "timeout"],
+  targetRuntimeEnvironment: true,
 }));

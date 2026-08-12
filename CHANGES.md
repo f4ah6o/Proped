@@ -1,4 +1,5 @@
 # Changes
+- Added installed Node-runtime selection for unknown Web projects: current/NVM/Volta/FNM/asdf runtimes are inventoried read-only, the highest compatible runtime is injected only into target subprocess PATHs, and no runtime is downloaded implicitly.
 - Added a managed command-server runtime with reserved-port hints plus loopback-only stdout/stderr endpoint discovery, credential-filtered child environments, split-log URL recovery, and mandatory process cleanup on readiness failure.
 - Promoted Waku to a first-class full-stack Web framework so React/Vite-backed Waku projects compile to managed command-server lifecycle (`preview`) instead of being misclassified as static-output SPAs.
 - Added review-only server-hook mining and human-approved manifest application: literal GET/HEAD interactions can become bounded read-only hooks, reset-like POST endpoints remain high-risk with explicit acknowledgement, and ordinary mutations are never proposed automatically.

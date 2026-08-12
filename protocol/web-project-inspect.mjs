@@ -367,6 +367,11 @@ function detectRuntimeHints(root, pkg, evidence) {
   const authDependencies = [
     "next-auth", "@auth/core", "@clerk/nextjs", "@clerk/react", "lucia", "@supabase/supabase-js", "firebase",
   ].filter(hasDep);
+  const serverFrameworks = ["hono", "express", "fastify", "koa", "@hapi/hapi"].filter(hasDep);
+  const serverPersistenceDependencies = ["drizzle-orm", "prisma", "@prisma/client", "better-sqlite3", "sqlite3", "pg", "mysql2", "mongodb", "redis", "ioredis"].filter(hasDep);
+  const relativeApiCalls = (source.match(/\bfetch\s*\(\s*["'`]\/(?:api|rpc|trpc)(?:[\/"'`?]|$)/g) ?? []).length;
+  const serverRouteSyntaxDetected = /\bnew\s+Hono\s*\(|\b(?:app|router)\.(?:get|post|put|patch|delete)\s*\(/.test(source);
+  const serverDetected = serverFrameworks.length > 0 || serverPersistenceDependencies.length > 0 || serverRouteSyntaxDetected;
   let routeModel = "unknown";
   if (hasDep("react-router-dom") || hasDep("react-router")) routeModel = "react-router";
   else if (hasDep("vue-router")) routeModel = "vue-router";
@@ -376,6 +381,9 @@ function detectRuntimeHints(root, pkg, evidence) {
   if (dexie) evidence.push("state:dexie");
   if (websocket) evidence.push("runtime:websocket");
   if (authDependencies.length) evidence.push(`auth:${authDependencies.join(",")}`);
+  if (serverFrameworks.length) evidence.push(`server-framework:${serverFrameworks.join(",")}`);
+  if (serverPersistenceDependencies.length) evidence.push(`server-persistence:${serverPersistenceDependencies.join(",")}`);
+  if (relativeApiCalls > 0) evidence.push(`runtime:relative-api-calls:${relativeApiCalls}`);
   if (scan.truncated) evidence.push(`source-scan:bounded:${scan.files.length}-files:${scan.bytes}-bytes`);
   else evidence.push(`source-scan:${scan.files.length}-files:${scan.bytes}-bytes`);
   return {
@@ -391,6 +399,14 @@ function detectRuntimeHints(root, pkg, evidence) {
     websocket: { detected: websocket, confidence: websocket ? 0.9 : 0 },
     serviceWorker: { detected: serviceWorker, confidence: serviceWorker ? 0.85 : 0 },
     auth: { detected: authDependencies.length > 0, dependencies: authDependencies, confidence: authDependencies.length ? 0.95 : 0 },
+    server: {
+      detected: serverDetected,
+      frameworks: serverFrameworks,
+      persistenceDependencies: serverPersistenceDependencies,
+      relativeApiCalls,
+      routeSyntaxDetected: serverRouteSyntaxDetected,
+      confidence: serverFrameworks.length ? 0.95 : serverPersistenceDependencies.length ? 0.85 : serverRouteSyntaxDetected ? 0.7 : 0,
+    },
     sourceScan: { files: scan.files.length, bytes: scan.bytes, truncated: scan.truncated },
   };
 }

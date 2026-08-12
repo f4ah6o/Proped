@@ -111,6 +111,7 @@ jobs:
           node scripts/test_web_generic_property_packs.mjs
           node scripts/test_web_project_onboarding_v2.mjs
           node scripts/test_web_project_prepare.mjs
+          node scripts/test_web_node_engine.mjs
           node scripts/test_proped_web_cli.mjs
 
       - name: Web project quality manifest

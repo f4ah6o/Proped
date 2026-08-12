@@ -50,6 +50,12 @@
             "string",
             "null"
           ]
+        },
+        "nodeRequirement": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },

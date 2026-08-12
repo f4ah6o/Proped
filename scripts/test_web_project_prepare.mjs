@@ -59,6 +59,18 @@ try {
   };
   fs.writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
 
+  const incompatibleManifest = structuredClone(manifest);
+  incompatibleManifest.project.nodeRequirement = "^1.0.0";
+  const incompatibleFile = path.join(PROJECT, "proped.incompatible.web.json");
+  fs.writeFileSync(incompatibleFile, `${JSON.stringify(incompatibleManifest, null, 2)}\n`);
+  const incompatiblePrepare = run(["web", "prepare", incompatibleFile, "--repository-root", PROJECT]);
+  assert.equal(incompatiblePrepare.status, 2, incompatiblePrepare.stderr || incompatiblePrepare.stdout);
+  assert.equal(JSON.parse(incompatiblePrepare.stderr.trim()).error, "node_engine_incompatible");
+  const incompatibleRun = run(["web", "run", incompatibleFile, "--repository-root", PROJECT, "--sandbox-mode", "caller-enforced", "--no-artifacts"]);
+  assert.equal(incompatibleRun.status, 2, incompatibleRun.stderr || incompatibleRun.stdout);
+  assert.equal(JSON.parse(incompatibleRun.stderr.trim()).error, "node_engine_incompatible");
+  assert.equal(fs.existsSync(path.join(PROJECT, "node_modules")), false, "engine preflight must run before any install");
+
   const before = webProjectDependencyReadiness(PROJECT, manifest);
   assert.equal(before.ready, false);
   assert.equal(before.reason, "npm-install-incomplete");
@@ -105,6 +117,7 @@ try {
     explicitPrepare: true,
     credentialEnvironmentDenied: true,
     offlineMode: true,
+    nodeEnginePreflight: true,
     readinessAfter: offlineReport.readinessAfter.ready,
   }));
 } finally {

@@ -29,10 +29,10 @@ function json(value) {
       name: "react-vite-app",
       packageManager: "pnpm@10.0.0",
       scripts: { build: "vite build", preview: "vite preview" },
-      dependencies: { react: "19.0.0", vite: "8.0.0", "react-router-dom": "7.0.0" },
+      dependencies: { react: "19.0.0", vite: "8.0.0", "react-router-dom": "7.0.0", hono: "4.0.0", "drizzle-orm": "0.44.0" },
     }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
-    "src/app.tsx": "localStorage.setItem('x','1'); new WebSocket('ws://example.invalid')",
+    "src/app.tsx": "localStorage.setItem('x','1'); new WebSocket('ws://example.invalid'); fetch('/api/items')",
   });
   const report = inspectWebProject(root);
   assert.equal(report.packageManager.name, "pnpm");
@@ -42,6 +42,10 @@ function json(value) {
   assert.equal(report.runtime.routing.model, "react-router");
   assert.ok(report.runtime.stateSources.includes("localStorage"));
   assert.equal(report.runtime.websocket.detected, true);
+  assert.equal(report.runtime.server.detected, true);
+  assert.deepEqual(report.runtime.server.frameworks, ["hono"]);
+  assert.deepEqual(report.runtime.server.persistenceDependencies, ["drizzle-orm"]);
+  assert.equal(report.runtime.server.relativeApiCalls, 1);
   assert.equal(report.safety.packageScriptsExecuted, false);
 }
 

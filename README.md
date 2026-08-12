@@ -27,7 +27,7 @@ See [docs/CLI.md](docs/CLI.md) for the complete command and output contract.
 
 ## Unknown Web project inspection
 
-Proped Rabbita can inspect an unknown Web project without running install, build, or start scripts. The read-only inspector infers package manager, framework, build/serve commands, render mode, output directory, routing, storage/IndexedDB, WebSocket, service-worker, and authentication hints, and reports confidence plus ambiguities instead of silently guessing.
+Proped Rabbita can inspect an unknown Web project without running install, build, or start scripts. The read-only inspector infers package manager, Node engine requirement, framework, build/serve commands, render mode, output directory, routing, storage/IndexedDB, WebSocket, service-worker, authentication, and server-side framework/persistence/API hints, and reports confidence plus ambiguities instead of silently guessing.
 
 ```bash
 node scripts/web_project_inspect.mjs .
@@ -72,11 +72,13 @@ node scripts/proped.mjs web prepare proped.web.json
 node scripts/proped.mjs web run proped.web.json
 ```
 
-`web prepare` executes the inferred install argv with `shell=false`, confines cwd to the project root, and passes only the credential-safe environment allowlist. Network access is explicit to this setup command; `--offline` requests package-manager offline mode. `web doctor` reports dependency readiness before execution.
+`web prepare` executes the inferred install argv with `shell=false`, confines cwd to the project root, and passes only the credential-safe environment allowlist. Network access is explicit to this setup command; `--offline` requests package-manager offline mode. The generated manifest carries `engines.node`; `web doctor`, `web prepare`, and `web run` fail before install/build when the current Node version is provably incompatible. `web doctor` also reports dependency readiness before execution.
 
 ## Blind unknown-project validation
 
 A pinned blind run against `moonbitlang/website` (`a6222f7292ce50f2a08847ef0852b1a8d456a393`) reached real Generic Browser exploration with **0 project-specific executable adapter LOC**. The run drove the unknown Vite subproject with generated actions and coverage-guided exploration. Blind findings were converted into generic fixes: Docusaurus detection, explicit dependency preparation, package-manager completion markers, storage-access fail-closed snapshots, and unique-link `href` fallback. On the real blind app, locator uniqueness improved from **54.2% to 100%** without forced clicks.
+
+A second blind onboarding pass used pinned `dowdiness/canopy` (`cb41945b04801084e8abe1d8edc27eb0cdce4a1c`) as a server-state candidate. Read-only inspection identified React/Vite plus local/session storage, IndexedDB, WebSocket, Hono, and five relative API call sites. Its declared Node range (`^24.0.0 || ^22.15.0`) excludes the available Node 25 runtime, so Proped now surfaces the mismatch in `doctor` and rejects both `prepare` and `run` before npm starts or creates `node_modules`.
 
 ## Low-config Web project manifest v2
 

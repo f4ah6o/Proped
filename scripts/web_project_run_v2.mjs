@@ -3,6 +3,7 @@ import path from "node:path";
 import { compileWebProjectManifestV2, loadWebProjectManifestV2 } from "../protocol/web-project-manifest-v2.mjs";
 import { runWebProject } from "../protocol/web-project-runner.mjs";
 import { webProjectDependencyReadiness } from "../protocol/web-project-bootstrap.mjs";
+import { evaluateNodeEngine } from "../protocol/web-node-engine.mjs";
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
@@ -34,6 +35,11 @@ if (!["manifest", "strict", "caller-enforced"].includes(sandboxMode)) usage("--s
 try {
   const root = repositoryRoot ?? path.dirname(manifestFile);
   const manifest = loadWebProjectManifestV2(manifestFile);
+  const engine = evaluateNodeEngine(manifest.project.nodeRequirement ?? null, process.version);
+  if (engine.status === "incompatible") {
+    console.error(JSON.stringify({ ok: false, error: "node_engine_incompatible", message: `Node ${process.version} does not satisfy ${manifest.project.nodeRequirement}`, engine, manifestVersion: 2 }));
+    process.exit(2);
+  }
   const dependencyReadiness = webProjectDependencyReadiness(root, manifest, { forRun: true });
   if (dependencyReadiness.ready === false) {
     const result = {

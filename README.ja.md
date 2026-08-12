@@ -72,11 +72,13 @@ node scripts/proped.mjs web prepare proped.web.json
 node scripts/proped.mjs web run proped.web.json
 ```
 
-`web prepare`は推定install argvを`shell=false`、project root固定cwd、credential-safeなenvironment allowlistで実行します。このsetup commandだけnetwork利用を明示的に許可し、`--offline`ではpackage-managerのoffline modeを要求します。`web doctor`でもdependency readinessを事前表示します。
+`web prepare`は推定install argvを`shell=false`、project root固定cwd、credential-safeなenvironment allowlistで実行します。このsetup commandだけnetwork利用を明示的に許可し、`--offline`ではpackage-managerのoffline modeを要求します。生成manifestは`engines.node`を保持し、現在Nodeが明確に非互換なら`web doctor` / `web prepare` / `web run`はinstall/build前に停止します。`web doctor`ではdependency readinessも事前表示します。
 
 ## 未知projectのblind validation
 
 `moonbitlang/website`のpin revision `a6222f7292ce50f2a08847ef0852b1a8d456a393`にblind適用し、**project固有executable adapter 0 LOC**で実Generic Browser探索まで到達しました。未知Vite subprojectをgenerated actionとcoverage-guided explorationだけで操作しています。blind findingからDocusaurus検出、明示dependency preparation、package-manager install完了marker、storage access拒否時のfail-closed snapshot、unique linkの`href` fallbackを一般機能として追加しました。実blind appのlocator uniquenessはforced clickなしで**54.2%から100%**へ改善しています。
+
+2本目のblind onboardingではpinした`dowdiness/canopy` (`cb41945b04801084e8abe1d8edc27eb0cdce4a1c`)をserver-state候補として適用しました。read-only inspectionだけでReact/Vite、local/session storage、IndexedDB、WebSocket、Hono、relative API call 5件を認識しました。対象のNode range (`^24.0.0 || ^22.15.0`)は手元のNode 25を許可しないため、Propedは`doctor`で不一致を表示し、`prepare`/`run`をnpm起動前・`node_modules`生成前に拒否します。
 
 ## Low-config Web project manifest v2
 

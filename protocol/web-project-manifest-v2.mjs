@@ -70,10 +70,11 @@ export function validateWebProjectManifestV2(manifest) {
   string(manifest.id, "id");
   if (!ID_PATTERN.test(manifest.id)) fail("id must match ^[a-z0-9][a-z0-9-]*$");
 
-  exactKeys(manifest.project, new Set(["root", "framework", "packageManager"]), "project");
+  exactKeys(manifest.project, new Set(["root", "framework", "packageManager", "nodeRequirement"]), "project");
   string(manifest.project.root, "project.root");
   string(manifest.project.framework, "project.framework");
   string(manifest.project.packageManager, "project.packageManager", { nullable: true });
+  if (manifest.project.nodeRequirement !== undefined) string(manifest.project.nodeRequirement, "project.nodeRequirement", { nullable: true });
 
   exactKeys(manifest.bootstrap, new Set(["install", "build"]), "bootstrap");
   command(manifest.bootstrap.install, "bootstrap.install");
@@ -188,6 +189,7 @@ export function createWebProjectManifestV2FromInspection(inspection, { projectRo
       root: projectRoot,
       framework: inspection.framework.name,
       packageManager: inspection.packageManager.name,
+      nodeRequirement: inspection.nodeRequirement ?? null,
     },
     bootstrap: {
       install: inspection.commands.install.argv ? clone(inspection.commands.install.argv) : null,

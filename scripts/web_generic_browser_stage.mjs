@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import http from "node:http";
-import net from "node:net";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { GenericPlaywrightBrowserDriver } from "../web/playwright-browser/generic-browser-driver.mjs";
 import { semanticHash } from "../protocol/ui-driver-v1.mjs";
 import { runGenericPropertyPacks } from "../protocol/web-generic-property-packs.mjs";
@@ -13,6 +11,7 @@ import { createWebServerHookClient, validateWebServerHooks } from "../protocol/w
 import { exploreWebCoverageGuided } from "../protocol/web-coverage-guided-exploration.mjs";
 import { runWebExplorationReplayGate } from "../protocol/web-exploration-replay-gate.mjs";
 import { resolveApprovedSemanticRuntime, validateApprovedSemanticHints } from "../protocol/web-approved-semantics-runtime.mjs";
+import { startWebCommandServer } from "../protocol/web-command-server.mjs";
 
 function usage(message) {
   const help = `Usage:\n  node scripts/web_generic_browser_stage.mjs --project-root <dir> --server-mode <static-output|command|external> [options]\n\nOptions:\n  --output-dir <dir>\n  --start-json <argv-json>\n  --url <url>\n  --headless <true|false>\n  --viewport <WIDTHxHEIGHT>\n  --locale <locale>\n  --timezone <timezone>\n  --readiness-timeout <ms>\n  --server-hooks-json <json-object>\n  --property-packs-json <json-array>\n  --semantic-hints-json <json|null>\n  --exploration-json <json-object>\n`;
@@ -142,87 +141,13 @@ async function startStaticServer(root) {
   };
 }
 
-async function reservePort() {
-  const server = net.createServer();
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  const port = server.address().port;
-  await new Promise((resolve) => server.close(resolve));
-  return port;
-}
-
-function boundedAppend(current, chunk, maximum = 4096) {
-  const next = `${current}${chunk}`;
-  return next.length <= maximum ? next : next.slice(next.length - maximum);
-}
-
-async function startCommandServer(projectRoot, argv, timeoutMs) {
-  const port = await reservePort();
-  let stdoutTail = "";
-  let stderrTail = "";
-  const child = spawn(argv[0], argv.slice(1), {
-    cwd: projectRoot,
-    shell: false,
-    detached: process.platform !== "win32",
-    env: {
-      ...process.env,
-      PORT: String(port),
-      HOST: "127.0.0.1",
-      HOSTNAME: "127.0.0.1",
-      NITRO_PORT: String(port),
-      NITRO_HOST: "127.0.0.1",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  child.stdout?.on("data", (chunk) => { stdoutTail = boundedAppend(stdoutTail, chunk); });
-  child.stderr?.on("data", (chunk) => { stderrTail = boundedAppend(stderrTail, chunk); });
-  const url = `http://127.0.0.1:${port}/`;
-  const started = Date.now();
-  let ready = false;
-  while (Date.now() - started < timeoutMs) {
-    if (child.exitCode !== null) throw new Error(`server exited before readiness (${child.exitCode})\n${stderrTail}\n${stdoutTail}`);
-    try {
-      const response = await fetch(url, { redirect: "manual" });
-      if (response.status < 500) {
-        ready = true;
-        break;
-      }
-    } catch {
-      // Retry until bounded timeout.
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  if (!ready) throw new Error(`server readiness timeout after ${timeoutMs}ms\n${stderrTail}\n${stdoutTail}`);
-  const stop = async () => {
-    if (child.exitCode !== null) return;
-    try {
-      if (process.platform !== "win32") process.kill(-child.pid, "SIGTERM");
-      else child.kill("SIGTERM");
-    } catch {
-      child.kill("SIGTERM");
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    if (child.exitCode === null) {
-      try {
-        if (process.platform !== "win32") process.kill(-child.pid, "SIGKILL");
-        else child.kill("SIGKILL");
-      } catch {
-        child.kill("SIGKILL");
-      }
-    }
-  };
-  return { url, stop, diagnostics: [{ kind: "server-command", argv, port }] };
-}
-
 const options = parseArgs(process.argv.slice(2));
 const projectRoot = fs.realpathSync(path.resolve(process.cwd(), options.projectRoot));
 let server = null;
 let driver = null;
 try {
   if (options.serverMode === "static-output") server = await startStaticServer(path.resolve(projectRoot, options.outputDir));
-  else if (options.serverMode === "command") server = await startCommandServer(projectRoot, options.start, options.readinessTimeoutMs);
+  else if (options.serverMode === "command") server = await startWebCommandServer(projectRoot, options.start, options.readinessTimeoutMs);
   else server = { url: options.url, stop: async () => {}, diagnostics: [{ kind: "external-server" }] };
 
   const hookClient = createWebServerHookClient(server.url, options.serverHooks);

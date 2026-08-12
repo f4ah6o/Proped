@@ -98,6 +98,10 @@ source inspectionでliteralなsame-origin server interactionを見つけると�
 
 pinしたCanopy dogfoodでは`GET /api/pi-resume-chat/status`をconfidence 0.85のread-only候補として1件提案しました。その候補だけをapproveすると、manifestには同じread-only hookだけが入り、reset hookはnull、他のsemantic candidateはpendingのまま維持されました。
 
+## Managed command-server endpoint discovery
+
+full-stack projectではGeneric Browser Modeが`PORT`/host環境変数でfreshなloopback portを要求しますが、targetがそのportへbindすることを前提にしません。managed command-server runtimeはboundedなstdout/stderrからliteralなloopback HTTP(S) URLだけも抽出し、same-machine candidateだけをreadiness probeします。external/network URLは無視し、childにはcredential-safe environment allowlistだけを渡し、readiness failure時もprocess treeを必ずcleanupします。未知preview serverのport差異を吸収しつつ、logに出た任意originを信用しない設計です。
+
 ## Fresh-campaign replay gate
 
 manifest v2はfresh campaignを既定3回実行します。candidate errorは同じcanonical failure classが全attemptで再現した場合だけquality failureへ昇格します。一部runだけに出るclassはCI failureではなく`nondeterministic_failure_candidate` diagnosticへ降格します。fresh-browser determinismを手動確認ではなくquality gate自体へ組み込みます。

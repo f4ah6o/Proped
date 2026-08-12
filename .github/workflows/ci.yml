@@ -92,6 +92,7 @@ jobs:
           node scripts/test_web_failure_classifier.mjs
           node scripts/test_web_replay_gate.mjs
           node scripts/test_web_server_hooks.mjs
+          node scripts/test_web_command_server.mjs
           node scripts/test_web_server_hook_candidates.mjs
           node scripts/test_github_actions_workflow.mjs
           node scripts/test_web_selector_survival.mjs

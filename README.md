@@ -98,6 +98,10 @@ When source inspection finds literal same-origin server interactions, `proped we
 
 Pinned Canopy dogfood proposed one real read-only candidate, `GET /api/pi-resume-chat/status`, at confidence 0.85. Approving only that candidate produced a manifest with exactly that read-only hook and no reset hook, with the other semantic candidates left pending.
 
+## Managed command-server endpoint discovery
+
+For full-stack projects, Generic Browser Mode requests a fresh loopback port through `PORT`/host environment hints but no longer assumes the target obeys it. The managed command-server runtime also scans bounded stdout/stderr for literal loopback HTTP(S) URLs and probes only those same-machine candidates. External/network URLs are ignored, the child receives the credential-safe environment allowlist, and readiness failure always terminates the process tree before returning. This keeps unknown preview servers usable without accepting arbitrary log-provided origins.
+
 ## Fresh-campaign replay gate
 
 Manifest v2 defaults to three fresh campaign attempts. A candidate error is promoted to a quality failure only when the same canonical failure class appears in every attempt. A class that appears in only some runs becomes a `nondeterministic_failure_candidate` diagnostic instead of failing CI. This makes fresh-browser determinism part of the quality gate rather than a separate manual check.

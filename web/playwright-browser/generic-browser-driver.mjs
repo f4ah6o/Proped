@@ -33,6 +33,7 @@ function targetKey(target) {
     name: target.name,
     within: target.within ?? [],
     testIdentity: target.testIdentity ?? null,
+    href: target.href ?? null,
   });
 }
 
@@ -327,6 +328,7 @@ export class GenericPlaywrightBrowserDriver {
           role,
           name: identity.name,
           within: scopeOf(element),
+          ...(role === "link" && element.getAttribute("href") ? { href: normalize(element.getAttribute("href")) } : {}),
           hidden: hidden(element),
           disabled: Boolean(element.disabled) || element.getAttribute("aria-disabled") === "true",
           locator: {
@@ -356,6 +358,7 @@ export class GenericPlaywrightBrowserDriver {
       base = base.getByRole(role, { name, exact: true });
     }
     if (target.testIdentity) return base.locator(`[data-testid=${JSON.stringify(target.testIdentity)}]`);
+    if (resolver?.strategy === "href" && target.href) return base.locator(`a[href=${JSON.stringify(target.href)}]`);
     if (resolver?.strategy === "placeholder") return base.getByPlaceholder(target.name, { exact: true });
     if (resolver?.strategy === "label") return base.getByLabel(target.name, { exact: true });
     if (resolver?.strategy === "name-attribute") return base.locator(`[name=${JSON.stringify(target.name)}]`);
@@ -368,7 +371,7 @@ export class GenericPlaywrightBrowserDriver {
     const resolverByTarget = new Map();
     for (const descriptor of descriptors) {
       if (!descriptor.name) continue;
-      const key = targetKey({ role: descriptor.role, name: descriptor.name, within: descriptor.within, testIdentity: descriptor.testIdentity });
+      const key = targetKey({ role: descriptor.role, name: descriptor.name, within: descriptor.within, testIdentity: descriptor.testIdentity, href: descriptor.href });
       if (!resolverByTarget.has(key)) resolverByTarget.set(key, descriptor.locator);
     }
 
@@ -378,6 +381,7 @@ export class GenericPlaywrightBrowserDriver {
       if (!["textbox", "searchbox", "spinbutton"].includes(descriptor.role) || !descriptor.name) continue;
       const target = { role: descriptor.role, name: descriptor.name, within: descriptor.within ?? [] };
       if (descriptor.testIdentity) target.testIdentity = descriptor.testIdentity;
+      if (descriptor.href) target.href = descriptor.href;
       const id = `press|${target.role}|${target.name}|${(target.within ?? []).map((scope) => `within=${scope}`).join("|")}${target.testIdentity ? `|test=${target.testIdentity}` : ""}|input=${JSON.stringify("Enter")}`;
       discoveredActions.push({
         id,
@@ -398,9 +402,20 @@ export class GenericPlaywrightBrowserDriver {
       }
       const key = targetKey(action.target);
       const resolver = resolverByTarget.get(key) ?? { strategy: "role-name", confidence: 0.75, source: "fallback" };
-      const locator = this.locatorFromResolver(action.target, resolver);
-      const count = await locator.count();
-      const metric = targetMetrics.get(key) ?? { count, resolver, target: action.target };
+      let effectiveResolver = resolver;
+      let locator = this.locatorFromResolver(action.target, effectiveResolver);
+      let count = await locator.count();
+      if (count !== 1 && action.target.role === "link" && action.target.href && !action.target.testIdentity) {
+        const hrefResolver = { strategy: "href", confidence: 0.97, source: "href" };
+        const hrefLocator = this.locatorFromResolver(action.target, hrefResolver);
+        const hrefCount = await hrefLocator.count();
+        if (hrefCount === 1) {
+          effectiveResolver = hrefResolver;
+          locator = hrefLocator;
+          count = hrefCount;
+        }
+      }
+      const metric = targetMetrics.get(key) ?? { count, resolver: effectiveResolver, target: action.target };
       targetMetrics.set(key, metric);
       if (count !== 1) {
         if (!metric.reported) {
@@ -408,18 +423,18 @@ export class GenericPlaywrightBrowserDriver {
             kind: "ambiguous_locator",
             target: action.target,
             count,
-            locatorStrategy: resolver.strategy,
-            confidence: resolver.confidence,
+            locatorStrategy: effectiveResolver.strategy,
+            confidence: effectiveResolver.confidence,
             message: count === 0 ? "generated locator resolved no elements" : "generated locator resolved multiple elements",
           });
           metric.reported = true;
         }
         continue;
       }
-      this.targetResolvers.set(key, resolver);
+      this.targetResolvers.set(key, effectiveResolver);
       actions.push({
         ...action,
-        locator: { strategy: resolver.strategy, confidence: resolver.confidence, count },
+        locator: { strategy: effectiveResolver.strategy, confidence: effectiveResolver.confidence, count },
         destructiveRisk: action.destructiveRisk ?? riskFor(action),
       });
     }
@@ -564,16 +579,20 @@ export class GenericPlaywrightBrowserDriver {
       const focus = active && active !== document.body
         ? { role: roleOf(active), name: labelFor(active), within: scopeOf(active), disabled: Boolean(active.disabled) || active.getAttribute?.("aria-disabled") === "true" }
         : undefined;
-      const storageObject = (storage) => {
-        try { return Object.fromEntries(Object.keys(storage).sort().map((key) => [key, storage.getItem(key)])); }
-        catch { return {}; }
+      const storageObject = (kind) => {
+        try {
+          const storage = kind === "local" ? window.localStorage : window.sessionStorage;
+          return Object.fromEntries(Object.keys(storage).sort().map((key) => [key, storage.getItem(key)]));
+        } catch {
+          return {};
+        }
       };
       return {
         url: location.href,
         semanticDom: semanticNode(document.querySelector("main") ?? document.body),
         forms,
         focus,
-        storage: { local: storageObject(localStorage), session: storageObject(sessionStorage) },
+        storage: { local: storageObject("local"), session: storageObject("session") },
         visitedNodes: visited,
       };
     });

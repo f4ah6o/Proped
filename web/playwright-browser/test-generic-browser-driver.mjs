@@ -73,6 +73,15 @@ async function startServer() {
       response.end("<!doctype html><main><button>Delete</button><button>Delete</button></main>");
       return;
     }
+    if (request.url === "/href-fallback") {
+      response.writeHead(200, { "content-type": "text/html" });
+      response.end(`<!doctype html><main>
+        <a href="/target"><span>Visible</span><span aria-hidden="true">Hidden</span></a>
+        <a href="/same"><span>Same</span><span aria-hidden="true">One</span></a>
+        <a href="/same"><span>Same</span><span aria-hidden="true">Two</span></a>
+      </main>`);
+      return;
+    }
     response.writeHead(200, { "content-type": "text/html", "cache-control": "no-store" });
     response.end(HTML);
   });
@@ -157,6 +166,20 @@ try {
     await ambiguous.dispose();
   }
 
+  const hrefFallback = new GenericPlaywrightBrowserDriver({ url: `${server.url}href-fallback`, timeoutMs: 4_000, inputCorpus: ["x"] });
+  try {
+    await hrefFallback.reset();
+    const hrefInventory = await hrefFallback.actions();
+    const recovered = hrefInventory.actions.find((action) => action.target.href === "/target");
+    assert.ok(recovered, "unique href should recover a link whose raw text does not match its accessible name");
+    assert.equal(recovered.locator.strategy, "href");
+    assert.equal(recovered.locator.count, 1);
+    assert.equal(hrefInventory.actions.some((action) => action.target.href === "/same"), false, "duplicate href must remain fail-closed");
+    assert.ok(hrefInventory.diagnostics.some((diagnostic) => ["ambiguous_action", "ambiguous_locator"].includes(diagnostic.kind)), "duplicate link identity must emit an ambiguity diagnostic");
+  } finally {
+    await hrefFallback.dispose();
+  }
+
   const churn = new GenericPlaywrightBrowserDriver({
     url: `${server.url}churn`,
     timeoutMs: 1_000,
@@ -186,6 +209,19 @@ try {
 } finally {
   await driver.dispose();
   await server.close();
+}
+
+// Opaque/data documents may deny storage access. Snapshotting must fail closed to empty storage
+// rather than aborting the whole browser campaign.
+const opaqueDriver = new GenericPlaywrightBrowserDriver({
+  url: "data:text/html,<main><button>Opaque</button></main>",
+  timeoutMs: 2_000,
+});
+try {
+  const opaqueSnapshot = await opaqueDriver.reset();
+  assert.deepEqual(opaqueSnapshot.storage, { local: {}, session: {} });
+} finally {
+  await opaqueDriver.dispose();
 }
 
 // Optional real TodoMVC dogfood: no project-specific Playwright adapter is used.

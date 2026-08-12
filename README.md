@@ -63,6 +63,21 @@ node scripts/proped.mjs web run proped.web.approved.json
 
 The existing `web_project_*` and `web_semantic_*` scripts remain compatibility entry points.
 
+## Explicit Web project preparation
+
+`web run` never installs target dependencies implicitly. If a generated manifest has an install command and the target dependency artifact is missing, `web run` exits with `prepare_required`. Run the explicit setup phase first:
+
+```bash
+node scripts/proped.mjs web prepare proped.web.json
+node scripts/proped.mjs web run proped.web.json
+```
+
+`web prepare` executes the inferred install argv with `shell=false`, confines cwd to the project root, and passes only the credential-safe environment allowlist. Network access is explicit to this setup command; `--offline` requests package-manager offline mode. `web doctor` reports dependency readiness before execution.
+
+## Blind unknown-project validation
+
+A pinned blind run against `moonbitlang/website` (`a6222f7292ce50f2a08847ef0852b1a8d456a393`) reached real Generic Browser exploration with **0 project-specific executable adapter LOC**. The run drove the unknown Vite subproject with generated actions and coverage-guided exploration. Blind findings were converted into generic fixes: Docusaurus detection, explicit dependency preparation, package-manager completion markers, storage-access fail-closed snapshots, and unique-link `href` fallback. On the real blind app, locator uniqueness improved from **54.2% to 100%** without forced clicks.
+
 ## Low-config Web project manifest v2
 
 The high-level v2 manifest is generated from read-only inspection and compiles to the existing v1 stage graph. The current canonical format is JSON; generation is stdout-only unless `--output` is explicit.

@@ -1,4 +1,6 @@
 # Changes
+- Blind-dogfooded unknown Web onboarding against pinned `moonbitlang/website`, adding first-class Docusaurus inspection, storage-denied snapshot fallback, and link-href locator recovery that raised the blind app from 54.2% to 100% locator uniqueness with zero project-specific executable adapter LOC.
+- Added explicit `web prepare` bootstrap with credential-filtered shell-free installs, offline mode, package-manager completion markers, dependency readiness diagnostics, and `prepare_required` run preflight so Web campaigns never install dependencies implicitly.
 - Added trace-focused replay gating for coverage-guided Web exploration so only failure classes reproduced by the exact discovered trace across all fresh attempts are promoted to quality failures; flaky exploration candidates remain diagnostics.
 - Added a shell-free unified `proped web` dispatcher covering inspect/init/doctor/compile/review/approve/apply/run while preserving the existing Web script entry points and child exit codes.
 - Connected manifest v2 exploration bounds to real Generic Browser coverage-guided exploration with fresh-trace state reconstruction, semantic novelty prioritization, destructive-action exclusion, and bounded-mutation execution only for self-contained static output.

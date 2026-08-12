@@ -2,6 +2,7 @@
 import path from "node:path";
 import { compileWebProjectManifestV2, loadWebProjectManifestV2 } from "../protocol/web-project-manifest-v2.mjs";
 import { runWebProject } from "../protocol/web-project-runner.mjs";
+import { webProjectDependencyReadiness } from "../protocol/web-project-bootstrap.mjs";
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
@@ -33,6 +34,19 @@ if (!["manifest", "strict", "caller-enforced"].includes(sandboxMode)) usage("--s
 try {
   const root = repositoryRoot ?? path.dirname(manifestFile);
   const manifest = loadWebProjectManifestV2(manifestFile);
+  const dependencyReadiness = webProjectDependencyReadiness(root, manifest, { forRun: true });
+  if (dependencyReadiness.ready === false) {
+    const result = {
+      ok: false,
+      error: "prepare_required",
+      message: "project dependencies are not prepared; run `proped web prepare <manifest>` explicitly before `web run`",
+      manifestVersion: 2,
+      dependencyReadiness,
+      bootstrapInstall: manifest.bootstrap.install,
+    };
+    console.error(JSON.stringify(result));
+    process.exit(2);
+  }
   const compiled = compileWebProjectManifestV2(manifest, root);
   const strict = sandboxMode === "strict" || (sandboxMode === "manifest" && compiled.execution.strictSandbox);
   const report = runWebProject(root, compiled.manifest, {

@@ -140,6 +140,7 @@ function detectFramework(root, pkg, evidence, ambiguities) {
   const dependencies = allDependencies(pkg);
   const has = (name) => hasDependency(dependencies, name);
   const candidates = [];
+  if (has("@docusaurus/core")) candidates.push({ name: "docusaurus", confidence: 1, evidence: "dependency:@docusaurus/core" });
   if (has("next")) candidates.push({ name: "next", confidence: 1, evidence: "dependency:next" });
   if (has("nuxt") || has("nuxi")) candidates.push({ name: "nuxt", confidence: 1, evidence: has("nuxt") ? "dependency:nuxt" : "dependency:nuxi" });
   if (has("react")) {
@@ -159,13 +160,14 @@ function detectFramework(root, pkg, evidence, ambiguities) {
   if (candidates.length === 0) candidates.push({ name: "unknown", confidence: 0, evidence: "no-known-framework-signal" });
 
   const ranked = candidates.sort((a, b) => {
-    const priority = (name) => name === "next" || name === "nuxt" ? 3 : name.startsWith("react") || name.startsWith("vue") ? 2 : 1;
+    const priority = (name) => ["next", "nuxt", "docusaurus"].includes(name) ? 3 : name.startsWith("react") || name.startsWith("vue") ? 2 : 1;
     return priority(b.name) - priority(a.name) || b.confidence - a.confidence;
   });
   const primary = ranked[0];
   const materiallyDifferent = ranked.filter((candidate) => candidate !== primary && !(
     (primary.name === "next" && candidate.name.startsWith("react")) ||
-    (primary.name === "nuxt" && candidate.name.startsWith("vue"))
+    (primary.name === "nuxt" && candidate.name.startsWith("vue")) ||
+    (primary.name === "docusaurus" && candidate.name.startsWith("react"))
   ));
   if (materiallyDifferent.length > 0) {
     ambiguities.push({
@@ -205,7 +207,13 @@ function inferModeAndOutput(root, framework, pkg, evidence, ambiguities) {
   let outputDir = null;
   let outputConfidence = 0;
 
-  if (framework.name === "next") {
+  if (framework.name === "docusaurus") {
+    mode = "static-export";
+    modeConfidence = 0.99;
+    outputDir = "build";
+    outputConfidence = 0.98;
+    evidence.push("docusaurus:default-build-dir=build");
+  } else if (framework.name === "next") {
     const config = configText(root, ["next.config"]);
     const staticExport = config && /output\s*:\s*["']export["']/.test(config.text);
     mode = staticExport ? "static-export" : "server-rendered";
@@ -364,6 +372,7 @@ function detectRuntimeHints(root, pkg, evidence) {
   else if (hasDep("vue-router")) routeModel = "vue-router";
   else if (hasDep("next")) routeModel = "next-file-system";
   else if (hasDep("nuxt")) routeModel = "nuxt-file-system";
+  else if (hasDep("@docusaurus/core")) routeModel = "docusaurus-client-router";
   if (dexie) evidence.push("state:dexie");
   if (websocket) evidence.push("runtime:websocket");
   if (authDependencies.length) evidence.push(`auth:${authDependencies.join(",")}`);

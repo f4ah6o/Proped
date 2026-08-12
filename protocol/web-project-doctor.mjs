@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { compileWebProjectManifestV2, validateWebProjectManifestV2 } from "./web-project-manifest-v2.mjs";
 import { strictSandboxCapabilities } from "./web-execution-sandbox.mjs";
 import { managedBrowserRuntimeDetails } from "../web/playwright-browser/managed-browser-runtime.mjs";
+import { webProjectDependencyReadiness } from "./web-project-bootstrap.mjs";
 
 function executableAvailable(command, environment = process.env) {
   if (!command) return false;
@@ -30,6 +31,15 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
       ? check("package-manager", "pass", `${manifest.project.packageManager} is available`)
       : check("package-manager", "fail", `${manifest.project.packageManager} is not available`));
   } else checks.push(check("package-manager", "warning", "package manager is unresolved"));
+
+  const dependencyReadiness = webProjectDependencyReadiness(repositoryRoot, manifest, { forRun: true });
+  if (dependencyReadiness.ready === true) {
+    checks.push(check("dependencies", "pass", `project dependencies are prepared: ${dependencyReadiness.reason}`, { dependencyReadiness }));
+  } else if (dependencyReadiness.ready === false) {
+    checks.push(check("dependencies", "pending", "project dependencies require explicit `web prepare`", { dependencyReadiness, prepareRequired: true }));
+  } else {
+    checks.push(check("dependencies", "warning", "dependency readiness could not be inferred for this package manager", { dependencyReadiness }));
+  }
 
   if (manifest.bootstrap.build) {
     checks.push(executableAvailable(manifest.bootstrap.build[0])
@@ -88,7 +98,7 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
     failureCount: failures.length,
     warningCount: warnings.length,
     pendingCount: pending.length,
-    runnableLocal: failures.length === 0 && (manifest.sandbox.mode !== "strict" || sandbox.available),
+    runnableLocal: failures.length === 0 && pending.length === 0 && (manifest.sandbox.mode !== "strict" || sandbox.available),
     strictSandboxAvailable: sandbox.available,
     compilation: compilation ? { stageCount: compilation.manifest.stages.length, execution: compilation.execution } : null,
   };

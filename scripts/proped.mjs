@@ -8,6 +8,7 @@ const COMMANDS = Object.freeze({
   inspect: "web_project_inspect.mjs",
   init: "web_project_init.mjs",
   doctor: "web_project_doctor.mjs",
+  prepare: "web_project_prepare.mjs",
   compile: "web_project_compile.mjs",
   review: "web_semantic_review.mjs",
   approve: "web_semantic_approval.mjs",
@@ -16,7 +17,7 @@ const COMMANDS = Object.freeze({
 });
 
 function help() {
-  return `Proped Rabbita Web CLI\n\nUsage:\n  proped web <command> [arguments]\n  node scripts/proped.mjs web <command> [arguments]\n\nCommands:\n  web inspect <project>                         Read-only project classification\n  web init <project>                            Generate manifest v2 (stdout by default)\n  web doctor <manifest>                         Validate onboarding/runtime prerequisites\n  web compile <manifest>                        Compile manifest v2 to the v1 stage graph\n  web review <project>                          Propose review-only semantic candidates\n  web approve <init|decide|compile> ...         Record explicit human semantic decisions\n  web apply <manifest> <semantic-hints>         Attach approved semantics to manifest v2\n  web run <manifest>                            Run the managed Web quality campaign\n\nThe dispatcher does not use a shell and preserves child exit codes.\n`;
+  return `Proped Rabbita Web CLI\n\nUsage:\n  proped web <command> [arguments]\n  node scripts/proped.mjs web <command> [arguments]\n\nCommands:\n  web inspect <project>                         Read-only project classification\n  web init <project>                            Generate manifest v2 (stdout by default)\n  web doctor <manifest>                         Validate onboarding/runtime prerequisites\n  web prepare <manifest>                        Explicitly install inferred project dependencies\n  web compile <manifest>                        Compile manifest v2 to the v1 stage graph\n  web review <project>                          Propose review-only semantic candidates\n  web approve <init|decide|compile> ...         Record explicit human semantic decisions\n  web apply <manifest> <semantic-hints>         Attach approved semantics to manifest v2\n  web run <manifest>                            Run the managed Web quality campaign\n\nThe dispatcher does not use a shell and preserves child exit codes.\n`;
 }
 
 function fail(message) {

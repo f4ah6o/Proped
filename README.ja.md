@@ -63,6 +63,21 @@ node scripts/proped.mjs web run proped.web.approved.json
 
 既存`web_project_*` / `web_semantic_*` scriptsは互換入口として残します。
 
+## 明示的なWeb project preparation
+
+`web run`はtarget dependencyを暗黙installしません。生成manifestにinstall commandがあり、dependency artifactが未準備なら`prepare_required`で終了します。先に明示setup phaseを実行します。
+
+```bash
+node scripts/proped.mjs web prepare proped.web.json
+node scripts/proped.mjs web run proped.web.json
+```
+
+`web prepare`は推定install argvを`shell=false`、project root固定cwd、credential-safeなenvironment allowlistで実行します。このsetup commandだけnetwork利用を明示的に許可し、`--offline`ではpackage-managerのoffline modeを要求します。`web doctor`でもdependency readinessを事前表示します。
+
+## 未知projectのblind validation
+
+`moonbitlang/website`のpin revision `a6222f7292ce50f2a08847ef0852b1a8d456a393`にblind適用し、**project固有executable adapter 0 LOC**で実Generic Browser探索まで到達しました。未知Vite subprojectをgenerated actionとcoverage-guided explorationだけで操作しています。blind findingからDocusaurus検出、明示dependency preparation、package-manager install完了marker、storage access拒否時のfail-closed snapshot、unique linkの`href` fallbackを一般機能として追加しました。実blind appのlocator uniquenessはforced clickなしで**54.2%から100%**へ改善しています。
+
 ## Low-config Web project manifest v2
 
 read-only inspection結果からhigh-level manifest v2を生成し、既存のv1 stage graphへcompileします。現時点のcanonical formatはJSONで、`--output`を明示しない限りstdout-onlyです。

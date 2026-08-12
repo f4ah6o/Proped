@@ -17,6 +17,7 @@ function actionSignature(action) {
       name: action?.target?.name ?? "",
       within: action?.target?.within ?? [],
       testIdentity: action?.target?.testIdentity ?? null,
+      href: action?.target?.href ?? null,
     },
     input: action?.input ?? null,
   });

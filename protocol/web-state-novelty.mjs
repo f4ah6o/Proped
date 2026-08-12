@@ -68,6 +68,7 @@ function actionTargetKey(action) {
     name: target.name ?? "",
     within: target.within ?? [],
     testIdentity: target.testIdentity ?? null,
+    href: target.href ?? null,
   });
 }
 

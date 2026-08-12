@@ -14,10 +14,11 @@ function scopeIdentity(element) { return (element.within ?? []).map(normalizeTex
 function targetIdentity(element) {
   const target = { role: normalizeText(element.role), name: normalizeText(element.name), within: scopeIdentity(element) };
   if (element.testIdentity) target.testIdentity = normalizeText(element.testIdentity);
+  if (target.role === "link" && element.href) target.href = normalizeText(element.href);
   return target;
 }
 function canonicalTarget(target) {
-  return [target.role, target.name, ...(target.within ?? []).map((v) => `within=${v}`), target.testIdentity ? `test=${target.testIdentity}` : ""].filter(Boolean).join("|");
+  return [target.role, target.name, ...(target.within ?? []).map((v) => `within=${v}`), target.testIdentity ? `test=${target.testIdentity}` : "", target.href ? `href=${target.href}` : ""].filter(Boolean).join("|");
 }
 function actionId(kind, target, input) {
   const inputPart = input === undefined ? "" : `|input=${JSON.stringify(input)}`;

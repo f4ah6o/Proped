@@ -48,6 +48,24 @@ function json(value) {
 {
   const root = fixture({
     "package.json": json({
+      name: "docusaurus-site",
+      packageManager: "pnpm@9.15.0",
+      scripts: { build: "docusaurus build", serve: "docusaurus serve" },
+      dependencies: { "@docusaurus/core": "3.8.1", react: "18.3.1", "react-dom": "18.3.1" },
+    }),
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "docusaurus");
+  assert.equal(report.project.mode, "static-export");
+  assert.equal(report.project.outputDir, "build");
+  assert.equal(report.commands.serve.source, "scripts.serve");
+  assert.equal(report.runtime.routing.model, "docusaurus-client-router");
+}
+
+{
+  const root = fixture({
+    "package.json": json({
       name: "next-static-app",
       scripts: { build: "next build", start: "next start" },
       dependencies: { next: "16.0.0", react: "19.0.0", "react-dom": "19.0.0" },

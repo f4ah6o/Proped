@@ -33,7 +33,7 @@ try {
     import("../protocol/web-execution-sandbox.mjs"),
     import("../web/playwright-browser/managed-browser-runtime.mjs"),
   ]);
-  const managedBrowser = managedBrowserRuntimeReadiness();
+  const managedBrowser = await managedBrowserRuntimeReadiness();
   const sandbox = strictSandboxCapabilities();
   const report = {
     ok: managedBrowser.executableReady,

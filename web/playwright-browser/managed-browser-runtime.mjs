@@ -37,12 +37,21 @@ export function managedBrowserRuntimeDetails({ includePaths = false } = {}) {
   return details;
 }
 
-export function managedBrowserRuntimeReadiness() {
-  const executablePath = chromium.executablePath();
-  return {
-    ...managedBrowserRuntimeDetails(),
-    executableReady: fs.existsSync(executablePath),
-  };
+export async function managedBrowserRuntimeReadiness() {
+  try {
+    const browser = await chromium.launch({ headless: true });
+    await browser.close();
+    return {
+      ...managedBrowserRuntimeDetails(),
+      executableReady: true,
+    };
+  } catch {
+    return {
+      ...managedBrowserRuntimeDetails(),
+      executableReady: false,
+      diagnostic: "managed_chromium_launch_failed",
+    };
+  }
 }
 
 export async function launchManagedChromium(options = {}) {

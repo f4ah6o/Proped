@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { buildStrictSandboxInvocation, safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
+import {
+  assertStrictSandboxCapabilities,
+  buildStrictSandboxInvocation,
+  safeExecutionEnvironment,
+  sandboxCapabilitiesForMode,
+} from "./web-execution-sandbox.mjs";
 import { semanticHash } from "./ui-driver-v1.mjs";
 import { clusterWebFailures } from "./web-failure-classifier.mjs";
 
@@ -262,7 +267,28 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
         ...(options.sandbox?.writablePaths ?? []),
       ]
     : [];
-  let sandboxMetadata = strictSandbox ? { mode: "strict", backend: "bubblewrap" } : { mode: "caller-enforced" };
+  const sandboxPlatform = options.sandbox?.platform ?? process.platform;
+  const sandboxBackendPath = options.sandbox?.backendPath ?? null;
+  const preflightCapabilities = strictSandbox
+    ? assertStrictSandboxCapabilities({ platform: sandboxPlatform, backendPath: sandboxBackendPath })
+    : sandboxCapabilitiesForMode({ mode: "caller-enforced", platform: sandboxPlatform });
+  let sandboxMetadata = strictSandbox
+    ? {
+        mode: "strict",
+        platform: preflightCapabilities.platform,
+        backend: preflightCapabilities.backend,
+        capabilities: preflightCapabilities.capabilities,
+        requiredCapabilities: preflightCapabilities.requiredCapabilities,
+        diagnostic: preflightCapabilities.diagnostic,
+      }
+    : {
+        mode: "caller-enforced",
+        platform: preflightCapabilities.platform,
+        backend: null,
+        capabilities: preflightCapabilities.capabilities,
+        requiredCapabilities: preflightCapabilities.requiredCapabilities,
+        diagnostic: preflightCapabilities.diagnostic,
+      };
   const results = [];
   const byId = new Map();
 
@@ -298,6 +324,8 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
         cwd,
         repositoryRoot,
         writablePaths: sandboxWritablePaths,
+        platform: sandboxPlatform,
+        backendPath: sandboxBackendPath,
       });
       executable = invocation.executable;
       args = invocation.args;

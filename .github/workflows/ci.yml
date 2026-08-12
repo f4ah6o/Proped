@@ -74,6 +74,7 @@ jobs:
           python3 -m json.tool protocol/web-project-manifest.schema.json > /dev/null
           python3 -m json.tool protocol/web-project-manifest-v2.schema.json > /dev/null
           python3 -m json.tool web/project-manifests/proped-web-quality.json > /dev/null
+          node scripts/test_sandbox_capability_model.mjs
           node scripts/test_web_execution_sandbox.mjs
           node scripts/test_web_project_manifest_v2.mjs
           node scripts/test_web_project_runner.mjs

@@ -106,7 +106,16 @@ try {
     sandbox: options.strictSandbox ? { mode: "strict", writablePaths: options.writablePaths } : null,
   });
 } catch (error) {
-  console.error(JSON.stringify({ ok: false, error: "execution_environment_failed", message: error.message }));
+  console.error(JSON.stringify({
+    ok: false,
+    error: error.code ?? "execution_environment_failed",
+    message: error.message,
+    ...(error.platform ? { platform: error.platform } : {}),
+    ...(error.backend ? { backend: error.backend } : {}),
+    ...(error.capabilities ? { capabilities: error.capabilities } : {}),
+    ...(error.requiredCapabilities ? { requiredCapabilities: error.requiredCapabilities } : {}),
+    ...(error.missingCapabilities ? { missingCapabilities: error.missingCapabilities } : {}),
+  }));
   process.exit(2);
 }
 const destination = report.ok ? console.log : console.error;

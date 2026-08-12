@@ -290,7 +290,7 @@ node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality
   --writable web/nuxt-ssr-hydration/.output
 ```
 
-strict modeではoutbound networkをdenyし、repositoryと`.git`をread-only mountし、明示したbuild/artifact directoryだけwrite可能にし、private `/tmp`とallowlist済みenvironmentを使います。完全なfilesystem strict modeは現時点でLinux + bubblewrapを要求し、未対応platformではsilent downgradeせずfail-closedします。
+strict modeはmachine-readableな`filesystem` / `network` / `process`の3 capabilityすべてに`strict`を要求します。Linux + bubblewrapは、source/`.git`のread-only化、明示したbuild/artifact directoryだけのwrite許可、private `/tmp`、outbound-network isolation、PID namespace/new session、allowlist済みenvironmentによってこのbaselineを満たします。reportには各軸を`strict` / `constrained` / `caller_enforced`で保存します。同等capabilityを満たすbackendが実装されるまではmacOSを含む未対応platformでstrict要求をsilent downgradeせずfail-closedし、明示的なcaller-enforced実行は3軸ともその保証レベルをreportします。
 
 ## Web mutation品質ゲート
 

@@ -290,7 +290,7 @@ node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality
   --writable web/nuxt-ssr-hydration/.output
 ```
 
-Strict mode denies outbound network, mounts the repository read-only, keeps `.git` read-only, exposes only explicit build/artifact directories as writable, uses a private `/tmp`, and passes only an allowlisted environment. Full filesystem strict mode currently requires Linux + bubblewrap; unsupported platforms fail closed rather than silently downgrading.
+Strict mode requires machine-readable `filesystem`, `network`, and `process` capabilities to all be `strict`. Linux + bubblewrap satisfies that baseline with read-only source/`.git`, explicit writable build/artifact paths, a private `/tmp`, outbound-network isolation, a PID namespace/new session, and an allowlisted environment. Reports record the applied capability level per axis as `strict`, `constrained`, or `caller_enforced`. Unsupported platforms, including macOS until its backend can satisfy the same required capabilities, fail closed rather than silently downgrading; an explicitly caller-enforced run is reported as such on all three axes.
 
 ## Web mutation quality gate
 

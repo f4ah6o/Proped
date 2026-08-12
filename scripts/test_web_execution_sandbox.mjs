@@ -34,6 +34,8 @@ try {
   });
   assert.equal(planned.executable, "/usr/bin/bwrap");
   assert.ok(planned.args.includes("--unshare-net"));
+  assert.ok(planned.args.includes("--unshare-pid"));
+  assert.ok(planned.args.includes("--new-session"));
   assert.ok(planned.args.includes("--ro-bind"));
   assert.ok(planned.args.includes("--tmpfs"));
   assert.ok(planned.args.includes("--bind"));
@@ -55,19 +57,29 @@ try {
     const sourceFile = path.join(TMP, "source-read-only.txt");
     const allowedFile = path.join(WRITABLE, "artifact.txt");
     const gitProbe = path.join(ROOT, ".git/proped-web-sandbox-probe");
+    const filesystemEscapeProbe = `/var/tmp/proped-web-sandbox-probe-${process.pid}`;
     fs.writeFileSync(sourceFile, "original\n");
     fs.rmSync(gitProbe, { force: true });
+    fs.rmSync(filesystemEscapeProbe, { force: true });
 
     const probe = String.raw`
 const fs = require('node:fs');
 const net = require('node:net');
+const { spawnSync } = require('node:child_process');
 const sourceFile = process.argv[1];
 const allowedFile = process.argv[2];
 const gitProbe = process.argv[3];
+const filesystemEscapeProbe = process.argv[4];
+const hostPid = process.argv[5];
 const result = { credentialsDenied: process.env.PROPED_WEB_SANDBOX_SECRET === undefined };
 try { fs.writeFileSync(sourceFile, 'mutated'); result.sourceReadOnly = false; } catch { result.sourceReadOnly = true; }
 try { fs.writeFileSync(gitProbe, 'mutated'); result.upstreamGitWritesDenied = false; } catch { result.upstreamGitWritesDenied = true; }
+try { fs.writeFileSync(filesystemEscapeProbe, 'mutated'); result.filesystemEscapeDenied = false; } catch { result.filesystemEscapeDenied = true; }
 try { fs.writeFileSync(allowedFile, 'artifact'); result.explicitWritablePathWorks = fs.readFileSync(allowedFile, 'utf8') === 'artifact'; } catch (error) { result.explicitWritablePathWorks = false; result.writeError = error.message; }
+result.hostProcessHidden = !fs.existsSync('/proc/' + hostPid);
+const childProbe = "const fs=require('node:fs');const hostPid=process.argv[1];const forbidden=process.argv[2];let ok=!fs.existsSync('/proc/'+hostPid);try{fs.writeFileSync(forbidden,'child');ok=false}catch{}process.exit(ok?0:1);";
+const child = spawnSync(process.execPath, ['-e', childProbe, hostPid, filesystemEscapeProbe], { stdio: 'ignore' });
+result.childProcessPolicyInherited = child.status === 0;
 const socket = net.createConnection({host:'1.1.1.1', port:53});
 const finish = (denied) => { result.networkDenied = denied; console.log(JSON.stringify(result)); process.exit(Object.values(result).every(Boolean) ? 0 : 1); };
 socket.setTimeout(500);
@@ -76,7 +88,7 @@ socket.once('error', () => finish(true));
 socket.once('timeout', () => { socket.destroy(); finish(true); });
 `;
     const invocation = buildStrictSandboxInvocation({
-      command: [process.execPath, "-e", probe, sourceFile, allowedFile, gitProbe],
+      command: [process.execPath, "-e", probe, sourceFile, allowedFile, gitProbe, filesystemEscapeProbe, String(process.pid)],
       cwd: ROOT,
       repositoryRoot: ROOT,
       writablePaths: [path.relative(ROOT, WRITABLE)],
@@ -93,11 +105,15 @@ socket.once('timeout', () => { socket.destroy(); finish(true); });
       credentialsDenied: true,
       sourceReadOnly: true,
       upstreamGitWritesDenied: true,
+      filesystemEscapeDenied: true,
       explicitWritablePathWorks: true,
+      hostProcessHidden: true,
+      childProcessPolicyInherited: true,
       networkDenied: true,
     });
     assert.equal(fs.readFileSync(sourceFile, "utf8"), "original\n");
     assert.equal(fs.existsSync(gitProbe), false);
+    assert.equal(fs.existsSync(filesystemEscapeProbe), false);
     console.log(JSON.stringify({ ok: true, runtime: "web-execution-sandbox-live", ...result, backend: capabilities.backend }));
   } else {
     console.log(JSON.stringify({

@@ -1,6 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import {
+  assertSandboxCapabilities,
+  sandboxCapabilityRequirement,
+  sandboxCapabilitySet,
+} from "./sandbox-capability-model.mjs";
 
 const ENV_ALLOWLIST = Object.freeze([
   "PATH",
@@ -53,37 +58,82 @@ export function safeExecutionEnvironment(sourceEnvironment = process.env, { osEn
   return environment;
 }
 
+function unavailableCapabilities({ platform, backend, reason }) {
+  return {
+    available: false,
+    platform,
+    backend,
+    capabilities: sandboxCapabilitySet(),
+    requiredCapabilities: sandboxCapabilityRequirement("strict"),
+    diagnostic: "strict_capability_unavailable",
+    reason,
+    strictFilesystem: false,
+    networkDeny: false,
+    processIsolation: false,
+  };
+}
+
+export function callerEnforcedSandboxCapabilities({ platform = process.platform } = {}) {
+  return {
+    available: true,
+    platform,
+    backend: null,
+    capabilities: sandboxCapabilitySet(),
+    requiredCapabilities: sandboxCapabilityRequirement("caller_enforced"),
+    diagnostic: "caller_enforced_execution",
+  };
+}
+
 export function strictSandboxCapabilities({ platform = process.platform, backendPath = null } = {}) {
   if (platform !== "linux") {
-    return {
-      available: false,
+    return unavailableCapabilities({
       platform,
       backend: null,
-      strictFilesystem: false,
-      networkDeny: false,
       reason: "strict Web execution sandbox currently requires Linux bubblewrap",
-    };
+    });
   }
   const resolvedBackend = backendPath ?? executableOnPath("bwrap");
   if (!resolvedBackend) {
-    return {
-      available: false,
+    return unavailableCapabilities({
       platform,
       backend: "bubblewrap",
-      strictFilesystem: true,
-      networkDeny: true,
       reason: "bubblewrap is not installed or is not on PATH",
-    };
+    });
   }
+  const capabilities = sandboxCapabilitySet({
+    filesystem: "strict",
+    network: "strict",
+    process: "strict",
+  });
   return {
     available: true,
     platform,
     backend: "bubblewrap",
     backendPath: resolvedBackend,
+    capabilities,
+    requiredCapabilities: sandboxCapabilityRequirement("strict"),
+    diagnostic: "strict_capabilities_satisfied",
     strictFilesystem: true,
     networkDeny: true,
+    processIsolation: true,
     credentials: "environment-allowlist",
   };
+}
+
+export function sandboxCapabilitiesForMode({ mode = "caller-enforced", platform = process.platform, backendPath = null } = {}) {
+  if (mode === "caller-enforced") return callerEnforcedSandboxCapabilities({ platform });
+  if (mode === "strict") return strictSandboxCapabilities({ platform, backendPath });
+  throw new Error(`unsupported sandbox mode: ${mode}`);
+}
+
+export function assertStrictSandboxCapabilities({ platform = process.platform, backendPath = null } = {}) {
+  const report = strictSandboxCapabilities({ platform, backendPath });
+  assertSandboxCapabilities(report.capabilities, report.requiredCapabilities, {
+    platform: report.platform,
+    backend: report.backend,
+  });
+  if (!report.available) throw new Error(report.reason);
+  return report;
 }
 
 function prepareWritablePath(repositoryRoot, candidate) {
@@ -125,12 +175,15 @@ export function buildStrictSandboxInvocation({
     throw new Error("strict sandbox repository root cannot be under /tmp because /tmp is replaced with a private tmpfs");
   }
 
-  const capabilities = strictSandboxCapabilities({ platform, backendPath });
-  if (!capabilities.available) throw new Error(capabilities.reason);
+  const capabilities = assertStrictSandboxCapabilities({ platform, backendPath });
   const writable = [...new Set(writablePaths.map((candidate) => prepareWritablePath(root, candidate)))].sort();
   const args = [
     "--die-with-parent",
     "--unshare-net",
+    "--unshare-pid",
+    "--unshare-ipc",
+    "--unshare-uts",
+    "--new-session",
     "--ro-bind", "/", "/",
     "--dev-bind", "/dev", "/dev",
     "--proc", "/proc",
@@ -151,8 +204,13 @@ export function buildStrictSandboxInvocation({
     args,
     metadata: {
       mode: "strict",
-      backend: "bubblewrap",
+      platform: capabilities.platform,
+      backend: capabilities.backend,
+      capabilities: capabilities.capabilities,
+      requiredCapabilities: capabilities.requiredCapabilities,
+      diagnostic: capabilities.diagnostic,
       network: "os-enforced-deny",
+      process: "pid-namespace-new-session",
       sourceTree: "read-only",
       temporaryDirectory: "private-tmpfs",
       credentials: "environment-allowlist-deny",

@@ -95,6 +95,15 @@ try {
   (result.ok ? console.log : console.error)(JSON.stringify(result));
   process.exitCode = result.ok ? 0 : 1;
 } catch (error) {
-  console.error(JSON.stringify({ ok: false, error: "web_v2_run_failed", message: error.message }));
+  console.error(JSON.stringify({
+    ok: false,
+    error: error.code ?? "web_v2_run_failed",
+    message: error.message,
+    ...(error.platform ? { platform: error.platform } : {}),
+    ...(error.backend ? { backend: error.backend } : {}),
+    ...(error.capabilities ? { capabilities: error.capabilities } : {}),
+    ...(error.requiredCapabilities ? { requiredCapabilities: error.requiredCapabilities } : {}),
+    ...(error.missingCapabilities ? { missingCapabilities: error.missingCapabilities } : {}),
+  }));
   process.exitCode = 2;
 }

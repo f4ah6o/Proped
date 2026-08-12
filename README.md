@@ -290,7 +290,7 @@ node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality
   --writable web/nuxt-ssr-hydration/.output
 ```
 
-Strict mode requires machine-readable `filesystem`, `network`, and `process` capabilities to all be `strict`. Linux + bubblewrap satisfies that baseline with read-only source/`.git`, explicit writable build/artifact paths, a private `/tmp`, outbound-network isolation, a PID namespace/new session, and an allowlisted environment. Reports record the applied capability level per axis as `strict`, `constrained`, or `caller_enforced`. Unsupported platforms, including macOS until its backend can satisfy the same required capabilities, fail closed rather than silently downgrading; an explicitly caller-enforced run is reported as such on all three axes.
+Strict mode requires machine-readable `filesystem`, `network`, and `process` capabilities to all be `strict`. Linux + bubblewrap satisfies that baseline with read-only source/`.git`, explicit writable build/artifact paths, a private `/tmp`, outbound-network isolation, a PID namespace/new session, and an allowlisted environment. Reports record the applied capability level per axis as `strict`, `constrained`, or `caller_enforced`. macOS can be selected explicitly with `proped web run <manifest> --sandbox-mode constrained`: the Seatbelt (`sandbox-exec`) backend denies network and filesystem writes by default, permits only explicit writable paths plus a private temporary HOME, filters the environment, denies reads of common host credential locations, and applies the policy to child processes. It is still reported as `constrained` because host process visibility and complete host-home read isolation are not provided; a strict manifest never silently downgrades on macOS.
 
 ## Web mutation quality gate
 
@@ -314,7 +314,7 @@ node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality
 node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json --output .tmp/web-quality
 ```
 
-The runner never invokes a shell. Manifest paths and stage working directories must remain inside the repository root. Exit `1` from a stage is classified as a quality-gate failure, exit `2` as usage error, other non-zero exits as execution failures, and dependent stages are blocked after prerequisite failure. Child-process network, filesystem-write, upstream-write, and credential restrictions are explicitly caller-enforced rather than claimed as an in-process sandbox. The runner itself confines manifest/cwd/artifact paths and strips non-allowlisted environment variables before spawning stages.
+The runner never invokes a shell. Manifest paths and stage working directories must remain inside the repository root. Exit `1` from a stage is classified as a quality-gate failure, exit `2` as usage error, other non-zero exits as execution failures, and dependent stages are blocked after prerequisite failure. Linux strict and macOS constrained runs apply their OS sandbox before spawning each stage and record the effective guarantees in the report; caller-enforced mode remains explicit. Every mode confines manifest/cwd/artifact paths and strips non-allowlisted environment variables before spawning stages.
 
 ## Included demos
 

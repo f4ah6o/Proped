@@ -76,6 +76,7 @@ try {
   const compiledReport = JSON.parse(compiledCli.stdout);
   assert.equal(compiledReport.manifest.schemaVersion, 1);
   assert.deepEqual(compiledReport.manifest.stages.map((stage) => stage.id), ["project-build", "generic-browser"]);
+  assert.equal(compiledReport.execution.sandboxMode, "strict");
   assert.equal(compiledReport.execution.strictSandbox, true);
   assert.deepEqual(compiledReport.execution.writablePaths, ["dist"]);
 
@@ -120,6 +121,26 @@ try {
   assert.equal(v2Report.manifestVersion, 2);
   assert.equal(v2Report.sandboxRequested, "caller-enforced");
   assert.equal(v2Report.stages[0].payload.replayGate.attempts, 3);
+
+  if (process.platform === "darwin") {
+    const constrainedRun = cli(path.join(ROOT, "scripts/web_project_run_v2.mjs"), [
+      runnableFile,
+      "--repository-root", ROOT,
+      "--sandbox-mode", "constrained",
+      "--no-artifacts",
+    ]);
+    assert.equal(constrainedRun.status, 0, constrainedRun.stderr);
+    const constrainedReport = JSON.parse(constrainedRun.stdout);
+    assert.equal(constrainedReport.ok, true);
+    assert.equal(constrainedReport.sandboxRequested, "constrained");
+    assert.equal(constrainedReport.sandbox.mode, "constrained");
+    assert.equal(constrainedReport.sandbox.backend, "sandbox-exec");
+    assert.deepEqual(constrainedReport.sandbox.capabilities, {
+      filesystem: "constrained",
+      network: "constrained",
+      process: "constrained",
+    });
+  }
 
   console.log(JSON.stringify({
     ok: true,

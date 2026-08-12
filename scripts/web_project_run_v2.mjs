@@ -8,7 +8,7 @@ import { applyPackageManagerRuntimeEnvironment, probePackageManagerRuntime } fro
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
-  else console.log("Usage: node scripts/web_project_run_v2.mjs <proped.web.json> [--repository-root <dir>] [--no-artifacts] [--sandbox-mode <manifest|strict|caller-enforced>]");
+  else console.log("Usage: node scripts/web_project_run_v2.mjs <proped.web.json> [--repository-root <dir>] [--no-artifacts] [--sandbox-mode <manifest|strict|constrained|caller-enforced>]");
   process.exit(message ? 2 : 0);
 }
 
@@ -31,7 +31,7 @@ for (let index = 0; index < argv.length; index += 1) {
   else manifestFile = path.resolve(arg);
 }
 if (!manifestFile) usage("web run v2 requires a manifest file");
-if (!["manifest", "strict", "caller-enforced"].includes(sandboxMode)) usage("--sandbox-mode is invalid");
+if (!["manifest", "strict", "constrained", "caller-enforced"].includes(sandboxMode)) usage("--sandbox-mode is invalid");
 
 try {
   const root = repositoryRoot ?? path.dirname(manifestFile);
@@ -78,16 +78,18 @@ try {
     process.exit(2);
   }
   const compiled = compileWebProjectManifestV2(manifest, root);
-  const strict = sandboxMode === "strict" || (sandboxMode === "manifest" && compiled.execution.strictSandbox);
+  const requestedSandboxMode = sandboxMode === "manifest" ? compiled.execution.sandboxMode : sandboxMode;
   const report = runWebProject(root, compiled.manifest, {
     writeArtifacts,
-    sandbox: strict ? { mode: "strict", writablePaths: compiled.execution.writablePaths } : null,
+    sandbox: requestedSandboxMode === "caller-enforced"
+      ? null
+      : { mode: requestedSandboxMode, writablePaths: compiled.execution.writablePaths },
     sourceEnvironment,
   });
   const result = {
     ...report,
     manifestVersion: 2,
-    sandboxRequested: strict ? "strict" : "caller-enforced",
+    sandboxRequested: requestedSandboxMode,
     bootstrapInstall: compiled.execution.bootstrapInstall,
     nodeRuntime: nodeRuntimeSummary,
     packageManagerRuntime,

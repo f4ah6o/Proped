@@ -355,6 +355,7 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
   return {
     manifest: v1,
     execution: {
+      sandboxMode: manifest.sandbox.mode,
       strictSandbox: manifest.sandbox.mode === "strict",
       writablePaths,
       bootstrapInstall: manifest.bootstrap.install ? clone(manifest.bootstrap.install) : null,

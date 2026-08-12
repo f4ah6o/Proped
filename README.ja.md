@@ -290,7 +290,7 @@ node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality
   --writable web/nuxt-ssr-hydration/.output
 ```
 
-strict modeはmachine-readableな`filesystem` / `network` / `process`の3 capabilityすべてに`strict`を要求します。Linux + bubblewrapは、source/`.git`のread-only化、明示したbuild/artifact directoryだけのwrite許可、private `/tmp`、outbound-network isolation、PID namespace/new session、allowlist済みenvironmentによってこのbaselineを満たします。reportには各軸を`strict` / `constrained` / `caller_enforced`で保存します。同等capabilityを満たすbackendが実装されるまではmacOSを含む未対応platformでstrict要求をsilent downgradeせずfail-closedし、明示的なcaller-enforced実行は3軸ともその保証レベルをreportします。
+strict modeはmachine-readableな`filesystem` / `network` / `process`の3 capabilityすべてに`strict`を要求します。Linux + bubblewrapは、source/`.git`のread-only化、明示したbuild/artifact directoryだけのwrite許可、private `/tmp`、outbound-network isolation、PID namespace/new session、allowlist済みenvironmentによってこのbaselineを満たします。reportには各軸を`strict` / `constrained` / `caller_enforced`で保存します。macOSでは`proped web run <manifest> --sandbox-mode constrained`を明示するとSeatbelt（`sandbox-exec`）backendを使い、networkとfilesystem writeをdefault deny、明示writable pathとprivate temporary HOMEだけをwrite許可、environment allowlist、代表的なhost credential pathのread deny、child processへのpolicy継承を適用します。ただしhost process visibilityとhost HOME全体のread isolationは提供できないため3軸とも`constrained`としてreportし、strict manifestをmacOSでsilent downgradeすることはありません。
 
 ## Web mutation品質ゲート
 
@@ -314,7 +314,7 @@ node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality
 node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json --output .tmp/web-quality
 ```
 
-runnerはshellを経由しません。manifest pathとstage cwdはrepository root外へescapeできません。stageのexit `1`はquality gate failure、exit `2`はusage error、その他のnon-zeroはexecution failureとして分類し、依存stageが失敗した後続stageはblockedになります。child processのnetwork、filesystem write、upstream write、credential制約はrunner内sandboxではなくcaller-enforcedであることを明示します。runner自身はmanifest/cwd/artifact pathをrepository内へ制限し、stage起動時にallowlist外の環境変数を引き継ぎません。
+runnerはshellを経由しません。manifest pathとstage cwdはrepository root外へescapeできません。stageのexit `1`はquality gate failure、exit `2`はusage error、その他のnon-zeroはexecution failureとして分類し、依存stageが失敗した後続stageはblockedになります。Linux strictとmacOS constrainedでは各stage起動前にOS sandboxを適用し、実際の保証をreportへ保存します。caller-enforced modeも明示的に残します。すべてのmodeでmanifest/cwd/artifact pathをrepository内へ制限し、stage起動時にallowlist外の環境変数を引き継ぎません。
 
 ## 同梱demo
 

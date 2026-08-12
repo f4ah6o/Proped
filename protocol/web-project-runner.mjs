@@ -2,8 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
+  assertConstrainedSandboxCapabilities,
   assertStrictSandboxCapabilities,
+  buildMacosConstrainedSandboxInvocation,
   buildStrictSandboxInvocation,
+  cleanupSandboxInvocation,
+  macosConstrainedSourceEnvironment,
+  macosCredentialReadDenyPaths,
   safeExecutionEnvironment,
   sandboxCapabilitiesForMode,
 } from "./web-execution-sandbox.mjs";
@@ -260,8 +265,9 @@ function stableStage(stageResult) {
 export function runWebProject(repositoryRoot, manifest, options = {}) {
   validateWebProjectManifest(manifest, repositoryRoot);
   const projectRoot = resolveExistingInside(repositoryRoot, manifest.projectRoot, "projectRoot");
-  const strictSandbox = options.sandbox?.mode === "strict";
-  const sandboxWritablePaths = strictSandbox
+  const sandboxMode = options.sandbox?.mode ?? "caller-enforced";
+  const osSandbox = sandboxMode !== "caller-enforced";
+  const sandboxWritablePaths = osSandbox
     ? [
         ...(options.writeArtifacts === false ? [] : [options.output ?? manifest.artifacts.output]),
         ...(options.sandbox?.writablePaths ?? []),
@@ -269,26 +275,22 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
     : [];
   const sandboxPlatform = options.sandbox?.platform ?? process.platform;
   const sandboxBackendPath = options.sandbox?.backendPath ?? null;
-  const preflightCapabilities = strictSandbox
+  const sourceEnvironment = sandboxMode === "constrained"
+    ? macosConstrainedSourceEnvironment(options.sourceEnvironment ?? process.env)
+    : (options.sourceEnvironment ?? process.env);
+  const preflightCapabilities = sandboxMode === "strict"
     ? assertStrictSandboxCapabilities({ platform: sandboxPlatform, backendPath: sandboxBackendPath })
-    : sandboxCapabilitiesForMode({ mode: "caller-enforced", platform: sandboxPlatform });
-  let sandboxMetadata = strictSandbox
-    ? {
-        mode: "strict",
-        platform: preflightCapabilities.platform,
-        backend: preflightCapabilities.backend,
-        capabilities: preflightCapabilities.capabilities,
-        requiredCapabilities: preflightCapabilities.requiredCapabilities,
-        diagnostic: preflightCapabilities.diagnostic,
-      }
-    : {
-        mode: "caller-enforced",
-        platform: preflightCapabilities.platform,
-        backend: null,
-        capabilities: preflightCapabilities.capabilities,
-        requiredCapabilities: preflightCapabilities.requiredCapabilities,
-        diagnostic: preflightCapabilities.diagnostic,
-      };
+    : sandboxMode === "constrained"
+      ? assertConstrainedSandboxCapabilities({ platform: sandboxPlatform, backendPath: sandboxBackendPath })
+      : sandboxCapabilitiesForMode({ mode: "caller-enforced", platform: sandboxPlatform });
+  let sandboxMetadata = {
+    mode: sandboxMode,
+    platform: preflightCapabilities.platform,
+    backend: preflightCapabilities.backend,
+    capabilities: preflightCapabilities.capabilities,
+    requiredCapabilities: preflightCapabilities.requiredCapabilities,
+    diagnostic: preflightCapabilities.diagnostic,
+  };
   const results = [];
   const byId = new Map();
 
@@ -318,8 +320,9 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
     const started = performance.now();
     let executable = stage.command[0];
     let args = stage.command.slice(1);
-    if (strictSandbox) {
-      const invocation = buildStrictSandboxInvocation({
+    let invocation = null;
+    if (sandboxMode === "strict") {
+      invocation = buildStrictSandboxInvocation({
         command: stage.command,
         cwd,
         repositoryRoot,
@@ -327,18 +330,37 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
         platform: sandboxPlatform,
         backendPath: sandboxBackendPath,
       });
+    } else if (sandboxMode === "constrained") {
+      invocation = buildMacosConstrainedSandboxInvocation({
+        command: stage.command,
+        cwd,
+        repositoryRoot,
+        writablePaths: sandboxWritablePaths,
+        backendPath: sandboxBackendPath,
+        credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
+      });
+    }
+    if (invocation) {
       executable = invocation.executable;
       args = invocation.args;
       sandboxMetadata = invocation.metadata;
     }
-    const child = spawnSync(executable, args, {
-      cwd,
-      encoding: "utf8",
-      timeout: stage.timeoutMs,
-      maxBuffer: 8 * 1024 * 1024,
-      shell: false,
-      env: childEnvironment({ osEnforced: strictSandbox, sourceEnvironment: options.sourceEnvironment ?? process.env }),
-    });
+    let child;
+    try {
+      child = spawnSync(executable, args, {
+        cwd,
+        encoding: "utf8",
+        timeout: stage.timeoutMs,
+        maxBuffer: 8 * 1024 * 1024,
+        shell: false,
+        env: {
+          ...childEnvironment({ osEnforced: osSandbox, sourceEnvironment }),
+          ...(invocation?.environment ?? {}),
+        },
+      });
+    } finally {
+      cleanupSandboxInvocation(invocation);
+    }
     const durationMs = Math.round((performance.now() - started) * 1000) / 1000;
     const status = stageStatus(child);
     const stdout = child.stdout ?? "";

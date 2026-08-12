@@ -13,9 +13,12 @@ import {
   sandboxCapabilitySet,
 } from "../protocol/sandbox-capability-model.mjs";
 import {
+  assertConstrainedSandboxCapabilities,
   assertStrictSandboxCapabilities,
+  buildMacosConstrainedSandboxInvocation,
   buildStrictSandboxInvocation,
   callerEnforcedSandboxCapabilities,
+  macosConstrainedSandboxCapabilities,
   strictSandboxCapabilities,
 } from "../protocol/web-execution-sandbox.mjs";
 import { runWebProject } from "../protocol/web-project-runner.mjs";
@@ -67,12 +70,28 @@ assert.deepEqual(callerMac.capabilities, {
 });
 assert.equal(callerMac.diagnostic, "caller_enforced_execution");
 
-const strictMac = strictSandboxCapabilities({ platform: "darwin" });
+const constrainedMac = macosConstrainedSandboxCapabilities({ platform: "darwin", backendPath: "/usr/bin/sandbox-exec" });
+assert.equal(constrainedMac.available, true);
+assert.equal(constrainedMac.backend, "sandbox-exec");
+assert.deepEqual(constrainedMac.capabilities, {
+  filesystem: "constrained",
+  network: "constrained",
+  process: "constrained",
+});
+assert.equal(constrainedMac.processIsolation, false);
+assert.equal(constrainedMac.childPolicyInheritance, true);
+assert.equal(constrainedMac.hostHomeReadIsolation, "unsupported");
+assert.deepEqual(
+  assertConstrainedSandboxCapabilities({ platform: "darwin", backendPath: "/usr/bin/sandbox-exec" }).capabilities,
+  constrainedMac.capabilities,
+);
+
+const strictMac = strictSandboxCapabilities({ platform: "darwin", backendPath: "/usr/bin/sandbox-exec" });
 assert.equal(strictMac.available, false);
-assert.equal(strictMac.backend, null);
-assert.deepEqual(strictMac.capabilities, callerMac.capabilities);
+assert.equal(strictMac.backend, "sandbox-exec");
+assert.deepEqual(strictMac.capabilities, constrainedMac.capabilities);
 assert.throws(
-  () => assertStrictSandboxCapabilities({ platform: "darwin" }),
+  () => assertStrictSandboxCapabilities({ platform: "darwin", backendPath: "/usr/bin/sandbox-exec" }),
   (error) => error instanceof SandboxCapabilityError
     && error.code === "sandbox_capability_requirement_not_met"
     && error.platform === "darwin"
@@ -96,6 +115,24 @@ assert.ok(planned.args.includes("--unshare-pid"));
 assert.ok(planned.args.includes("--new-session"));
 assert.deepEqual(planned.metadata.capabilities, strictRequirement);
 assert.equal(planned.metadata.process, "pid-namespace-new-session");
+
+const plannedMac = buildMacosConstrainedSandboxInvocation({
+  command: ["node", "-e", "process.exit(0)"],
+  cwd: ROOT,
+  repositoryRoot: ROOT,
+  writablePaths: [".tmp/sandbox-capability-model-test/writable-mac"],
+  backendPath: "/usr/bin/sandbox-exec",
+  temporaryDirectory: path.join(TMP, "mac-home"),
+  credentialReadDenyPaths: [path.join(TMP, "credential")],
+});
+assert.equal(plannedMac.executable, "/usr/bin/sandbox-exec");
+assert.equal(plannedMac.args[0], "-p");
+assert.match(plannedMac.args[1], /\(deny network\*\)/);
+assert.match(plannedMac.args[1], /\(deny file-write\*\)/);
+assert.deepEqual(plannedMac.metadata.capabilities, constrainedMac.capabilities);
+assert.equal(plannedMac.metadata.mode, "constrained");
+assert.equal(plannedMac.metadata.hostHomeReadIsolation, "unsupported");
+assert.equal(plannedMac.metadata.credentialReadDenyPathCount, 1);
 
 function manifest() {
   return {
@@ -143,6 +180,21 @@ try {
       && error.code === "sandbox_capability_requirement_not_met",
   );
   assert.equal(fs.existsSync(SENTINEL), false, "strict capability rejection must happen before any stage executes");
+
+  if (process.platform === "darwin") {
+    const constrainedReport = runWebProject(ROOT, manifest(), {
+      writeArtifacts: false,
+      sandbox: {
+        mode: "constrained",
+        writablePaths: [path.relative(ROOT, TMP)],
+      },
+    });
+    assert.equal(constrainedReport.ok, true);
+    assert.equal(constrainedReport.sandbox.mode, "constrained");
+    assert.equal(constrainedReport.sandbox.backend, "sandbox-exec");
+    assert.deepEqual(constrainedReport.sandbox.capabilities, constrainedMac.capabilities);
+    assert.equal(fs.existsSync(SENTINEL), true);
+  }
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });
 }
@@ -153,5 +205,6 @@ console.log(JSON.stringify({
   axes: SANDBOX_CAPABILITY_AXES,
   levels: SANDBOX_CAPABILITY_LEVELS,
   strictMacFailClosed: true,
+  constrainedMacReported: true,
   deterministicReport: true,
 }));

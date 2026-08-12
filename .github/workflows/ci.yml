@@ -1007,7 +1007,13 @@ jobs:
         run: python scripts/test_managed_setup.py ${{ matrix.setup_args }}
 
   sandbox-policy:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -1017,13 +1023,27 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install network-deny backend
+      - name: Install Linux strict sandbox backend
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install --yes bubblewrap
 
-      - name: Verify network denial
+      - name: Verify external harness network denial on Linux
+        if: runner.os == 'Linux'
         run: sudo python3 scripts/external_harness.py sandbox-check --cwd "$GITHUB_WORKSPACE"
 
-      - name: Verify Web strict execution sandbox
+      - name: Verify external harness network denial on macOS
+        if: runner.os == 'macOS'
+        run: python3 scripts/external_harness.py sandbox-check --cwd "$GITHUB_WORKSPACE"
+
+      - name: Verify sandbox capability model
+        run: node scripts/test_sandbox_capability_model.mjs
+
+      - name: Verify Linux strict Web execution sandbox
+        if: runner.os == 'Linux'
         run: sudo "$(command -v node)" scripts/test_web_execution_sandbox.mjs --live
+
+      - name: Verify macOS constrained Web execution sandbox
+        if: runner.os == 'macOS'
+        run: node scripts/test_web_execution_sandbox.mjs --live

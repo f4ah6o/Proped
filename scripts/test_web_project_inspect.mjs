@@ -102,6 +102,80 @@ function json(value) {
 
 {
   const root = fixture({
+    "package.json": json({ name: "nvmrc-only" }),
+    ".nvmrc": "v22.22.3\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.nodeRequirement, "22.22.3");
+  assert.equal(report.nodeRequirementResolution.status, "resolved");
+  assert.deepEqual(report.nodeRequirementResolution.sources, [{ source: ".nvmrc", kind: "pin", requirement: "22.22.3", raw: "v22.22.3" }]);
+}
+
+{
+  const root = fixture({
+    "package.json": json({ name: "nvmrc-major" }),
+    ".nvmrc": "22\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.nodeRequirement, ">=22.0.0 <23.0.0");
+  assert.equal(report.nodeRequirementResolution.status, "resolved");
+  assert.equal(report.nodeRequirementResolution.sources[0].kind, "range");
+}
+
+{
+  const root = fixture({
+    "package.json": json({ name: "range-and-major-selector", engines: { node: "^22.15.0" } }),
+    ".nvmrc": "22\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.nodeRequirement, "^22.15.0 >=22.0.0 <23.0.0");
+  assert.equal(report.nodeRequirementResolution.status, "resolved");
+}
+
+{
+  const root = fixture({
+    "package.json": json({ name: "unparseable-selector" }),
+    ".nvmrc": "lts/*\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.nodeRequirement, null);
+  assert.equal(report.nodeRequirementResolution.status, "not-declared");
+  assert.ok(report.ambiguities.some((item) => item.code === "node-requirement-unparseable-selector"));
+}
+
+{
+  const root = fixture({
+    "package.json": json({ name: "volta-only", volta: { node: "20.20.0" } }),
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.nodeRequirement, "20.20.0");
+  assert.equal(report.nodeRequirementResolution.sources[0].source, "package.json#volta.node");
+}
+
+{
+  const root = fixture({
+    "package.json": json({ name: "range-and-pin", engines: { node: "^22.15.0" } }),
+    ".node-version": "22.22.3\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.nodeRequirement, "22.22.3");
+  assert.equal(report.nodeRequirementResolution.status, "resolved");
+  assert.equal(report.ambiguities.some((item) => item.code === "node-version-pin-range-conflict"), false);
+}
+
+{
+  const root = fixture({
+    "package.json": json({ name: "conflicting-pins", engines: { node: "^22.15.0" }, volta: { node: "22.22.3" } }),
+    ".nvmrc": "20.20.0\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.nodeRequirement, null);
+  assert.equal(report.nodeRequirementResolution.status, "ambiguous");
+  assert.ok(report.ambiguities.some((item) => item.code === "conflicting-node-version-pins"));
+}
+
+{
+  const root = fixture({
     "package.json": json({
       name: "mismatch",
       packageManager: "pnpm@10.0.0",

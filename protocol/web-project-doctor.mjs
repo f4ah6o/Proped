@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { compileWebProjectManifestV2, validateWebProjectManifestV2 } from "./web-project-manifest-v2.mjs";
 import { strictSandboxCapabilities } from "./web-execution-sandbox.mjs";
 import { managedBrowserRuntimeDetails } from "../web/playwright-browser/managed-browser-runtime.mjs";
-import { applyNodeRuntimeToEnvironment, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "./web-node-runtime.mjs";
+import { applyNodeRuntimeToEnvironment, blockingNodeRequirementAmbiguities, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "./web-node-runtime.mjs";
 import { webProjectDependencyReadiness } from "./web-project-bootstrap.mjs";
 
 function executableAvailable(command, environment = process.env) {
@@ -27,6 +27,7 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
     ? check("project-root", "pass", "project root exists")
     : check("project-root", "fail", "project root does not exist", { path: projectRoot }));
 
+  const nodeAmbiguities = blockingNodeRequirementAmbiguities(manifest);
   const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null);
   const nodeRuntimeSummary = summarizeNodeRuntimeResolution(nodeRuntime);
   const targetEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
@@ -37,7 +38,9 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
       : check("package-manager", "fail", `${manifest.project.packageManager} is not available`));
   } else checks.push(check("package-manager", "warning", "package manager is unresolved"));
 
-  if (manifest.project.nodeRequirement) {
+  if (nodeAmbiguities.length > 0) {
+    checks.push(check("node-engine", "fail", "Node runtime requirement is ambiguous and requires review", { nodeRuntime: nodeRuntimeSummary, ambiguities: nodeAmbiguities }));
+  } else if (manifest.project.nodeRequirement) {
     if (nodeRuntime.status === "selected") {
       const switched = nodeRuntime.selected?.path !== process.execPath;
       checks.push(check("node-engine", "pass", `${switched ? "selected" : "current"} Node ${nodeRuntime.selected?.version} satisfies ${manifest.project.nodeRequirement}`, { nodeRuntime: nodeRuntimeSummary }));

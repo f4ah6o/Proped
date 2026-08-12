@@ -5,6 +5,22 @@ import { evaluateNodeEngine } from "./web-node-engine.mjs";
 
 export const WEB_NODE_RUNTIME_VERSION = "1";
 
+export const BLOCKING_NODE_REQUIREMENT_AMBIGUITY_CODES = Object.freeze([
+  "conflicting-node-version-pins",
+  "conflicting-node-engine-ranges",
+  "node-version-pin-range-conflict",
+  "node-pin-range-compatibility-unverified",
+  "node-requirement-unparseable-selector",
+  "node-requirement-unparseable-pin",
+]);
+
+export function blockingNodeRequirementAmbiguities(value) {
+  const ambiguities = Array.isArray(value) ? value : value?.inference?.ambiguities ?? [];
+  const blocking = new Set(BLOCKING_NODE_REQUIREMENT_AMBIGUITY_CODES);
+  return ambiguities.filter((item) => item && blocking.has(item.code));
+}
+
+
 function versionTuple(value) {
   const match = String(value ?? "").trim().replace(/^v/, "").match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
   return match ? [Number(match[1]), Number(match[2] ?? 0), Number(match[3] ?? 0)] : [0, 0, 0];

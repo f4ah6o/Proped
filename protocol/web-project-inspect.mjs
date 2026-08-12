@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { evaluateNodeEngine } from "./web-node-engine.mjs";
 
 export const WEB_PROJECT_INSPECT_VERSION = 1;
 
@@ -64,6 +65,119 @@ function packageManagerFromField(value) {
   if (typeof value !== "string") return null;
   const match = /^(npm|pnpm|yarn|bun)@/.exec(value.trim());
   return match?.[1] ?? null;
+}
+
+function normalizeNodeSelector(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  let match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(trimmed);
+  if (match) return { kind: "pin", requirement: `${match[1]}.${match[2]}.${match[3]}` };
+  match = /^v?(\d+)\.(\d+)$/.exec(trimmed);
+  if (match) {
+    const major = Number(match[1]);
+    const minor = Number(match[2]);
+    return { kind: "range", requirement: `>=${major}.${minor}.0 <${major}.${minor + 1}.0` };
+  }
+  match = /^v?(\d+)$/.exec(trimmed);
+  if (match) {
+    const major = Number(match[1]);
+    return { kind: "range", requirement: `>=${major}.0.0 <${major + 1}.0.0` };
+  }
+  return null;
+}
+
+function readSmallText(file) {
+  try {
+    const stat = fs.statSync(file);
+    if (!stat.isFile() || stat.size > 4096) return null;
+    return fs.readFileSync(file, "utf8").trim();
+  } catch {
+    return null;
+  }
+}
+
+function intersectNodeRequirements(requirements) {
+  const unique = [...new Set(requirements.filter(Boolean))];
+  if (unique.length === 0) return null;
+  let clauses = [""];
+  for (const requirement of unique) {
+    const parts = String(requirement).split("||").map((part) => part.trim()).filter(Boolean);
+    clauses = clauses.flatMap((base) => parts.map((part) => `${base} ${part}`.trim()));
+  }
+  return [...new Set(clauses)].join(" || ");
+}
+
+function detectNodeRequirement(root, pkg, ambiguities, evidence) {
+  const sources = [];
+  const addRange = (source, value) => {
+    if (typeof value !== "string" || !value.trim()) return;
+    const requirement = value.trim();
+    sources.push({ source, kind: "range", requirement, raw: requirement });
+    evidence.push(`node-requirement:${source}:${requirement}`);
+  };
+  const addSelector = (source, value) => {
+    if (typeof value !== "string" || !value.trim()) return;
+    const raw = value.trim();
+    const normalized = normalizeNodeSelector(raw);
+    if (!normalized) {
+      ambiguities.push({
+        code: "node-requirement-unparseable-selector",
+        message: `${source} contains a Node selector that cannot be safely normalized: ${raw}`,
+        severity: "error",
+      });
+      evidence.push(`node-requirement:${source}:unparseable`);
+      return;
+    }
+    sources.push({ source, kind: normalized.kind, requirement: normalized.requirement, raw });
+    evidence.push(`node-requirement:${source}:${normalized.requirement}`);
+  };
+
+  addRange("package.json#engines.node", pkg?.engines?.node);
+  addSelector("package.json#volta.node", pkg?.volta?.node);
+  addSelector(".nvmrc", readSmallText(path.join(root, ".nvmrc")));
+  addSelector(".node-version", readSmallText(path.join(root, ".node-version")));
+
+  const pins = [...new Set(sources.filter((item) => item.kind === "pin").map((item) => item.requirement))];
+  if (pins.length > 1) {
+    ambiguities.push({
+      code: "node-requirement-source-conflict",
+      message: `conflicting Node version pins found: ${pins.join(", ")}`,
+      severity: "error",
+    });
+    return { requirement: null, sources, status: "ambiguous" };
+  }
+
+  const pin = pins[0] ?? null;
+  const ranges = [...new Set(sources.filter((item) => item.kind === "range").map((item) => item.requirement))];
+  if (pin) {
+    let unknown = false;
+    for (const requirement of ranges) {
+      const result = evaluateNodeEngine(requirement, pin);
+      if (result.compatible === false) {
+        ambiguities.push({
+          code: "node-requirement-source-conflict",
+          message: `Node version pin ${pin} does not satisfy ${requirement}`,
+          severity: "error",
+        });
+        return { requirement: null, sources, status: "ambiguous" };
+      }
+      if (result.compatible === null) unknown = true;
+    }
+    if (unknown) {
+      ambiguities.push({
+        code: "node-requirement-consistency-unverified",
+        message: `Node version pin ${pin} could not be proven compatible with every declared range`,
+        severity: "error",
+      });
+      return { requirement: null, sources, status: "unverified" };
+    }
+    return { requirement: ranges[0] ?? pin, sources, status: "resolved" };
+  }
+
+  const requirement = intersectNodeRequirements(ranges);
+  return requirement
+    ? { requirement, sources, status: "resolved" }
+    : { requirement: null, sources, status: "not-declared" };
 }
 
 function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
@@ -438,8 +552,8 @@ export function inspectWebProject(targetPath, options = {}) {
   const commands = inferCommands(pkg, packageManager.name, framework, project.mode, ambiguities);
   const runtime = detectRuntimeHints(root, pkg, evidence);
 
-  const nodeRequirement = typeof pkg?.engines?.node === "string" ? pkg.engines.node : null;
-  if (nodeRequirement) evidence.push(`node:${nodeRequirement}`);
+  const nodeRequirementResolution = detectNodeRequirement(root, pkg, ambiguities, evidence);
+  const nodeRequirement = nodeRequirementResolution.requirement;
   const confidence = {
     packageManager: packageManager.confidence,
     framework: framework.confidence,
@@ -462,6 +576,7 @@ export function inspectWebProject(targetPath, options = {}) {
     },
     packageManager,
     nodeRequirement,
+    nodeRequirementResolution,
     framework,
     project: {
       mode: project.mode,

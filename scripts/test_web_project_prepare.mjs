@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { inspectWebProject } from "../protocol/web-project-inspect.mjs";
 import { createWebProjectManifestV2FromInspection } from "../protocol/web-project-manifest-v2.mjs";
 import { webProjectDependencyReadiness } from "../protocol/web-project-bootstrap.mjs";
+import { diagnoseWebProjectManifestV2 } from "../protocol/web-project-doctor.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, ".tmp/web-project-prepare-test");
@@ -71,6 +72,27 @@ try {
   assert.equal(JSON.parse(incompatibleRun.stderr.trim()).error, "node_runtime_required");
   assert.equal(fs.existsSync(path.join(PROJECT, "node_modules")), false, "engine preflight must run before any install");
 
+  const ambiguousManifest = structuredClone(manifest);
+  ambiguousManifest.project.nodeRequirement = null;
+  ambiguousManifest.inference.ambiguities = [{
+    code: "conflicting-node-version-pins",
+    message: "fixture conflict",
+    severity: "warning",
+  }];
+  const ambiguousFile = path.join(PROJECT, "proped.ambiguous.web.json");
+  fs.writeFileSync(ambiguousFile, `${JSON.stringify(ambiguousManifest, null, 2)}\n`);
+  const ambiguousDoctor = diagnoseWebProjectManifestV2(ambiguousManifest, PROJECT);
+  const ambiguousNodeCheck = ambiguousDoctor.checks.find((item) => item.id === "node-engine");
+  assert.equal(ambiguousNodeCheck.status, "fail");
+  assert.equal(ambiguousDoctor.runnableLocal, false);
+  const ambiguousPrepare = run(["web", "prepare", ambiguousFile, "--repository-root", PROJECT]);
+  assert.equal(ambiguousPrepare.status, 2, ambiguousPrepare.stderr || ambiguousPrepare.stdout);
+  assert.equal(JSON.parse(ambiguousPrepare.stderr.trim()).error, "node_requirement_ambiguous");
+  const ambiguousRun = run(["web", "run", ambiguousFile, "--repository-root", PROJECT, "--sandbox-mode", "caller-enforced", "--no-artifacts"]);
+  assert.equal(ambiguousRun.status, 2, ambiguousRun.stderr || ambiguousRun.stdout);
+  assert.equal(JSON.parse(ambiguousRun.stderr.trim()).error, "node_requirement_ambiguous");
+  assert.equal(fs.existsSync(path.join(PROJECT, "node_modules")), false, "ambiguous Node requirement must block before install");
+
   const before = webProjectDependencyReadiness(PROJECT, manifest);
   assert.equal(before.ready, false);
   assert.equal(before.reason, "npm-install-incomplete");
@@ -118,6 +140,7 @@ try {
     credentialEnvironmentDenied: true,
     offlineMode: true,
     nodeRuntimePreflight: true,
+    ambiguousNodeRequirementDenied: true,
     readinessAfter: offlineReport.readinessAfter.ready,
   }));
 } finally {

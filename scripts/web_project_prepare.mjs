@@ -2,7 +2,7 @@
 import path from "node:path";
 import { loadWebProjectManifestV2 } from "../protocol/web-project-manifest-v2.mjs";
 import { prepareWebProject } from "../protocol/web-project-bootstrap.mjs";
-import { applyNodeRuntimeToEnvironment, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "../protocol/web-node-runtime.mjs";
+import { applyNodeRuntimeToEnvironment, blockingNodeRequirementAmbiguities, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "../protocol/web-node-runtime.mjs";
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
@@ -31,6 +31,11 @@ if (!manifestFile) usage("web prepare requires a manifest file");
 try {
   const root = repositoryRoot ?? path.dirname(manifestFile);
   const manifest = loadWebProjectManifestV2(manifestFile);
+  const nodeAmbiguities = blockingNodeRequirementAmbiguities(manifest);
+  if (nodeAmbiguities.length > 0) {
+    console.error(JSON.stringify({ ok: false, error: "node_requirement_ambiguous", message: "Node runtime requirement is ambiguous and requires review before prepare", ambiguities: nodeAmbiguities }));
+    process.exit(2);
+  }
   const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null);
   const nodeRuntimeSummary = summarizeNodeRuntimeResolution(nodeRuntime);
   if (nodeRuntime.status === "unavailable") {

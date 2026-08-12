@@ -92,6 +92,12 @@ node scripts/web_project_compile.mjs proped.web.json
 
 `web doctor` checks project/runtime/server/browser/sandbox readiness without running install, build, or start commands. Static output and managed command servers are executed by a Proped-owned browser stage after compilation.
 
+## Review-only server hooks
+
+When source inspection finds literal same-origin server interactions, `proped web review` can propose bounded server hooks without activating them. Literal GET/HEAD fetches or routes become low-risk read-only candidates; POST endpoints are ignored unless the path is explicitly reset-like, and reset candidates are high-risk. A human-approved read-only candidate is merged into manifest v2 `server.hooks.readOnly`; an approved reset candidate requires explicit risk acknowledgement before it can populate `server.hooks.reset`. Other mutation endpoints are never proposed as hooks, and `automaticActivation` remains false.
+
+Pinned Canopy dogfood proposed one real read-only candidate, `GET /api/pi-resume-chat/status`, at confidence 0.85. Approving only that candidate produced a manifest with exactly that read-only hook and no reset hook, with the other semantic candidates left pending.
+
 ## Fresh-campaign replay gate
 
 Manifest v2 defaults to three fresh campaign attempts. A candidate error is promoted to a quality failure only when the same canonical failure class appears in every attempt. A class that appears in only some runs becomes a `nondeterministic_failure_candidate` diagnostic instead of failing CI. This makes fresh-browser determinism part of the quality gate rather than a separate manual check.

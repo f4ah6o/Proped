@@ -12,11 +12,16 @@ try {
     ref: "property:saved-state-survives-reload", id: "saved-state-survives-reload", kind: "property",
     confidence: 0.98, confidenceBand: "high", approvedByHuman: true, riskAcknowledged: false,
     note: null, activation: "human-approved",
+  }, {
+    ref: "server-hook:read-only-api-state-a1b2c3d4", id: "read-only-api-state-a1b2c3d4", kind: "server-hook",
+    confidence: 0.91, confidenceBand: "high", approvedByHuman: true, riskAcknowledged: false,
+    note: null, activation: "human-approved",
+    serverHook: { hookKind: "readOnly", config: { id: "read-only-api-state-a1b2c3d4", method: "GET", path: "/api/state", expectedStatus: [200], timeoutMs: 5000, maxBytes: 65536 } },
   }];
   const stable = { reviewSemanticHash: "review", approved, rejected: [], deferred: [], pending: [] };
   const hints = {
     ok: true, runtime: "web-semantic-approved-hints", version: "1", reviewSemanticHash: "review",
-    approvalPlanSemanticHash: "plan", counts: { approved: 1, rejected: 0, deferred: 0, pending: 0 },
+    approvalPlanSemanticHash: "plan", counts: { approved: 2, rejected: 0, deferred: 0, pending: 0 },
     ...stable, automaticActivation: false, semanticHash: semanticHash(stable),
   };
   const manifest = {
@@ -43,6 +48,8 @@ try {
   const applied = JSON.parse(fs.readFileSync(outputFile, "utf8"));
   assert.equal(applied.semantics.approved.semanticHash, hints.semanticHash);
   assert.equal(applied.semantics.approved.automaticActivation, false);
+  assert.equal(applied.server.hooks.readOnly.length, 1);
+  assert.equal(applied.server.hooks.readOnly[0].path, "/api/state");
   const stdout = spawnSync(process.execPath, ["scripts/web_semantic_apply.mjs", manifestFile, hintsFile], { cwd: process.cwd(), encoding: "utf8", shell: false });
   assert.equal(stdout.status, 0, stdout.stderr);
   assert.equal(JSON.parse(stdout.stdout).semantics.approved.semanticHash, hints.semanticHash);

@@ -88,6 +88,9 @@ export function decideWebSemanticCandidate(review, plan, { ref, decision, riskAc
   if (decision === "approve" && candidate.kind === "normalizer" && !candidate.proposedChange) {
     fail(`normalizer candidate ${ref} has no concrete replacement rule to approve`);
   }
+  if (decision === "approve" && candidate.kind === "server-hook" && !candidate.proposedChange) {
+    fail(`server-hook candidate ${ref} has no concrete hook to approve`);
+  }
   if (note !== null && (typeof note !== "string" || note.length > 1000)) fail("note must be null or at most 1000 characters");
   const decisions = plan.decisions.map((entry) => entry.ref === ref ? {
     ...entry,
@@ -113,6 +116,7 @@ function approvedHint(candidate, decision) {
   if (candidate.kind === "property") return { ...base, kind: "property" };
   if (candidate.kind === "projection") return { ...base, kind: "projection", projection: candidate.proposedChange };
   if (candidate.kind === "normalizer") return { ...base, kind: "normalizer", normalizer: candidate.proposedChange };
+  if (candidate.kind === "server-hook") return { ...base, kind: "server-hook", serverHook: candidate.proposedChange };
   fail(`unsupported candidate kind ${candidate.kind}`);
 }
 

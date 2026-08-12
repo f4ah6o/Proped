@@ -41,15 +41,16 @@ function normalizeCandidate(kind, candidate) {
     evidenceKinds: [...new Set(evidence.map((item) => item.kind))].sort(),
     evidence,
     automaticActivation: candidate.automaticActivation === true,
-    proposedChange: kind === "normalizer" ? candidate.proposedRule ?? null : kind === "projection" ? candidate.suggestedHook ?? null : null,
+    proposedChange: kind === "normalizer" ? candidate.proposedRule ?? null : kind === "projection" ? candidate.suggestedHook ?? null : kind === "server-hook" ? candidate.proposedHook ?? null : null,
   };
 }
 
-export function buildWebSemanticReviewReport({ properties, projections, normalizers = null } = {}) {
+export function buildWebSemanticReviewReport({ properties, projections, normalizers = null, serverHooks = null } = {}) {
   const candidates = [
     ...(properties?.candidates ?? []).map((candidate) => normalizeCandidate("property", candidate)),
     ...(projections?.candidates ?? []).map((candidate) => normalizeCandidate("projection", candidate)),
     ...(normalizers?.candidates ?? []).map((candidate) => normalizeCandidate("normalizer", candidate)),
+    ...(serverHooks?.candidates ?? []).map((candidate) => normalizeCandidate("server-hook", candidate)),
   ].sort((a, b) => {
     if (b.confidence !== a.confidence) return b.confidence - a.confidence;
     if (a.kind !== b.kind) return a.kind.localeCompare(b.kind);
@@ -69,6 +70,7 @@ export function buildWebSemanticReviewReport({ properties, projections, normaliz
       property: candidates.filter((candidate) => candidate.kind === "property").length,
       projection: candidates.filter((candidate) => candidate.kind === "projection").length,
       normalizer: candidates.filter((candidate) => candidate.kind === "normalizer").length,
+      serverHook: candidates.filter((candidate) => candidate.kind === "server-hook").length,
       highConfidence: candidates.filter((candidate) => candidate.confidenceBand === "high").length,
       mediumConfidence: candidates.filter((candidate) => candidate.confidenceBand === "medium").length,
       lowConfidence: candidates.filter((candidate) => candidate.confidenceBand === "low").length,
@@ -82,7 +84,7 @@ export function buildWebSemanticReviewReport({ properties, projections, normaliz
 export function formatWebSemanticReview(report) {
   const lines = [
     `Proped Web semantic review · ${report.candidateCount} candidates`,
-    `property ${report.counts.property} · projection ${report.counts.projection} · normalizer ${report.counts.normalizer}`,
+    `property ${report.counts.property} · projection ${report.counts.projection} · normalizer ${report.counts.normalizer} · server-hook ${report.counts.serverHook}`,
     "",
   ];
   for (const candidate of report.candidates) {

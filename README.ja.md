@@ -92,6 +92,12 @@ node scripts/web_project_compile.mjs proped.web.json
 
 `web doctor`はinstall/build/start commandを実行せず、project/runtime/server/browser/sandbox readinessを検査します。static outputやmanaged command serverはcompile後にProped-owned browser stageが扱います。
 
+## Review-only server hooks
+
+source inspectionでliteralなsame-origin server interactionを見つけると、`proped web review`はhookを自動有効化せず候補として提示できます。literal GET/HEAD fetch/routeはlow-risk read-only候補、POSTはpathが明示的にreset用途と判定できる場合だけhigh-risk reset候補にします。human-approved read-only候補はmanifest v2の`server.hooks.readOnly`へmergeし、reset候補は明示risk acknowledgementがないと`server.hooks.reset`へ入りません。通常のmutation endpointはhook候補化せず、`automaticActivation`は常にfalseです。
+
+pinしたCanopy dogfoodでは`GET /api/pi-resume-chat/status`をconfidence 0.85のread-only候補として1件提案しました。その候補だけをapproveすると、manifestには同じread-only hookだけが入り、reset hookはnull、他のsemantic candidateはpendingのまま維持されました。
+
 ## Fresh-campaign replay gate
 
 manifest v2はfresh campaignを既定3回実行します。candidate errorは同じcanonical failure classが全attemptで再現した場合だけquality failureへ昇格します。一部runだけに出るclassはCI failureではなく`nondeterministic_failure_candidate` diagnosticへ降格します。fresh-browser determinismを手動確認ではなくquality gate自体へ組み込みます。

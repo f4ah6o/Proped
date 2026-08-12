@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateWebProjectManifest } from "./web-project-runner.mjs";
 import { validateWebServerHooks } from "./web-server-hooks.mjs";
-import { validateApprovedSemanticHints } from "./web-approved-semantics-runtime.mjs";
+import { applyApprovedServerHooks, validateApprovedSemanticHints } from "./web-approved-semantics-runtime.mjs";
 
 export const WEB_PROJECT_MANIFEST_V2 = 2;
 const TOOL_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -329,5 +329,8 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
 export function withApprovedWebSemantics(manifest, approved) {
   validateWebProjectManifestV2(manifest);
   validateApprovedSemanticHints(approved);
-  return validateWebProjectManifestV2({ ...clone(manifest), semantics: { approved: clone(approved) } });
+  const next = clone(manifest);
+  next.semantics = { approved: clone(approved) };
+  next.server.hooks = applyApprovedServerHooks(next.server.hooks, approved);
+  return validateWebProjectManifestV2(next);
 }

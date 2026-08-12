@@ -1,4 +1,5 @@
 # Changes
+- Added review-only server-hook mining and human-approved manifest application: literal GET/HEAD interactions can become bounded read-only hooks, reset-like POST endpoints remain high-risk with explicit acknowledgement, and ordinary mutations are never proposed automatically.
 - Blind-dogfooded a server-state candidate against pinned `dowdiness/canopy`, adding manifest-level Node engine requirements, doctor/prepare/run engine preflight, and read-only Hono/server/API runtime signals so incompatible environments fail before dependency installation.
 - Blind-dogfooded unknown Web onboarding against pinned `moonbitlang/website`, adding first-class Docusaurus inspection, storage-denied snapshot fallback, and link-href locator recovery that raised the blind app from 54.2% to 100% locator uniqueness with zero project-specific executable adapter LOC.
 - Added explicit `web prepare` bootstrap with credential-filtered shell-free installs, offline mode, package-manager completion markers, dependency readiness diagnostics, and `prepare_required` run preflight so Web campaigns never install dependencies implicitly.

@@ -1,4 +1,5 @@
 import { semanticHash } from "./ui-driver-v1.mjs";
+import { validateWebServerHooks } from "./web-server-hooks.mjs";
 
 export const WEB_APPROVED_SEMANTICS_RUNTIME_VERSION = "1";
 
@@ -32,10 +33,15 @@ export function validateApprovedSemanticHints(hints) {
   if (expectedHash !== hints.semanticHash) throw new Error("approved semantic hints semantic hash mismatch");
   for (const item of hints.approved) {
     if (!item || item.approvedByHuman !== true || item.activation !== "human-approved") throw new Error("semantic hint must be human-approved");
-    if (!["property", "projection", "normalizer"].includes(item.kind)) throw new Error(`unsupported semantic hint kind: ${item.kind}`);
+    if (!["property", "projection", "normalizer", "server-hook"].includes(item.kind)) throw new Error(`unsupported semantic hint kind: ${item.kind}`);
     if (typeof item.ref !== "string" || typeof item.id !== "string") throw new Error("semantic hint identity is invalid");
     if (item.kind === "normalizer" && (!item.normalizer || item.normalizer.action !== "replace" || typeof item.normalizer.path !== "string")) {
       throw new Error(`approved normalizer ${item.ref} has no concrete replacement rule`);
+    }
+    if (item.kind === "server-hook") {
+      if (!item.serverHook || !["readOnly", "reset"].includes(item.serverHook.hookKind) || !item.serverHook.config) throw new Error(`approved server hook ${item.ref} is invalid`);
+      if (item.serverHook.hookKind === "readOnly") validateWebServerHooks({ reset: null, readOnly: [item.serverHook.config] });
+      else validateWebServerHooks({ reset: item.serverHook.config, readOnly: [] });
     }
   }
   return hints;
@@ -140,4 +146,25 @@ export function applyApprovedSemanticNormalizers(value, runtime) {
   let output = clone(value);
   for (const rule of runtime?.normalizers ?? []) output = replaceAtPath(output, rule.path, rule.replacement);
   return output;
+}
+
+export function applyApprovedServerHooks(existing, hints) {
+  validateApprovedSemanticHints(hints);
+  const base = validateWebServerHooks(existing ?? { reset: null, readOnly: [] });
+  let reset = base.reset;
+  const readOnly = new Map(base.readOnly.map((hook) => [hook.id, hook]));
+  for (const item of approvedList(hints, "server-hook")) {
+    const proposal = item.serverHook;
+    if (proposal.hookKind === "readOnly") {
+      const hook = validateWebServerHooks({ reset: null, readOnly: [proposal.config] }).readOnly[0];
+      const previous = readOnly.get(hook.id);
+      if (previous && JSON.stringify(previous) !== JSON.stringify(hook)) throw new Error(`approved read-only server hook conflicts with existing id ${hook.id}`);
+      readOnly.set(hook.id, hook);
+    } else {
+      const hook = validateWebServerHooks({ reset: proposal.config, readOnly: [] }).reset;
+      if (reset && JSON.stringify(reset) !== JSON.stringify(hook)) throw new Error("multiple conflicting reset server hooks were approved");
+      reset = hook;
+    }
+  }
+  return validateWebServerHooks({ reset, readOnly: [...readOnly.values()].sort((a, b) => a.id.localeCompare(b.id)) });
 }

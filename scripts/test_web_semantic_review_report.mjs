@@ -23,11 +23,17 @@ const normalizers = { candidates: [{
   evidence: [{ kind: "fresh-run-volatility", path: "$.semanticDom.attributes.id", volatilityKind: "generated-id", observedRuns: 3, distinctValueCount: 3, missingRunCount: 0 }],
   proposedRule: { action: "replace", path: "$.semanticDom.attributes.id", replacement: "<generated-id>" },
 }] };
-const report = buildWebSemanticReviewReport({ properties, projections, normalizers });
-assert.equal(report.candidateCount, 3);
-assert.deepEqual(report.counts, { property: 1, projection: 1, normalizer: 1, highConfidence: 2, mediumConfidence: 1, lowConfidence: 0 });
+const serverHooks = { candidates: [{
+  id: "read-only-api-state-a1b2c3d4", title: "Observe GET /api/state", status: "review-only", confidence: 0.91,
+  semanticRisk: "low", recommendedDecision: "approve-only-if-endpoint-is-side-effect-free", automaticActivation: false,
+  evidence: [{ kind: "source", path: "src/api.ts", line: 8, excerpt: "fetch('/api/state')" }],
+  proposedHook: { hookKind: "readOnly", config: { id: "read-only-api-state-a1b2c3d4", method: "GET", path: "/api/state", expectedStatus: [200], timeoutMs: 5000, maxBytes: 65536 } },
+}] };
+const report = buildWebSemanticReviewReport({ properties, projections, normalizers, serverHooks });
+assert.equal(report.candidateCount, 4);
+assert.deepEqual(report.counts, { property: 1, projection: 1, normalizer: 1, serverHook: 1, highConfidence: 3, mediumConfidence: 1, lowConfidence: 0 });
 assert.equal(report.automaticActivationCount, 0);
-assert.equal(new Set(report.candidates.map((candidate) => candidate.ref)).size, 3);
+assert.equal(new Set(report.candidates.map((candidate) => candidate.ref)).size, 4);
 const text = formatWebSemanticReview(report);
 assert.match(text, /HIGH · 0\.98/);
 assert.match(text, /evidence:/);

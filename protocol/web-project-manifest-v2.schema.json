@@ -56,6 +56,18 @@
             "string",
             "null"
           ]
+        },
+        "packageManagerReference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nodePreferredVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
@@ -538,6 +550,73 @@
         },
         "ambiguities": {
           "type": "array"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variables",
+        "templateFiles",
+        "valueCapture",
+        "automaticForwarding"
+      ],
+      "properties": {
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "exposure",
+              "evidence",
+              "confidence",
+              "required"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Z_][A-Z0-9_]*$"
+              },
+              "exposure": {
+                "enum": [
+                  "public",
+                  "sensitive-candidate",
+                  "server-config"
+                ]
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "required": {
+                "const": "unknown"
+              }
+            }
+          }
+        },
+        "templateFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "valueCapture": {
+          "const": false
+        },
+        "automaticForwarding": {
+          "const": false
         }
       }
     }

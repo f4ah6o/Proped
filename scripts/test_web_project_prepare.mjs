@@ -12,6 +12,7 @@ import { diagnoseWebProjectManifestV2 } from "../protocol/web-project-doctor.mjs
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, ".tmp/web-project-prepare-test");
 const PROJECT = path.join(TMP, "fixture");
+const CONFLICT_PROJECT = path.join(TMP, "conflicting-node-fixture");
 const MANIFEST = path.join(PROJECT, "proped.web.json");
 const CLI = path.join(ROOT, "scripts/proped.mjs");
 
@@ -59,6 +60,54 @@ try {
     hooks: { reset: null, readOnly: [] },
   };
   fs.writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  fs.mkdirSync(CONFLICT_PROJECT, { recursive: true });
+  fs.writeFileSync(path.join(CONFLICT_PROJECT, "package.json"), `${JSON.stringify({
+    name: "conflicting-node-fixture",
+    engines: { node: "^22.15.0" },
+    volta: { node: "22.22.3" },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(CONFLICT_PROJECT, ".nvmrc"), "20.20.0\n");
+  fs.writeFileSync(path.join(CONFLICT_PROJECT, "package-lock.json"), "{}\n");
+  fs.writeFileSync(path.join(CONFLICT_PROJECT, "install-should-not-run.mjs"), `
+    import fs from "node:fs";
+    fs.writeFileSync("prepare-mutation-marker", "unexpected\\n");
+  `);
+  const conflictInspection = inspectWebProject(CONFLICT_PROJECT);
+  assert.equal(conflictInspection.nodeRequirementResolution.status, "ambiguous");
+  assert.ok(conflictInspection.ambiguities.some((item) => item.code === "node-requirement-source-conflict" && item.severity === "error"));
+  const conflictManifest = createWebProjectManifestV2FromInspection(conflictInspection, { projectRoot: ".", id: "conflicting-node-fixture" });
+  conflictManifest.bootstrap.install = [process.execPath, "install-should-not-run.mjs"];
+  conflictManifest.server = {
+    mode: "external",
+    outputDir: null,
+    start: null,
+    url: "http://127.0.0.1:9/",
+    readiness: { strategy: "semantic-quiescence", timeoutMs: 1000 },
+    hooks: { reset: null, readOnly: [] },
+  };
+  const conflictFile = path.join(CONFLICT_PROJECT, "proped.web.json");
+  fs.writeFileSync(conflictFile, `${JSON.stringify(conflictManifest, null, 2)}\n`);
+
+  const conflictDoctor = run(["web", "doctor", conflictFile, "--repository-root", CONFLICT_PROJECT]);
+  assert.equal(conflictDoctor.status, 1, conflictDoctor.stderr || conflictDoctor.stdout);
+  const conflictDoctorReport = JSON.parse(conflictDoctor.stderr.trim());
+  assert.equal(conflictDoctorReport.ok, false);
+  assert.ok(conflictDoctorReport.checks.some((item) => item.id === "inference" && item.status === "fail" && item.ambiguities.some((ambiguity) => ambiguity.code === "node-requirement-source-conflict")));
+
+  const conflictPrepare = run(["web", "prepare", conflictFile, "--repository-root", CONFLICT_PROJECT]);
+  assert.equal(conflictPrepare.status, 2, conflictPrepare.stderr || conflictPrepare.stdout);
+  const conflictPrepareReport = JSON.parse(conflictPrepare.stderr.trim());
+  assert.equal(conflictPrepareReport.error, "inference_review_required");
+  assert.ok(conflictPrepareReport.ambiguities.some((item) => item.code === "node-requirement-source-conflict"));
+
+  const conflictRun = run(["web", "run", conflictFile, "--repository-root", CONFLICT_PROJECT, "--sandbox-mode", "caller-enforced", "--no-artifacts"]);
+  assert.equal(conflictRun.status, 2, conflictRun.stderr || conflictRun.stdout);
+  const conflictRunReport = JSON.parse(conflictRun.stderr.trim());
+  assert.equal(conflictRunReport.error, "inference_review_required");
+  assert.ok(conflictRunReport.ambiguities.some((item) => item.code === "node-requirement-source-conflict"));
+  assert.equal(fs.existsSync(path.join(CONFLICT_PROJECT, "prepare-mutation-marker")), false, "conflicting source fixture must fail closed before prepare mutates the target");
+  assert.equal(fs.existsSync(path.join(CONFLICT_PROJECT, "node_modules")), false, "conflicting source fixture must fail closed before dependency acquisition");
 
   const ambiguousManifest = structuredClone(manifest);
   ambiguousManifest.inference.ambiguities.push({ code: "node-requirement-source-conflict", message: "fixture conflict", severity: "error" });
@@ -136,6 +185,7 @@ try {
     nodeRuntimePreflight: true,
     criticalInferencePreflight: true,
     ambiguousNodeRequirementDenied: true,
+    conflictingNodeFixtureFailClosed: { doctor: true, prepare: true, run: true },
     readinessAfter: offlineReport.readinessAfter.ready,
   }));
 } finally {

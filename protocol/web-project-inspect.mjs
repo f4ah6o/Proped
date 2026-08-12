@@ -484,6 +484,67 @@ function collectSourceFiles(root) {
   return { files, bytes, truncated: files.length >= MAX_SOURCE_FILES || bytes >= MAX_SOURCE_BYTES };
 }
 
+function environmentExposure(name) {
+  if (/^(?:VITE_|NEXT_PUBLIC_|NUXT_PUBLIC_|PUBLIC_|REACT_APP_)/.test(name)) return "public";
+  if (/(?:SECRET|TOKEN|PASSWORD|PRIVATE|API_KEY|COOKIE|SESSION|AUTH|DATABASE_URL|DB_URL|DSN)/i.test(name)) return "sensitive-candidate";
+  return "server-config";
+}
+
+function detectEnvironmentRequirements(root, source, evidence) {
+  const byName = new Map();
+  const add = (name, sourceKind) => {
+    if (!/^[A-Z_][A-Z0-9_]*$/.test(name)) return;
+    const current = byName.get(name) ?? { name, exposure: environmentExposure(name), evidence: new Set() };
+    current.evidence.add(sourceKind);
+    byName.set(name, current);
+  };
+
+  const patterns = [
+    /\bprocess\.env\.([A-Z_][A-Z0-9_]*)\b/g,
+    /\bprocess\.env\[\s*["']([A-Z_][A-Z0-9_]*)["']\s*\]/g,
+    /\bimport\.meta\.env\.([A-Z_][A-Z0-9_]*)\b/g,
+    /\bimport\.meta\.env\[\s*["']([A-Z_][A-Z0-9_]*)["']\s*\]/g,
+  ];
+  for (const pattern of patterns) for (const match of source.matchAll(pattern)) add(match[1], "source");
+
+  const templateFiles = [];
+  for (const filename of [".env.example", ".env.sample", ".env.template"]) {
+    const file = path.join(root, filename);
+    let text = null;
+    try {
+      const stat = fs.statSync(file);
+      if (stat.isFile() && stat.size <= 64 * 1024) text = fs.readFileSync(file, "utf8");
+    } catch {
+      // Template is optional. Real .env files are intentionally never read here.
+    }
+    if (text === null) continue;
+    templateFiles.push(filename);
+    for (const line of text.split(/\r?\n/)) {
+      const match = /^\s*(?:export\s+)?([A-Z_][A-Z0-9_]*)\s*=/.exec(line);
+      if (match) add(match[1], `template:${filename}`);
+    }
+  }
+
+  const variables = [...byName.values()]
+    .map((item) => ({
+      name: item.name,
+      exposure: item.exposure,
+      evidence: [...item.evidence].sort(),
+      confidence: item.evidence.size > 1 ? 0.95 : item.evidence.has("source") ? 0.9 : 0.75,
+      required: "unknown",
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (variables.length > 0) evidence.push(`environment:variables:${variables.length}`);
+  if (templateFiles.length > 0) evidence.push(`environment:templates:${templateFiles.join(",")}`);
+  return {
+    variables,
+    templateFiles,
+    valueCapture: false,
+    automaticForwarding: false,
+    realEnvFilesRead: false,
+  };
+}
+
 function detectRuntimeHints(root, pkg, evidence) {
   const dependencies = allDependencies(pkg);
   const scan = collectSourceFiles(root);
@@ -493,6 +554,7 @@ function detectRuntimeHints(root, pkg, evidence) {
     if (text) chunks.push(text);
   }
   const source = chunks.join("\n");
+  const environment = detectEnvironmentRequirements(root, source, evidence);
   const hasDep = (name) => hasDependency(dependencies, name);
   const stateSources = ["dom", "forms", "url"];
   const add = (value) => { if (!stateSources.includes(value)) stateSources.push(value); };
@@ -557,6 +619,7 @@ function detectRuntimeHints(root, pkg, evidence) {
       routeSyntaxDetected: serverRouteSyntaxDetected,
       confidence: serverFrameworks.length ? 0.95 : serverPersistenceDependencies.length ? 0.85 : serverRouteSyntaxDetected ? 0.7 : 0,
     },
+    environment,
     sourceScan: { files: scan.files.length, bytes: scan.bytes, truncated: scan.truncated },
   };
 }

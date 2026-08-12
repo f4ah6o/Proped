@@ -11,7 +11,7 @@ const GENERIC_BROWSER_STAGE = path.join(TOOL_ROOT, "scripts/web_generic_browser_
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const TOP_KEYS = new Set([
   "schemaVersion", "id", "project", "bootstrap", "server", "browser", "discovery",
-  "state", "normalization", "properties", "semantics", "exploration", "replay", "sandbox", "artifacts", "inference",
+  "state", "environment", "normalization", "properties", "semantics", "exploration", "replay", "sandbox", "artifacts", "inference",
 ]);
 
 function fail(message) {
@@ -119,6 +119,23 @@ export function validateWebProjectManifestV2(manifest) {
     if (manifest.state.indexedDB.adapter.kind !== "dexie") fail("state.indexedDB.adapter.kind must be dexie");
     string(manifest.state.indexedDB.adapter.declaredVersion, "state.indexedDB.adapter.declaredVersion", { nullable: true });
     string(manifest.state.indexedDB.adapter.resolvedVersion, "state.indexedDB.adapter.resolvedVersion", { nullable: true });
+  }
+
+  if (manifest.environment !== undefined) {
+    exactKeys(manifest.environment, new Set(["variables", "templateFiles", "valueCapture", "automaticForwarding"]), "environment");
+    if (!Array.isArray(manifest.environment.variables)) fail("environment.variables must be an array");
+    for (const [index, variable] of manifest.environment.variables.entries()) {
+      exactKeys(variable, new Set(["name", "exposure", "evidence", "confidence", "required"]), `environment.variables[${index}]`);
+      string(variable.name, `environment.variables[${index}].name`);
+      if (!["public", "sensitive-candidate", "server-config"].includes(variable.exposure)) fail(`environment.variables[${index}].exposure is invalid`);
+      uniqueStrings(variable.evidence, `environment.variables[${index}].evidence`);
+      if (typeof variable.confidence !== "number" || variable.confidence < 0 || variable.confidence > 1) fail(`environment.variables[${index}].confidence must be 0..1`);
+      if (variable.required !== "unknown") fail(`environment.variables[${index}].required must be unknown`);
+    }
+    uniqueStrings(manifest.environment.templateFiles, "environment.templateFiles");
+    bool(manifest.environment.valueCapture, "environment.valueCapture");
+    bool(manifest.environment.automaticForwarding, "environment.automaticForwarding");
+    if (manifest.environment.valueCapture !== false || manifest.environment.automaticForwarding !== false) fail("environment discovery must not capture values or forward variables automatically");
   }
 
   exactKeys(manifest.normalization, new Set(["builtin", "volatilityProbeRuns"]), "normalization");
@@ -235,6 +252,12 @@ export function createWebProjectManifestV2FromInspection(inspection, { projectRo
           resolvedVersion: inspection.runtime.indexedDB.dexieResolvedVersion ?? null,
         } : null,
       },
+    },
+    environment: {
+      variables: clone(inspection.runtime.environment?.variables ?? []),
+      templateFiles: clone(inspection.runtime.environment?.templateFiles ?? []),
+      valueCapture: false,
+      automaticForwarding: false,
     },
     normalization: { builtin: true, volatilityProbeRuns: 3 },
     properties: { packs },

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import path from "node:path";
-import { compileWebProjectManifestV2, loadWebProjectManifestV2 } from "../protocol/web-project-manifest-v2.mjs";
+import { compileWebProjectManifestV2, criticalWebProjectInferenceAmbiguities, loadWebProjectManifestV2 } from "../protocol/web-project-manifest-v2.mjs";
 import { runWebProject } from "../protocol/web-project-runner.mjs";
 import { webProjectDependencyReadiness } from "../protocol/web-project-bootstrap.mjs";
 import { applyNodeRuntimeToEnvironment, blockingNodeRequirementAmbiguities, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "../protocol/web-node-runtime.mjs";
@@ -35,6 +35,11 @@ if (!["manifest", "strict", "caller-enforced"].includes(sandboxMode)) usage("--s
 try {
   const root = repositoryRoot ?? path.dirname(manifestFile);
   const manifest = loadWebProjectManifestV2(manifestFile);
+  const criticalAmbiguities = criticalWebProjectInferenceAmbiguities(manifest);
+  if (criticalAmbiguities.length > 0) {
+    console.error(JSON.stringify({ ok: false, error: "inference_review_required", message: "critical inferred project settings require review before target execution", ambiguities: criticalAmbiguities }));
+    process.exit(2);
+  }
   const nodeAmbiguities = blockingNodeRequirementAmbiguities(manifest);
   if (nodeAmbiguities.length > 0) {
     console.error(JSON.stringify({ ok: false, error: "node_requirement_ambiguous", message: "Node runtime requirement is ambiguous and requires review before run", ambiguities: nodeAmbiguities, manifestVersion: 2 }));

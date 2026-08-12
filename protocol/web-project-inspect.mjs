@@ -109,6 +109,7 @@ function intersectNodeRequirements(requirements) {
 
 function detectNodeRequirement(root, pkg, ambiguities, evidence) {
   const sources = [];
+  let unsupportedSelector = false;
   const addRange = (source, value) => {
     if (typeof value !== "string" || !value.trim()) return;
     const requirement = value.trim();
@@ -120,8 +121,9 @@ function detectNodeRequirement(root, pkg, ambiguities, evidence) {
     const raw = value.trim();
     const normalized = normalizeNodeSelector(raw);
     if (!normalized) {
+      unsupportedSelector = true;
       ambiguities.push({
-        code: "node-requirement-unparseable-selector",
+        code: "node-requirement-source-unsupported",
         message: `${source} contains a Node selector that cannot be safely normalized: ${raw}`,
         severity: "error",
       });
@@ -136,6 +138,8 @@ function detectNodeRequirement(root, pkg, ambiguities, evidence) {
   addSelector("package.json#volta.node", pkg?.volta?.node);
   addSelector(".nvmrc", readSmallText(path.join(root, ".nvmrc")));
   addSelector(".node-version", readSmallText(path.join(root, ".node-version")));
+
+  if (unsupportedSelector) return { requirement: null, sources, status: "ambiguous" };
 
   const pins = [...new Set(sources.filter((item) => item.kind === "pin").map((item) => item.requirement))];
   if (pins.length > 1) {

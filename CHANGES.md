@@ -1,4 +1,5 @@
 # Changes
+- Added fail-closed Node requirement discovery from `engines.node`, `volta.node`, `.nvmrc`, and `.node-version`; compatible declarations are reconciled while conflicting or unsupported selectors require review before prepare/run/compile.
 - Added read-only Node requirement discovery from `engines.node`, `volta.node`, `.nvmrc`, and `.node-version`, with shorthand selector normalization and fail-closed blocking when declarations conflict or cannot be safely interpreted.
 - Added installed Node-runtime selection for unknown Web projects: current/NVM/Volta/FNM/asdf runtimes are inventoried read-only, the highest compatible runtime is injected only into target subprocess PATHs, and no runtime is downloaded implicitly.
 - Added a managed command-server runtime with reserved-port hints plus loopback-only stdout/stderr endpoint discovery, credential-filtered child environments, split-log URL recovery, and mandatory process cleanup on readiness failure.

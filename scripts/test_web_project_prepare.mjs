@@ -60,6 +60,18 @@ try {
   };
   fs.writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
 
+  const ambiguousManifest = structuredClone(manifest);
+  ambiguousManifest.inference.ambiguities.push({ code: "node-requirement-source-conflict", message: "fixture conflict", severity: "error" });
+  const ambiguousFile = path.join(PROJECT, "proped.ambiguous.web.json");
+  fs.writeFileSync(ambiguousFile, `${JSON.stringify(ambiguousManifest, null, 2)}\n`);
+  const ambiguousPrepare = run(["web", "prepare", ambiguousFile, "--repository-root", PROJECT]);
+  assert.equal(ambiguousPrepare.status, 2, ambiguousPrepare.stderr || ambiguousPrepare.stdout);
+  assert.equal(JSON.parse(ambiguousPrepare.stderr.trim()).error, "inference_review_required");
+  const ambiguousRun = run(["web", "run", ambiguousFile, "--repository-root", PROJECT, "--sandbox-mode", "caller-enforced", "--no-artifacts"]);
+  assert.equal(ambiguousRun.status, 2, ambiguousRun.stderr || ambiguousRun.stdout);
+  assert.equal(JSON.parse(ambiguousRun.stderr.trim()).error, "inference_review_required");
+  assert.equal(fs.existsSync(path.join(PROJECT, "node_modules")), false, "critical inference ambiguity must block install before target mutation");
+
   const incompatibleManifest = structuredClone(manifest);
   incompatibleManifest.project.nodeRequirement = "^1.0.0";
   const incompatibleFile = path.join(PROJECT, "proped.incompatible.web.json");
@@ -71,27 +83,6 @@ try {
   assert.equal(incompatibleRun.status, 2, incompatibleRun.stderr || incompatibleRun.stdout);
   assert.equal(JSON.parse(incompatibleRun.stderr.trim()).error, "node_runtime_required");
   assert.equal(fs.existsSync(path.join(PROJECT, "node_modules")), false, "engine preflight must run before any install");
-
-  const ambiguousManifest = structuredClone(manifest);
-  ambiguousManifest.project.nodeRequirement = null;
-  ambiguousManifest.inference.ambiguities = [{
-    code: "conflicting-node-version-pins",
-    message: "fixture conflict",
-    severity: "warning",
-  }];
-  const ambiguousFile = path.join(PROJECT, "proped.ambiguous.web.json");
-  fs.writeFileSync(ambiguousFile, `${JSON.stringify(ambiguousManifest, null, 2)}\n`);
-  const ambiguousDoctor = diagnoseWebProjectManifestV2(ambiguousManifest, PROJECT);
-  const ambiguousNodeCheck = ambiguousDoctor.checks.find((item) => item.id === "node-engine");
-  assert.equal(ambiguousNodeCheck.status, "fail");
-  assert.equal(ambiguousDoctor.runnableLocal, false);
-  const ambiguousPrepare = run(["web", "prepare", ambiguousFile, "--repository-root", PROJECT]);
-  assert.equal(ambiguousPrepare.status, 2, ambiguousPrepare.stderr || ambiguousPrepare.stdout);
-  assert.equal(JSON.parse(ambiguousPrepare.stderr.trim()).error, "node_requirement_ambiguous");
-  const ambiguousRun = run(["web", "run", ambiguousFile, "--repository-root", PROJECT, "--sandbox-mode", "caller-enforced", "--no-artifacts"]);
-  assert.equal(ambiguousRun.status, 2, ambiguousRun.stderr || ambiguousRun.stdout);
-  assert.equal(JSON.parse(ambiguousRun.stderr.trim()).error, "node_requirement_ambiguous");
-  assert.equal(fs.existsSync(path.join(PROJECT, "node_modules")), false, "ambiguous Node requirement must block before install");
 
   const before = webProjectDependencyReadiness(PROJECT, manifest);
   assert.equal(before.ready, false);
@@ -140,6 +131,7 @@ try {
     credentialEnvironmentDenied: true,
     offlineMode: true,
     nodeRuntimePreflight: true,
+    criticalInferencePreflight: true,
     ambiguousNodeRequirementDenied: true,
     readinessAfter: offlineReport.readinessAfter.ready,
   }));

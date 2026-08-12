@@ -164,6 +164,11 @@ export function loadWebProjectManifestV2(file) {
   return validateWebProjectManifestV2(JSON.parse(fs.readFileSync(file, "utf8")));
 }
 
+export function criticalWebProjectInferenceAmbiguities(manifest) {
+  validateWebProjectManifestV2(manifest);
+  return (manifest.inference?.ambiguities ?? []).filter((item) => item?.severity === "error");
+}
+
 export function createWebProjectManifestV2FromInspection(inspection, { projectRoot = ".", id = null } = {}) {
   if (!inspection?.ok) fail("inspection result must be successful");
   const persistent = inspection.runtime.stateSources.some((source) => ["localStorage", "sessionStorage", "indexedDB"].includes(source));
@@ -245,6 +250,10 @@ export function createWebProjectManifestV2FromInspection(inspection, { projectRo
 
 export function compileWebProjectManifestV2(manifest, repositoryRoot) {
   validateWebProjectManifestV2(manifest);
+  const criticalAmbiguities = criticalWebProjectInferenceAmbiguities(manifest);
+  if (criticalAmbiguities.length > 0) {
+    fail(`critical inference ambiguity requires review: ${criticalAmbiguities.map((item) => item.code ?? "unknown").join(", ")}`);
+  }
   const stages = [];
   if (manifest.bootstrap.build) {
     stages.push({

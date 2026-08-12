@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { compileWebProjectManifestV2, validateWebProjectManifestV2 } from "./web-project-manifest-v2.mjs";
+import { compileWebProjectManifestV2, criticalWebProjectInferenceAmbiguities, validateWebProjectManifestV2 } from "./web-project-manifest-v2.mjs";
 import { strictSandboxCapabilities } from "./web-execution-sandbox.mjs";
 import { managedBrowserRuntimeDetails } from "../web/playwright-browser/managed-browser-runtime.mjs";
 import { applyNodeRuntimeToEnvironment, blockingNodeRequirementAmbiguities, resolveNodeRuntime, summarizeNodeRuntimeResolution } from "./web-node-runtime.mjs";
@@ -22,6 +22,10 @@ function check(id, status, message, details = {}) {
 export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
   validateWebProjectManifestV2(manifest);
   const checks = [];
+  const criticalAmbiguities = criticalWebProjectInferenceAmbiguities(manifest);
+  checks.push(criticalAmbiguities.length > 0
+    ? check("inference", "fail", "critical inferred project settings require review", { ambiguities: criticalAmbiguities })
+    : check("inference", "pass", "no critical inference ambiguity remains"));
   const projectRoot = path.resolve(repositoryRoot, manifest.project.root);
   checks.push(fs.existsSync(projectRoot) && fs.statSync(projectRoot).isDirectory()
     ? check("project-root", "pass", "project root exists")

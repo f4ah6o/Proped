@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inspectWebProject } from "../protocol/web-project-inspect.mjs";
+import { compileWebProjectManifestV2, createWebProjectManifestV2FromInspection } from "../protocol/web-project-manifest-v2.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
@@ -139,8 +140,10 @@ function json(value) {
   });
   const report = inspectWebProject(root);
   assert.equal(report.nodeRequirement, null);
-  assert.equal(report.nodeRequirementResolution.status, "not-declared");
-  assert.ok(report.ambiguities.some((item) => item.code === "node-requirement-unparseable-selector"));
+  assert.equal(report.nodeRequirementResolution.status, "ambiguous");
+  assert.ok(report.ambiguities.some((item) => item.code === "node-requirement-source-unsupported" && item.severity === "error"));
+  const manifest = createWebProjectManifestV2FromInspection(report, { projectRoot: ".", id: "unsupported-node-selector" });
+  assert.throws(() => compileWebProjectManifestV2(manifest, root), /critical inference ambiguity requires review/);
 }
 
 {
@@ -158,9 +161,9 @@ function json(value) {
     ".node-version": "22.22.3\n",
   });
   const report = inspectWebProject(root);
-  assert.equal(report.nodeRequirement, "22.22.3");
+  assert.equal(report.nodeRequirement, "^22.15.0");
   assert.equal(report.nodeRequirementResolution.status, "resolved");
-  assert.equal(report.ambiguities.some((item) => item.code === "node-version-pin-range-conflict"), false);
+  assert.equal(report.ambiguities.some((item) => item.code === "node-requirement-source-conflict"), false);
 }
 
 {
@@ -171,7 +174,9 @@ function json(value) {
   const report = inspectWebProject(root);
   assert.equal(report.nodeRequirement, null);
   assert.equal(report.nodeRequirementResolution.status, "ambiguous");
-  assert.ok(report.ambiguities.some((item) => item.code === "conflicting-node-version-pins"));
+  assert.ok(report.ambiguities.some((item) => item.code === "node-requirement-source-conflict" && item.severity === "error"));
+  const manifest = createWebProjectManifestV2FromInspection(report, { projectRoot: ".", id: "conflicting-node-sources" });
+  assert.throws(() => compileWebProjectManifestV2(manifest, root), /critical inference ambiguity requires review/);
 }
 
 {

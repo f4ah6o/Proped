@@ -1,6 +1,6 @@
 # Rust CLI distribution shell + CalVer releases
 
-Status: open
+Status: closed
 
 ## Goal
 
@@ -166,34 +166,47 @@ The Rust shell must not weaken the existing unknown-project safety model.
 
 ### Slice 1 — native shell
 
-- [ ] add Cargo workspace / `proped-cli`
-- [ ] implement `proped -V` / `--version`
-- [ ] implement `proped web ...` forwarding to the existing canonical Web dispatcher
-- [ ] locate the bundled/development Web runtime deterministically
-- [ ] preserve argv/stdout/stderr/exit codes
-- [ ] add Rust unit/integration coverage
-- [ ] document native CLI as the preferred entry point
+- [x] add Cargo workspace / `proped-cli`
+- [x] implement `proped -V` / `--version`
+- [x] implement `proped web ...` forwarding to the existing canonical Web dispatcher
+- [x] locate the bundled/development Web runtime deterministically
+- [x] preserve argv/stdout/stderr/exit codes
+- [x] add Rust unit/integration coverage
+- [x] document native CLI as the preferred entry point
 
 ### Slice 2 — product doctor
 
-- [ ] add `proped doctor`
-- [ ] report Rust CLI build/version provenance
-- [ ] report internal Web runtime availability
-- [ ] report Node and managed Chromium readiness using existing generic discovery rather than duplicating incompatible logic
-- [ ] machine-readable output suitable for agents/CI
+- [x] add `proped doctor`
+- [x] report Rust CLI build/version provenance
+- [x] report internal Web runtime availability
+- [x] report Node and managed Chromium readiness using existing generic discovery rather than duplicating incompatible logic
+- [x] machine-readable output suitable for agents/CI
 
 ### Slice 3 — CalVer release automation
 
-- [ ] migrate product version to `YYYY.M.PATCH`
-- [ ] integrate `f4ah6o/calver-action`
-- [ ] embed 7-char source SHA in release artifacts
-- [ ] keep package version pure CalVer
-- [ ] add version consistency regression
-- [ ] build native release artifacts
+- [x] migrate product version to `YYYY.M.PATCH`
+- [x] integrate `f4ah6o/calver-action`
+- [x] embed 7-char source SHA in release artifacts
+- [x] keep package version pure CalVer
+- [x] add version consistency regression
+- [x] build native release artifacts
 
 ### Slice 4 — progressively internalize product-shell responsibilities
 
 Move runtime/process/cache/security responsibilities from Node to Rust only when the boundary is clear and behavior can be kept compatible. Do not perform a flag-day rewrite.
+
+## Implementation evidence — 2026-08-12
+
+- Rust CLI unit tests: 4/4 pass.
+- `cargo clippy --workspace --all-targets -- -D warnings`: pass.
+- Native/Web dispatcher parity covers `inspect`, `doctor`, `run` exit behavior, help, and invalid-command handling.
+- MoonBit native tests: 159/159 pass.
+- Existing Node `proped web` regression: pass.
+- Unknown-Web onboarding acceptance: 6/6 known failure recall, deterministic replay, 10,000 healthy transitions, false positives 0.
+- CalVer consistency regression covers Cargo package metadata, Cargo.lock, MoonBit package/CLI metadata, native CLI output, and separate provenance.
+- Release workflow pins `f4ah6o/calver-action` by full commit SHA, allocates `YYYY.MM.PATCH` in `Asia/Tokyo`, creates `vYYYY.M.PATCH` immutable tags from a release-only metadata commit, and keeps registry publication disabled.
+- Product doctor reports the existing managed Playwright/Chromium readiness and strict-sandbox capability through the shared runtime implementation.
+- GitHub Release matrix builds Linux/macOS/Windows native CLI archives with SHA-256 sidecars and rejects release packaging when provenance is still `(dev)`.
 
 ## Acceptance
 

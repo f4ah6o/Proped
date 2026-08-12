@@ -1,0 +1,12 @@
+[package]
+name = "proped-cli"
+version = "2026.8.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+description = "Native product shell for Proped Rabbita"
+repository = "https://github.com/f4ah6o/Proped-Rabbita"
+
+[[bin]]
+name = "proped"
+path = "src/main.rs"

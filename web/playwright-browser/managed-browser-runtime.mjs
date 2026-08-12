@@ -37,6 +37,14 @@ export function managedBrowserRuntimeDetails({ includePaths = false } = {}) {
   return details;
 }
 
+export function managedBrowserRuntimeReadiness() {
+  const executablePath = chromium.executablePath();
+  return {
+    ...managedBrowserRuntimeDetails(),
+    executableReady: fs.existsSync(executablePath),
+  };
+}
+
 export async function launchManagedChromium(options = {}) {
   return chromium.launch(options);
 }

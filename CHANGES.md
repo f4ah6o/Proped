@@ -18,6 +18,7 @@
 
 ### Added
 
+- Added a Rust-native `proped` product shell with CalVer/provenance output, product doctor, and shell-free forwarding to the existing Node/Playwright Web dispatcher while preserving stdout/stderr/exit codes.
 - Closed unknown-Web onboarding acceptance with 6/6 pinned real-browser failure recall (TodoMVC 3/3 + drawDB 3/3) and a deterministic 10,000-transition healthy benchmark with zero generic false positives plus live sensitivity controls.
 - Added a human semantic-approval workflow with review-hash pinning, stable candidate refs, approve/reject/defer decisions, explicit high-risk acknowledgement, stale/tamper rejection, and deterministic human-approved hint compilation without automatic activation.
 - Added a unified semantic review report for property/projection/normalizer candidates with stable refs, confidence bands, risk/decision metadata, bounded evidence display, and human/JSON output; tightened Escape-key evidence to avoid escape-helper false positives.
@@ -52,6 +53,7 @@
 
 ### Changed
 
+- Adopted CalVer `2026.8.0` as the product/package version while keeping Git SHA as separate CLI provenance.
 - Generalized Web project runner quality summaries so non-mutation quality stages expose `failures[].code`, `property`, or `failureClass` as Atlas `qualityFailureCodes`.
 
 ## 0.35.0 - 2026-08-06

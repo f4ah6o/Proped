@@ -32,6 +32,16 @@ jobs:
       - name: Show toolchain versions
         run: moon version --all
 
+      - name: Rust native CLI
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+          cargo build --workspace
+          cargo build --release -p proped-cli
+          node scripts/test_version_consistency.mjs
+          python3 scripts/test_native_package.py
+
       - name: Update package registry
         run: moon update
 
@@ -80,6 +90,9 @@ jobs:
           npm ci --prefix web/nuxt-ssr-hydration --ignore-scripts
           npm audit --prefix web/nuxt-ssr-hydration --omit=dev
           npx --prefix web/playwright-browser playwright install --with-deps --only-shell chromium
+
+      - name: Native CLI integration
+        run: node scripts/test_native_cli.mjs
 
       - name: Generic browser adapter tests
         run: |
@@ -207,7 +220,10 @@ jobs:
               'openseek-desktop-lifecycle',
           ]
           assert schema['name'] == 'proped-rabbita'
-          assert schema['version'] == '0.35.0'
+          import re
+          moon_mod = Path('moon.mod').read_text()
+          expected_version = re.search(r'^version = \"([^\"]+)\"$', moon_mod, re.MULTILINE).group(1)
+          assert schema['version'] == expected_version
           assert schema['demoIds'] == expected_ids
           assert schema['externalIds'] == external_ids
           assert any(

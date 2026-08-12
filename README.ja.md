@@ -4,7 +4,24 @@
 
 Proped Rabbita は、Rabbita UI の到達可能状態を探索し、モデルと遷移のプロパティを検証し、failure traceを縮約して、決定的なHTML・SVG・JSON・Graphviz Atlasを出力します。
 
-## CLIを実行する
+## Native CLI
+
+`proped` をRust製のproduct入口として追加しています。既存のMoonBit探索engineとNode/Playwright Web engineは書き直さず、このnative shellの背後で利用します。
+
+```bash
+cargo build -p proped-cli
+./target/debug/proped -V
+./target/debug/proped doctor --json
+./target/debug/proped web inspect . --json
+```
+
+development buildはCalVer package versionを`proped 2026.8.0 (dev)`として表示します。release buildではsource commitの7文字SHAをpackage versionとは分離して埋め込み、`proped 2026.8.0 (abcdef0)`のように表示します。native shellはWeb command dispatchでshellを使わず、既存dispatcherのstdout/stderr/exit statusを保持します。`PROPED_RUNTIME_ROOT`で`scripts/proped.mjs`を含むProped runtime treeを明示指定できます。
+
+release archiveにはnative shellと`lib/proped`以下のProped JavaScript runtime sourceを含めるため、system Nodeがあれば展開済みlayoutから`proped web inspect`のようなread-only commandを実行できます。Node本体とmanaged Playwright/Chromium installationはarchiveへ内包せず、`proped doctor`がこれらのruntime prerequisiteを明示的に診断します。
+
+## MoonBit探索CLI
+
+既存MoonBit CLIはexploration engineの直接入口として残します。
 
 ```bash
 moon run src/cli -- help
@@ -23,18 +40,18 @@ moon run src/cli -- schema --json
 
 終了コードは、各demoが宣言した期待結果と一致した場合が `0`、引数エラーが `2`、期待結果との不一致が `3` です。`--json` は引数列の任意の位置に指定でき、`--output <dir>` でartifact rootを変更できます。
 
-完全なcommand・output契約は [docs/CLI.ja.md](docs/CLI.ja.md) にあります。
+完全なMoonBit command・output契約は [docs/CLI.ja.md](docs/CLI.ja.md) にあります。
 
 ## 未知Webプロジェクトのinspection
 
 Proped Rabbitaは未知のWebプロジェクトに対して、install/build/start scriptを実行せずread-only inspectionできます。package manager、framework、build/serve command、render mode、output directory、routing、storage/IndexedDB、WebSocket、service worker、authenticationのhintを推定し、無言で断定せずconfidenceとambiguityを返します。
 
 ```bash
-node scripts/web_project_inspect.mjs .
-node scripts/web_project_inspect.mjs . --json
+./target/debug/proped web inspect .
+./target/debug/proped web inspect . --json
 ```
 
-現在の実装入口はNode scriptで、配布CLIでは`proped web inspect`を予定しています。
+`node scripts/web_project_inspect.mjs`の直接入口はinternal/互換用途として残します。
 
 ## Generated GitHub Actions quality gate
 
@@ -52,13 +69,13 @@ generated workflowはProped Rabbitaを**full commit SHA**でpinし、repository 
 Web onboardingのcanonical入口を`proped web`へまとめました。repository内では`node scripts/proped.mjs web ...`として同じdispatcherを実行できます。dispatcherはshellを使わず、各既存commandのstdout/stderr/exit codeをそのまま保持します。
 
 ```bash
-node scripts/proped.mjs web inspect . --json
-node scripts/proped.mjs web init . --output proped.web.json
-node scripts/proped.mjs web doctor proped.web.json
-node scripts/proped.mjs web review . --json
-node scripts/proped.mjs web approve init review.json --output approvals.json
-node scripts/proped.mjs web apply proped.web.json semantic-hints.json --output proped.web.approved.json
-node scripts/proped.mjs web run proped.web.approved.json
+./target/debug/proped web inspect . --json
+./target/debug/proped web init . --output proped.web.json
+./target/debug/proped web doctor proped.web.json
+./target/debug/proped web review . --json
+./target/debug/proped web approve init review.json --output approvals.json
+./target/debug/proped web apply proped.web.json semantic-hints.json --output proped.web.approved.json
+./target/debug/proped web run proped.web.approved.json
 ```
 
 既存`web_project_*` / `web_semantic_*` scriptsは互換入口として残します。
@@ -68,8 +85,8 @@ node scripts/proped.mjs web run proped.web.approved.json
 `web run`はtarget dependencyを暗黙installしません。生成manifestにinstall commandがあり、dependency artifactが未準備なら`prepare_required`で終了します。先に明示setup phaseを実行します。
 
 ```bash
-node scripts/proped.mjs web prepare proped.web.json
-node scripts/proped.mjs web run proped.web.json
+./target/debug/proped web prepare proped.web.json
+./target/debug/proped web run proped.web.json
 ```
 
 `web prepare`は推定install argvを`shell=false`、project root固定cwd、credential-safeなenvironment allowlistで実行します。 Node要件は`package.json#engines.node`、`package.json#volta.node`、`.nvmrc`、`.node-version`からread-onlyで推定し、整合する宣言は統合、競合または安全に解釈できないselectorは`doctor` / `prepare` / `run`でblocking ambiguityとして扱います。このsetup commandだけnetwork利用を明示的に許可し、`--offline`ではpackage-managerのoffline modeを要求します。生成manifestは`package.json#engines.node`、`package.json#volta.node`、`.nvmrc`、`.node-version`から保守的に推定したNode requirementを保持します。互換条件とpreferred runtimeを分離します。`engines.node`やshorthand selectorは許容range、exactな`.nvmrc` / Volta / `.node-version`は`nodePreferredVersion`として保持します。preferred exactが既にあればそれを選び、無ければ同majorの既存互換runtimeを優先してdoctor warning付きでfallbackします。競合または安全に解釈できないselectorは引き続きcriticalなreview-required ambiguityとしてtargetのinstall/build前に停止します。Propedは現在processに加えてNVM / Volta / FNM / asdfの既存Node runtimeをread-onlyでinventoryし、targetのinstall/build/preview subprocessだけに最も新しい互換runtimeを選択します。runtimeを暗黙downloadせず、Proped本体とmanaged ChromiumはProped-owned runtimeのままです。互換runtimeが既に存在しない場合だけ`web doctor` / `web prepare` / `web run`をinstall/build前に停止します。`web doctor`ではdependency readinessも事前表示します。 npm / pnpm / Yarnのexact `packageManager`宣言はmanifest v2へ保持し、実行commandはCorepack経由にします。未cacheのpackage-manager版を取得できるのは明示`web prepare`だけで、通常のrun/build/previewは`COREPACK_ENABLE_NETWORK=0`を強制します。Corepack cache pathも明示継承するため、strict sandboxでもprepare済みmanagerをnetwork再開なしで読み取れます。

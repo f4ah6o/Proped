@@ -1,0 +1,142 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - latest
+
+permissions:
+  contents: write
+
+concurrency:
+  group: proped-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.calver.outputs.version }}
+      tag: ${{ steps.calver.outputs.tag }}
+    steps:
+      - name: Checkout selected source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify source belongs to main history
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Allocate CalVer
+        id: calver
+        uses: f4ah6o/calver-action@ed77f35391c8a334e420974bb7983b0a13fc5deb
+        with:
+          format: YYYY.MM.PATCH
+          timezone: Asia/Tokyo
+          prefix: v
+          fetch_tags: true
+          create_tag: false
+          target: ${{ github.sha }}
+
+      - name: Apply release version and provenance
+        env:
+          RELEASE_VERSION: ${{ steps.calver.outputs.version }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          python3 scripts/set_version.py "$RELEASE_VERSION" --provenance "${SOURCE_SHA:0:7}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Prepare managed browser runtime
+        run: |
+          npm ci --prefix web/playwright-browser --ignore-scripts
+          npx --prefix web/playwright-browser playwright install --with-deps --only-shell chromium
+
+      - name: Set up MoonBit
+        uses: hustcer/setup-moonbit@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate release tree
+        run: |
+          moon update
+          moon fmt --check
+          moon check --target native
+          moon test --target native
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+          cargo build --workspace
+          node scripts/test_native_cli.mjs
+          node scripts/test_version_consistency.mjs
+
+      - name: Create immutable release tag
+        env:
+          RELEASE_TAG: ${{ steps.calver.outputs.tag }}
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add Cargo.toml Cargo.lock moon.mod src/cli/main.mbt crates/proped-cli/Cargo.toml crates/proped-cli/src/release-commit.txt
+          git diff --cached --check
+          git commit -m "release: ${RELEASE_TAG}"
+          git tag "${RELEASE_TAG}"
+          git push origin "${RELEASE_TAG}"
+
+
+  native-artifacts:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout immutable release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+
+      - name: Build native CLI
+        run: cargo build --release -p proped-cli
+
+      - name: Package native CLI
+        run: python scripts/package_native_cli.py --output dist
+
+      - name: Upload native CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: proped-${{ runner.os }}-${{ runner.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  github-release:
+    needs:
+      - release
+      - native-artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download native CLI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: proped-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          gh release create "$RELEASE_TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "$RELEASE_TAG" \
+            --generate-notes

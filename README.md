@@ -4,7 +4,24 @@
 
 Proped Rabbita explores reachable Rabbita UI states, checks model and transition properties, shrinks failures, and exports deterministic HTML, SVG, JSON, and Graphviz atlases.
 
-## Run the CLI
+## Native CLI
+
+`proped` is the Rust-native product entry point. Repository builds keep the existing MoonBit exploration engine and Node/Playwright Web engine behind this shell instead of rewriting them.
+
+```bash
+cargo build -p proped-cli
+./target/debug/proped -V
+./target/debug/proped doctor --json
+./target/debug/proped web inspect . --json
+```
+
+Development builds report the CalVer package version as `proped 2026.8.0 (dev)`. Release builds embed a separate seven-character source SHA provenance, for example `proped 2026.8.0 (abcdef0)`; the Git SHA is not part of the package version. The native shell does not use a shell when it dispatches Web commands and preserves the existing dispatcher stdout, stderr, and exit status. `PROPED_RUNTIME_ROOT` can explicitly point at a Proped runtime tree containing `scripts/proped.mjs`.
+
+The release archive contains the native shell plus the Proped JavaScript runtime source under `lib/proped`, so read-only commands such as `proped web inspect` work from the extracted layout with a system Node runtime. Node itself and the managed Playwright/Chromium installation are not embedded in the archive; `proped doctor` reports those runtime prerequisites explicitly.
+
+## MoonBit exploration CLI
+
+The existing MoonBit CLI remains the direct exploration-engine interface:
 
 ```bash
 moon run src/cli -- help
@@ -23,18 +40,18 @@ moon run src/cli -- schema --json
 
 CLI exit codes are `0` when each demo matches its declared expected outcome, `2` for invalid usage, and `3` for an expectation mismatch. `--json` may appear anywhere in the argument list. `--output <dir>` changes the artifact root.
 
-See [docs/CLI.md](docs/CLI.md) for the complete command and output contract.
+See [docs/CLI.md](docs/CLI.md) for the complete MoonBit command and output contract.
 
 ## Unknown Web project inspection
 
 Proped Rabbita can inspect an unknown Web project without running install, build, or start scripts. The read-only inspector infers package manager, Node engine requirement, framework, build/serve commands, render mode, output directory, routing, storage/IndexedDB, WebSocket, service-worker, authentication, and server-side framework/persistence/API hints, and reports confidence plus ambiguities instead of silently guessing.
 
 ```bash
-node scripts/web_project_inspect.mjs .
-node scripts/web_project_inspect.mjs . --json
+./target/debug/proped web inspect .
+./target/debug/proped web inspect . --json
 ```
 
-The current implementation entry point is the Node script; the planned packaged CLI surface is `proped web inspect`.
+The direct `node scripts/web_project_inspect.mjs` entry point remains available for internal and compatibility use.
 
 ## Generated GitHub Actions quality gate
 
@@ -52,13 +69,13 @@ The generated workflow checks out Proped Rabbita at a **full commit SHA**, uses 
 The canonical Web onboarding entry point is now `proped web`. Inside the repository, the same dispatcher runs as `node scripts/proped.mjs web ...`. It does not invoke a shell and preserves each existing command's stdout, stderr, and exit code.
 
 ```bash
-node scripts/proped.mjs web inspect . --json
-node scripts/proped.mjs web init . --output proped.web.json
-node scripts/proped.mjs web doctor proped.web.json
-node scripts/proped.mjs web review . --json
-node scripts/proped.mjs web approve init review.json --output approvals.json
-node scripts/proped.mjs web apply proped.web.json semantic-hints.json --output proped.web.approved.json
-node scripts/proped.mjs web run proped.web.approved.json
+./target/debug/proped web inspect . --json
+./target/debug/proped web init . --output proped.web.json
+./target/debug/proped web doctor proped.web.json
+./target/debug/proped web review . --json
+./target/debug/proped web approve init review.json --output approvals.json
+./target/debug/proped web apply proped.web.json semantic-hints.json --output proped.web.approved.json
+./target/debug/proped web run proped.web.approved.json
 ```
 
 The existing `web_project_*` and `web_semantic_*` scripts remain compatibility entry points.
@@ -68,8 +85,8 @@ The existing `web_project_*` and `web_semantic_*` scripts remain compatibility e
 `web run` never installs target dependencies implicitly. If a generated manifest has an install command and the target dependency artifact is missing, `web run` exits with `prepare_required`. Run the explicit setup phase first:
 
 ```bash
-node scripts/proped.mjs web prepare proped.web.json
-node scripts/proped.mjs web run proped.web.json
+./target/debug/proped web prepare proped.web.json
+./target/debug/proped web run proped.web.json
 ```
 
 `web prepare` executes the inferred install argv with `shell=false`, confines cwd to the project root, and passes only the credential-safe environment allowlist. Proped also derives Node requirements read-only from `package.json#engines.node`, `package.json#volta.node`, `.nvmrc`, and `.node-version`; compatible declarations are combined, while conflicting or unparseable selectors remain blocking ambiguities for `doctor`, `prepare`, and `run`. Network access is explicit to this setup command; `--offline` requests package-manager offline mode. The generated manifest carries a conservative Node requirement inferred from `package.json#engines.node`, `package.json#volta.node`, `.nvmrc`, and `.node-version`. Compatibility and preference are kept separate: `engines.node` and shorthand selectors define the allowed runtime range, while an exact `.nvmrc` / Volta / `.node-version` pin is retained as `nodePreferredVersion`. Proped selects the exact preferred runtime when installed, otherwise prefers an installed compatible runtime from the same major and reports the fallback as a doctor warning. Conflicting or unsupported selectors remain critical review-required ambiguities before any target install/build. Proped inventories already-installed Node runtimes (current process plus NVM, Volta, FNM, and asdf layouts), selects the highest compatible runtime for target install/build/preview subprocesses, and never downloads a runtime implicitly. The Proped process and managed Chromium stay on the Proped-owned runtime. If no installed runtime can satisfy the declared range, `web doctor`, `web prepare`, and `web run` fail before install/build. `web doctor` also reports dependency readiness before execution. Exact `packageManager` declarations for npm, pnpm, and Yarn are preserved in manifest v2 and executed through Corepack. `web prepare` is the only phase allowed to acquire an uncached package-manager version; normal run/build/preview set `COREPACK_ENABLE_NETWORK=0`, and the resolved Corepack cache path is preserved explicitly so strict sandbox execution can read the prepared manager without reopening network access.

@@ -27,6 +27,8 @@ try {
   assert.equal(payload.explorationReplayGate.attempts, 3);
   assert.equal(payload.explorationReplayGate.stableFailureCount, 1);
   assert.equal(payload.explorationReplayGate.unstableCandidates.length, 0);
+  assert.equal(payload.semanticVerification.generic.verdict, 'generic_failed');
+  assert.equal(payload.semanticVerification.domain.verdict, 'domain_unverified');
   assert.ok(payload.failures.some((failure) => (failure.code ?? failure.property) === 'unhandled_exception'));
   console.log(JSON.stringify({ ok: true, runtime: 'web-exploration-stage-quality-test', transitions: payload.exploration.transitions, stableFailureCount: payload.explorationReplayGate.stableFailureCount, attempts: payload.explorationReplayGate.attempts }));
 } finally {

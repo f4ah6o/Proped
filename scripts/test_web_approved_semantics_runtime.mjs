@@ -68,6 +68,7 @@ const hints = {
 validateApprovedSemanticHints(hints);
 const runtime = resolveApprovedSemanticRuntime(hints);
 assert.deepEqual(runtime.propertyPacks, ["reload-persistence"]);
+assert.deepEqual(runtime.properties.map((item) => item.ref), ["property:saved-state-survives-reload"]);
 assert.deepEqual(runtime.projections.map((item) => item.id), ["route-identity", "persistence-summary"]);
 assert.equal(runtime.normalizers.length, 1);
 assert.equal(runtime.diagnostics.length, 0);

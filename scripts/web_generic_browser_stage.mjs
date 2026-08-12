@@ -11,6 +11,7 @@ import { createWebServerHookClient, validateWebServerHooks } from "../protocol/w
 import { exploreWebCoverageGuided } from "../protocol/web-coverage-guided-exploration.mjs";
 import { runWebExplorationReplayGate } from "../protocol/web-exploration-replay-gate.mjs";
 import { resolveApprovedSemanticRuntime, validateApprovedSemanticHints } from "../protocol/web-approved-semantics-runtime.mjs";
+import { buildWebSemanticOracleBoundary } from "../protocol/web-semantic-oracle-boundary.mjs";
 import { startWebCommandServer } from "../protocol/web-command-server.mjs";
 
 function usage(message) {
@@ -209,6 +210,15 @@ try {
     storage: snapshot.storage,
     applicationState: snapshot.applicationState,
   });
+  const semanticVerification = buildWebSemanticOracleBoundary({
+    semanticHints: options.semanticHints,
+    approvedSemanticRuntime,
+    propertyCampaign,
+    replayGate,
+    explorationReplayGate,
+    snapshot,
+    actionCount: inventory.actions.length,
+  });
   const result = {
     ok: replayGate.ok && explorationReplayGate.ok,
     runtime: "generic-web-browser-stage",
@@ -221,6 +231,7 @@ try {
     exploration,
     explorationReplayGate: { ...explorationReplayGate, stableFailures: undefined },
     propertyPacks: campaignOptions.packs,
+    semanticVerification,
     approvedSemantics: {
       semanticHash: approvedSemanticRuntime.semanticHash,
       approvedHintSemanticHash: approvedSemanticRuntime.approvedHintSemanticHash,
@@ -265,6 +276,7 @@ try {
     explorationSemanticHash: exploration.semanticHash,
     explorationReplayGateSemanticHash: explorationReplayGate.semanticHash,
     approvedSemanticRuntimeHash: approvedSemanticRuntime.semanticHash,
+    semanticVerificationHash: semanticVerification.semanticHash,
     stateSemanticHash,
   });
   console.log(JSON.stringify(result));

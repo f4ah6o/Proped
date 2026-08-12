@@ -53,10 +53,13 @@ export function resolveApprovedSemanticRuntime(hints) {
   const projections = approvedList(hints, "projection");
   const normalizers = approvedList(hints, "normalizer");
   const propertyPacks = [];
+  const activeProperties = [];
   const diagnostics = [];
   for (const item of properties) {
-    if (item.id === "saved-state-survives-reload") propertyPacks.push("reload-persistence");
-    else diagnostics.push({ kind: "approved_semantic_runtime_unsupported", ref: item.ref, semanticKind: item.kind, message: "approved property is preserved but has no generic runtime executor yet" });
+    if (SUPPORTED_PROPERTIES.has(item.id)) {
+      propertyPacks.push("reload-persistence");
+      activeProperties.push(item);
+    } else diagnostics.push({ kind: "approved_semantic_runtime_unsupported", ref: item.ref, semanticKind: item.kind, message: "approved property is preserved but has no generic runtime executor yet" });
   }
   const activeProjections = [];
   for (const item of projections) {
@@ -67,6 +70,7 @@ export function resolveApprovedSemanticRuntime(hints) {
     version: WEB_APPROVED_SEMANTICS_RUNTIME_VERSION,
     approvedHintSemanticHash: hints?.semanticHash ?? null,
     propertyPacks: [...new Set(propertyPacks)].sort(),
+    properties: activeProperties.map(clone),
     projections: activeProjections.map(clone),
     normalizers: normalizers.map((item) => clone(item.normalizer)),
     diagnostics,

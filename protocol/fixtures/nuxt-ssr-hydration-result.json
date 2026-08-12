@@ -2,7 +2,7 @@
   "ok": true,
   "runtime": "nuxt-ssr-hydration",
   "versions": {
-    "nuxt": "4.4.8",
+    "nuxt": "4.5.2",
     "vue": "3.5.41",
     "playwright": "1.62.0"
   },
@@ -129,5 +129,5 @@
     "dirtyContext": 4,
     "cleanContext": 5
   },
-  "semanticHash": "5543b06e0cd395637b48fd794f94de9775dc1a79ee8fdab5fa1c188426b6b9f9"
+  "semanticHash": "1d196f60db314806d6fcc3c4c23a02b6cadbddda9a699e38ab9450c77d624267"
 }

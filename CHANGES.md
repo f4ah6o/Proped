@@ -53,6 +53,7 @@
 
 ### Changed
 
+- Updated the Nuxt SSR/hydration fixture to Nuxt 4.5.2 so the pinned CI dependency set clears the production `npm audit` gate while preserving the hydration regression contract.
 - Adopted CalVer `2026.8.0` as the product/package version while keeping Git SHA as separate CLI provenance.
 - Generalized Web project runner quality summaries so non-mutation quality stages expose `failures[].code`, `property`, or `failureClass` as Atlas `qualityFailureCodes`.
 

@@ -33,7 +33,7 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
     : check("project-root", "fail", "project root does not exist", { path: projectRoot }));
 
   const nodeAmbiguities = blockingNodeRequirementAmbiguities(manifest);
-  const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null);
+  const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null, { preferredVersion: manifest.project.nodePreferredVersion ?? null });
   const nodeRuntimeSummary = summarizeNodeRuntimeResolution(nodeRuntime);
   let targetEnvironment = applyNodeRuntimeToEnvironment(process.env, nodeRuntime);
   targetEnvironment = applyPackageManagerRuntimeEnvironment(manifest, targetEnvironment, { allowNetwork: false });
@@ -62,6 +62,14 @@ export function diagnoseWebProjectManifestV2(manifest, repositoryRoot) {
     }
   } else {
     checks.push(check("node-engine", "pass", `using current Node ${nodeRuntime.selected?.version ?? process.version}`, { nodeRuntime: nodeRuntimeSummary }));
+  }
+
+  if (manifest.project.nodePreferredVersion) {
+    if (nodeRuntime.selectedReason === "preferred-exact") {
+      checks.push(check("node-preference", "pass", `preferred Node ${manifest.project.nodePreferredVersion} is installed and selected`, { nodeRuntime: nodeRuntimeSummary }));
+    } else if (nodeRuntime.status === "selected") {
+      checks.push(check("node-preference", "warning", `preferred Node ${manifest.project.nodePreferredVersion} is not installed; selected compatible ${nodeRuntime.selected?.version ?? "runtime"}`, { nodeRuntime: nodeRuntimeSummary }));
+    }
   }
 
   const dependencyReadiness = webProjectDependencyReadiness(repositoryRoot, manifest, { forRun: true });

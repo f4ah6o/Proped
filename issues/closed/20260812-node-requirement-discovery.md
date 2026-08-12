@@ -16,7 +16,7 @@ Reduce unknown-project setup by inferring the target Node requirement without ex
 - Fail closed on conflicting exact pins, pin/range conflicts, or selectors that cannot be safely interpreted.
 - Preserve ambiguities in manifest v2 inference metadata; `severity: error` inference is treated as critical.
 - Refuse manifest compilation and block `doctor`, `web prepare`, and `web run` before child-process execution while critical inference ambiguity remains.
-- Keep a compatible exact Node pin as the canonical runtime requirement instead of widening it back to an engine range.
+- Keep compatibility and preference separate: engine/range declarations remain the allowed runtime requirement, while an exact compatible pin is preserved as `nodePreferredVersion`.
 
 ## Validation
 

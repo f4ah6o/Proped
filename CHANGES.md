@@ -1,4 +1,5 @@
 # Changes
+- Split Node compatibility from Node preference: exact `.nvmrc`/Volta/`.node-version` pins are preserved as `nodePreferredVersion`, while engine/range constraints remain the runtime requirement; missing exact pins now prefer an installed compatible runtime from the same major with a doctor warning instead of blocking execution.
 - Added exact package-manager runtime selection for declared npm/pnpm/yarn versions: generated commands use Corepack, explicit `web prepare` may acquire an uncached manager, run/build/preview force Corepack network deny, and the cache path remains visible inside strict sandbox execution.
 - Hardened read-only Node requirement discovery from `engines.node`, `volta.node`, `.nvmrc`, and `.node-version`: shorthand selectors are normalized, compatible exact pins remain canonical, and critical inference ambiguities fail closed before compile/prepare/run.
 - Added installed Node-runtime selection for unknown Web projects: current/NVM/Volta/FNM/asdf runtimes are inventoried read-only, the highest compatible runtime is injected only into target subprocess PATHs, and no runtime is downloaded implicitly.

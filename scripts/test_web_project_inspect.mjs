@@ -154,6 +154,7 @@ function json(value) {
   });
   const report = inspectWebProject(root);
   assert.equal(report.nodeRequirement, "22.22.3");
+  assert.equal(report.nodePreferredVersion, "22.22.3");
   assert.equal(report.nodeRequirementResolution.status, "resolved");
   assert.deepEqual(report.nodeRequirementResolution.sources, [{ source: ".nvmrc", kind: "pin", requirement: "22.22.3", raw: "v22.22.3" }]);
 }
@@ -207,7 +208,9 @@ function json(value) {
     ".node-version": "22.22.3\n",
   });
   const report = inspectWebProject(root);
-  assert.equal(report.nodeRequirement, "22.22.3");
+  assert.equal(report.nodeRequirement, "^22.15.0");
+  assert.equal(report.nodePreferredVersion, "22.22.3");
+  assert.equal(report.nodeRequirementResolution.preferredVersion, "22.22.3");
   assert.equal(report.nodeRequirementResolution.status, "resolved");
   assert.equal(report.ambiguities.some((item) => item.code === "node-requirement-source-conflict"), false);
 }

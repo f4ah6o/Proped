@@ -120,61 +120,39 @@ export function inventoryNodeRuntimes(requirement = null, { environment = proces
 }
 
 export function resolveNodeRuntime(requirement = null, options = {}) {
-  const candidates = inventoryNodeRuntimes(requirement, options);
+  const preferredVersion = options.preferredVersion ?? null;
+  const effectiveRequirement = requirement ?? preferredVersion ?? null;
+  const candidates = inventoryNodeRuntimes(effectiveRequirement, options);
   const current = candidates.find((item) => item.source === "current") ?? null;
-  if (!requirement) {
-    return {
-      status: current ? "selected" : "unavailable",
-      requirement: null,
-      selected: current,
-      current,
-      candidates,
-      automaticDownload: false,
-    };
-  }
-  if (current?.engine.compatible === true) {
-    return {
-      status: "selected",
-      requirement,
-      selected: current,
-      current,
-      candidates,
-      automaticDownload: false,
-    };
-  }
-  const compatible = candidates
-    .filter((item) => item.engine.compatible === true)
-    .sort((a, b) => compareVersions(b.version, a.version) || a.path.localeCompare(b.path));
-  if (compatible.length > 0) {
-    return {
-      status: "selected",
-      requirement,
-      selected: compatible[0],
-      current,
-      candidates,
-      automaticDownload: false,
-    };
-  }
-  if (current?.engine.status === "unknown") {
-    return {
-      status: "unverified",
-      requirement,
-      selected: current,
-      current,
-      candidates,
-      automaticDownload: false,
-      reason: "unsupported-range-syntax",
-    };
-  }
-  return {
-    status: "unavailable",
-    requirement,
-    selected: null,
+  const result = (status, selected, selectedReason, reason = null) => ({
+    status,
+    requirement: effectiveRequirement,
+    preferredVersion,
+    selected,
+    selectedReason,
     current,
     candidates,
     automaticDownload: false,
-    reason: "no-compatible-installed-runtime",
-  };
+    reason,
+  });
+  if (!effectiveRequirement) return result(current ? "selected" : "unavailable", current, current ? "current" : null, current ? null : "current-runtime-unavailable");
+
+  const compatible = candidates
+    .filter((item) => item.engine.compatible === true)
+    .sort((a, b) => compareVersions(b.version, a.version) || a.path.localeCompare(b.path));
+
+  if (preferredVersion) {
+    const exact = compatible.find((item) => compareVersions(item.version, preferredVersion) === 0);
+    if (exact) return result("selected", exact, "preferred-exact");
+    const preferredMajor = versionTuple(preferredVersion)[0];
+    const sameMajor = compatible.filter((item) => versionTuple(item.version)[0] === preferredMajor);
+    if (sameMajor.length > 0) return result("selected", sameMajor[0], "preferred-major-fallback", "preferred-runtime-not-installed");
+  }
+
+  if (current?.engine.compatible === true) return result("selected", current, "current-compatible");
+  if (compatible.length > 0) return result("selected", compatible[0], "highest-compatible", preferredVersion ? "preferred-runtime-not-installed" : null);
+  if (current?.engine.status === "unknown") return result("unverified", current, "current-unverified", "unsupported-range-syntax");
+  return result("unavailable", null, null, "no-compatible-installed-runtime");
 }
 
 export function applyNodeRuntimeToEnvironment(environment, resolution) {
@@ -193,6 +171,8 @@ export function summarizeNodeRuntimeResolution(resolution) {
   return {
     status: resolution.status,
     requirement: resolution.requirement,
+    preferredVersion: resolution.preferredVersion ?? null,
+    selectedReason: resolution.selectedReason ?? null,
     selected: resolution.selected ? {
       source: resolution.selected.source,
       version: resolution.selected.version,

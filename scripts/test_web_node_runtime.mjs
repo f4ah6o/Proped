@@ -38,6 +38,16 @@ try {
   assert.equal(selected.selected.version, "v22.22.3");
   assert.equal(selected.selected.source, "nvm");
   assert.equal(selected.automaticDownload, false);
+
+  const preferredMajorFallback = resolveNodeRuntime(">=18.0", { environment, currentExecutable: current, preferredVersion: "22.10.0" });
+  assert.equal(preferredMajorFallback.status, "selected");
+  assert.equal(preferredMajorFallback.selected.version, "v22.22.3");
+  assert.equal(preferredMajorFallback.selectedReason, "preferred-major-fallback");
+  assert.equal(preferredMajorFallback.reason, "preferred-runtime-not-installed");
+
+  const preferredExact = resolveNodeRuntime(">=18.0", { environment, currentExecutable: current, preferredVersion: "22.22.3" });
+  assert.equal(preferredExact.selected.version, "v22.22.3");
+  assert.equal(preferredExact.selectedReason, "preferred-exact");
   const applied = applyNodeRuntimeToEnvironment(environment, selected);
   assert.equal(applied.PATH.split(path.delimiter)[0], path.dirname(fs.realpathSync(node22)));
 
@@ -58,6 +68,7 @@ try {
     runtime: "web-node-runtime-test",
     selected: summary.selected,
     compatibleFallback: true,
+    preferredMajorFallback: preferredMajorFallback.selected.version,
     automaticDownload: summary.automaticDownload,
     unavailableIsFailClosed: unavailable.status === "unavailable",
   }));

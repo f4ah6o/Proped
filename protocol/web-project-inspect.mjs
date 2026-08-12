@@ -145,7 +145,7 @@ function detectNodeRequirement(root, pkg, ambiguities, evidence) {
   addSelector(".nvmrc", readSmallText(path.join(root, ".nvmrc")));
   addSelector(".node-version", readSmallText(path.join(root, ".node-version")));
 
-  if (unsupportedSelector) return { requirement: null, sources, status: "ambiguous" };
+  if (unsupportedSelector) return { requirement: null, preferredVersion: null, sources, status: "ambiguous" };
 
   const pins = [...new Set(sources.filter((item) => item.kind === "pin").map((item) => item.requirement))];
   if (pins.length > 1) {
@@ -154,7 +154,7 @@ function detectNodeRequirement(root, pkg, ambiguities, evidence) {
       message: `conflicting Node version pins found: ${pins.join(", ")}`,
       severity: "error",
     });
-    return { requirement: null, sources, status: "ambiguous" };
+    return { requirement: null, preferredVersion: null, sources, status: "ambiguous" };
   }
 
   const pin = pins[0] ?? null;
@@ -169,7 +169,7 @@ function detectNodeRequirement(root, pkg, ambiguities, evidence) {
           message: `Node version pin ${pin} does not satisfy ${requirement}`,
           severity: "error",
         });
-        return { requirement: null, sources, status: "ambiguous" };
+        return { requirement: null, preferredVersion: null, sources, status: "ambiguous" };
       }
       if (result.compatible === null) unknown = true;
     }
@@ -179,15 +179,16 @@ function detectNodeRequirement(root, pkg, ambiguities, evidence) {
         message: `Node version pin ${pin} could not be proven compatible with every declared range`,
         severity: "error",
       });
-      return { requirement: null, sources, status: "unverified" };
+      return { requirement: null, preferredVersion: pin, sources, status: "unverified" };
     }
-    return { requirement: pin, sources, status: "resolved" };
+    const requirement = ranges.length > 0 ? intersectNodeRequirements(ranges) : pin;
+    return { requirement, preferredVersion: pin, sources, status: "resolved" };
   }
 
   const requirement = intersectNodeRequirements(ranges);
   return requirement
-    ? { requirement, sources, status: "resolved" }
-    : { requirement: null, sources, status: "not-declared" };
+    ? { requirement, preferredVersion: null, sources, status: "resolved" }
+    : { requirement: null, preferredVersion: null, sources, status: "not-declared" };
 }
 
 function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
@@ -580,6 +581,7 @@ export function inspectWebProject(targetPath, options = {}) {
 
   const nodeRequirementResolution = detectNodeRequirement(root, pkg, ambiguities, evidence);
   const nodeRequirement = nodeRequirementResolution.requirement;
+  const nodePreferredVersion = nodeRequirementResolution.preferredVersion ?? null;
   const confidence = {
     packageManager: packageManager.confidence,
     framework: framework.confidence,
@@ -602,6 +604,7 @@ export function inspectWebProject(targetPath, options = {}) {
     },
     packageManager,
     nodeRequirement,
+    nodePreferredVersion,
     nodeRequirementResolution,
     framework,
     project: {

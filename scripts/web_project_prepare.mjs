@@ -42,7 +42,7 @@ try {
     console.error(JSON.stringify({ ok: false, error: "node_requirement_ambiguous", message: "Node runtime requirement is ambiguous and requires review before prepare", ambiguities: nodeAmbiguities }));
     process.exit(2);
   }
-  const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null);
+  const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null, { preferredVersion: manifest.project.nodePreferredVersion ?? null });
   const nodeRuntimeSummary = summarizeNodeRuntimeResolution(nodeRuntime);
   if (nodeRuntime.status === "unavailable") {
     console.error(JSON.stringify({ ok: false, error: "node_runtime_required", message: `no installed Node runtime satisfies ${manifest.project.nodeRequirement}`, nodeRuntime: nodeRuntimeSummary }));

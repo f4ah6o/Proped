@@ -92,7 +92,7 @@ def fingerprint(root: Path) -> str:
 def forced_managed_node_path(tmp: Path, inherited_path: str) -> str:
     tool_bin = tmp / "bootstrap-tools"
     tool_bin.mkdir()
-    for name in ["curl", "tar"]:
+    for name in ["curl", "tar", "gzip"]:
         executable = shutil.which(name, path=inherited_path)
         if not executable:
             raise SystemExit(f"required setup bootstrap tool not found: {name}")

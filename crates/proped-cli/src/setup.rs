@@ -514,7 +514,7 @@ fn select_system_node(metadata: &RuntimeMetadata) -> Option<NodeRuntime> {
     let mut seen = HashSet::new();
     let mut fallback = Vec::new();
     for (path, source) in paths {
-        let canonical = fs::canonicalize(&path).unwrap_or(path);
+        let canonical = normalize_command_path(fs::canonicalize(&path).unwrap_or(path));
         if !seen.insert(canonical.clone()) {
             continue;
         }
@@ -1167,6 +1167,25 @@ fn apply_managed_path_environment(command: &mut Command, paths: &ManagedPaths) {
         .env("PROPED_MANAGED_BROWSER_ROOT", &paths.browsers);
 }
 
+fn normalize_command_path(path: PathBuf) -> PathBuf {
+    if cfg!(target_os = "windows") {
+        let value = path.to_string_lossy();
+        PathBuf::from(strip_windows_verbatim_prefix(&value))
+    } else {
+        path
+    }
+}
+
+fn strip_windows_verbatim_prefix(value: &str) -> String {
+    if let Some(rest) = value.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{rest}")
+    } else if let Some(rest) = value.strip_prefix(r"\\?\") {
+        rest.to_owned()
+    } else {
+        value.to_owned()
+    }
+}
+
 fn node_executable_name() -> &'static str {
     if cfg!(target_os = "windows") {
         "node.exe"
@@ -1207,7 +1226,8 @@ fn node_version(executable: &Path) -> Option<String> {
 }
 
 fn npm_cli_for_node(node: &Path) -> Option<PathBuf> {
-    let node = fs::canonicalize(node).unwrap_or_else(|_| node.to_path_buf());
+    let node =
+        normalize_command_path(fs::canonicalize(node).unwrap_or_else(|_| node.to_path_buf()));
     let bin = node.parent()?;
     let root = if cfg!(target_os = "windows") {
         bin.to_path_buf()
@@ -1553,5 +1573,17 @@ mod tests {
     fn semantic_version_parser_handles_node_prefix() {
         assert_eq!(parse_version("v22.23.2"), Some((22, 23, 2)));
         assert_eq!(parse_version("22.23.2"), Some((22, 23, 2)));
+    }
+
+    #[test]
+    fn windows_verbatim_paths_are_normalized_for_node_cli_arguments() {
+        assert_eq!(
+            strip_windows_verbatim_prefix(r"\\?\C:\hostedtoolcache\node\npm-cli.js"),
+            r"C:\hostedtoolcache\node\npm-cli.js"
+        );
+        assert_eq!(
+            strip_windows_verbatim_prefix(r"\\?\UNC\server\share\npm-cli.js"),
+            r"\\server\share\npm-cli.js"
+        );
     }
 }

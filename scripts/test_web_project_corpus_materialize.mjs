@@ -194,6 +194,24 @@ try {
   assert.equal(git(nestedCheckout, "remote", "get-url", "origin"), NESTED_UPSTREAM);
   assert.equal(fs.existsSync(path.join(nestedCheckout, "deps/deep/.git")), false, "nested materialization must not recurse into second-level gitlinks");
   assert.equal(materialized.checkouts[0].nestedSources[0].ok, true);
+
+  const explicitDeepCorpus = validateWebProjectCorpus({
+    ...rawCorpus,
+    targets: [{ ...rawCorpus.targets[0], source: {
+      ...rawCorpus.targets[0].source,
+      nestedSources: [
+        { path: "deps/nested", url: NESTED_UPSTREAM, revision: nestedRevision },
+        { path: "deps/nested/deps/deep", url: DEEP_UPSTREAM, revision: deepRevision },
+      ],
+    } }],
+  });
+  const explicitDeepMaterialized = materializeWebProjectCorpus(explicitDeepCorpus, { checkoutRoot: CHECKOUTS, fetch: false });
+  assert.equal(explicitDeepMaterialized.ok, true);
+  assert.deepEqual(explicitDeepMaterialized.materializedNestedSources.map((entry) => entry.path), ["deps/nested", "deps/nested/deps/deep"]);
+  const deepCheckout = path.join(checkout, "deps/nested/deps/deep");
+  assert.equal(git(deepCheckout, "rev-parse", "HEAD"), deepRevision);
+  assert.equal(git(deepCheckout, "remote", "get-url", "origin"), DEEP_UPSTREAM);
+  assert.equal(verifyMaterializedWebProjectCorpus(explicitDeepCorpus, { checkoutRoot: CHECKOUTS }).ok, true);
   const nestedSymlinkOutside = path.join(TMP, "nested-symlink-outside");
   fs.mkdirSync(nestedSymlinkOutside, { recursive: true });
   fs.rmSync(path.join(checkout, "deps"), { recursive: true, force: true });
@@ -399,9 +417,9 @@ try {
 
   const canopyNested = loadWebProjectCorpus(path.join(ROOT, "protocol/fixtures/canopy-nested-source-corpus.json"));
   assert.equal(canopyNested.targets.length, 1);
-  assert.equal(canopyNested.targets[0].source.nestedSources.length, 7);
+  assert.equal(canopyNested.targets[0].source.nestedSources.length, 10);
   assert.equal(canopyNested.targets[0].adapterLoc, 0);
-  assert.deepEqual(canopyNested.targets[0].source.nestedSources.map((nested) => nested.path), ["deps/alga", "deps/event-graph-walker", "deps/graphviz", "deps/loom", "deps/order-tree", "deps/rabbita", "deps/svg-dsl"]);
+  assert.deepEqual(canopyNested.targets[0].source.nestedSources.map((nested) => nested.path), ["deps/alga", "deps/event-graph-walker", "deps/graphviz", "deps/loom", "deps/loom/egglog", "deps/loom/egraph", "deps/loom/incr", "deps/order-tree", "deps/rabbita", "deps/svg-dsl"]);
 
   const external = resolveWebProjectCorpus("external");
   assert.equal(external.id, "external-production");

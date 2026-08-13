@@ -1,6 +1,6 @@
 # Explicit nested source materialization and workspace prebuild
 
-Status: open
+Status: closed
 Model: GPT-5.6 Sol
 Created: 2026-08-13
 Updated: 2026-08-13
@@ -11,7 +11,7 @@ Depends-On: `20260813-external-ssr-pnpm-auto-prepare.md`
 
 monorepo内のWeb subprojectが、pinされたGit submodule群とrepository-root build artifactsを前提にする場合でも、暗黙のrecursive submodule取得やproject-specific executable adapterを導入せず、安全にsource materialization -> workspace prebuild -> project campaignへ接続する。
 
-最初のreal targetは`dowdiness/canopy` `apps/web`。現状はnpm auto-prepareと互換Node 22.22.3選択までは成功するが、repository rootのMoonBit prebuilt artifactsがなくWaku buildがfail closedする。root `moon.work`は7個のGit submoduleを参照しており、現在のexternal materializerは意図的にsubmodule取得を無効化している。
+最初のreal targetは`dowdiness/canopy` `apps/web`。root `moon.work`は7個のtop-level Git submoduleに加えて`deps/loom`配下の明示gitlinkを参照するため、top-levelだけでなく宣言済みancestor配下のnested sourceもexplicit pinできる必要がある。実装後は互換Node 22.22.3選択、MoonBit workspace prebuild、Waku build/server/browser/replayまで0 adapter LOCで完走した。
 
 ## Scope
 
@@ -19,7 +19,7 @@ monorepo内のWeb subprojectが、pinされたGit submodule群とrepository-root
 - parent revisionのgitlink SHA / `.gitmodules` path+URLと宣言を照合する。
 - nested sourceはfull SHA、credential-free HTTPS/file/absolute-local sourceのみ許可する。
 - hooks / credential helper / fsmonitor / checkout filter / recursive submodule acquisitionをnested sourceでも無効化する。
-- nested sourceを再帰取得しない。
+- nested sourceを再帰取得しない。多階層sourceもcheckout-root-relative pathで個別に明示し、最も近い宣言済みancestorのgitlink / `.gitmodules`に対して検証する。
 - authorized checkout rootをworkspace scopeとしてcampaignへ渡せるようにする。
 - `moon.work`のような既知workspace descriptorから、structured argvのworkspace prebuildを安全に推定する。
 - MoonBit workspaceの場合はshell scriptを推定実行せず、`moon build --target js --release`のようなknown-tool argvだけを候補にする。
@@ -40,6 +40,14 @@ Parent: `dowdiness/canopy@cb41945b04801084e8abe1d8edc27eb0cdce4a1c`
 | `deps/rabbita` | `https://github.com/moonbit-community/rabbita.git` | `67e8169efa1bb2e8bd17018b62b41211cbc4c357` |
 | `deps/svg-dsl` | `https://github.com/dowdiness/svg-dsl.git` | `5e643ae674fc6e6d76f991be3eccdd62f7e62f77` |
 
+`deps/loom@9f630d67...`からはさらに次の3 sourceをexplicitにpinする。
+
+| path | repository | gitlink revision |
+| --- | --- | --- |
+| `deps/loom/egglog` | `https://github.com/dowdiness/egglog.git` | `d5934f272755133cc9e21b626461f1102e9f9d3c` |
+| `deps/loom/egraph` | `https://github.com/dowdiness/egraph.git` | `6a74bcffd5fd560f9209ba32456444148129dcc9` |
+| `deps/loom/incr` | `https://github.com/dowdiness/incr.git` | `afc715b261d99f35245f1a14a2390ae8ad86d7d0` |
+
 `apps/web`のnpm auto-prepareは成功済みで、Node engine `^24.0.0 || ^22.15.0`に対してcurrent Node 25を使わずinstalled Node `22.22.3`を選択できている。buildの停止点は`apps/web/scripts/build-waku.sh`が`CANOPY_SKIP_MOON_BUILD=1`でWaku buildを起動し、上記nested sourceを含むroot `moon.work`のprebuilt JS artifactsを要求する箇所。したがってnested source materializationとworkspace prebuildが成立すれば、その後のWaku command-server campaignを直接再開できる。
 
 ## Safety
@@ -58,9 +66,9 @@ Parent: `dowdiness/canopy@cb41945b04801084e8abe1d8edc27eb0cdce4a1c`
 - [x] authorized workspace root外へのcommand cwdを拒否し、nested checkout pathのcontainment/symlink境界をfail closedできる。
 - [x] known-tool workspace prebuildをstructured argvで表現できる。
 - [x] Canopyの7 pinned nested source path / URL / gitlink SHAをchecked-in dogfood corpusへ固定する。
-- [ ] Canopyの7 nested sourcesを実checkoutへ明示materializeする。
-- [ ] Canopy root MoonBit prebuildからWaku build/serverへ接続できる。
-- [ ] Canopyが0 adapter LOC / 0 human interventionでcampaign executionへ到達する。
+- [x] Canopyの7 top-level nested sourcesを実checkoutへ明示materializeする。
+- [x] Canopy root MoonBit prebuildからWaku build/serverへ接続できる。
+- [x] Canopyが0 adapter LOC / 0 human interventionでcampaign executionへ到達する。
 - [x] local integrationでbenchmark後にparent+nested checkoutをpin状態へrestoreできる。
 - [x] regression tests / docs / CHANGESを更新する。
 
@@ -71,4 +79,8 @@ Parent: `dowdiness/canopy@cb41945b04801084e8abe1d8edc27eb0cdce4a1c`
 - materializerは親revisionのgitlink mode+SHAと`.gitmodules` path/URLを照合してからnested sourceを独立cloneする。nested checkout自身もhook/filter/global Git config/recursive submodule取得を無効化する。
 - state capture/restoreはparentとnestedを別々に扱い、run中に生成したuntracked/new ignored stateだけを戻す。
 - `moon.work`をauthorized workspace rootで検出した場合に限り、`moon build --target js --release`をstructured argv / `shell=false` / credential-safe envでprebuildする。`--no-prepare`では`workspace_prepare_required`。
-- Canopy dogfood corpusは親`cb41945b...`と7 gitlinkを固定済み。現hostではnested checkoutが未materializeのためverifyは意図どおり`nested-source-invalid`でfail closedしている。
+- explicit nested declarationは多階層を許可するが、ancestorもcorpusで明示されている場合だけ最も近い宣言済みancestorのgitlink SHAと`.gitmodules` path/URLを照合する。`.gitmodules`の自動walkやrecursive submodule acquisitionは行わない。
+- Canopy dogfood corpusは親`cb41945b...`、7 top-level gitlink、`deps/loom`配下3 gitlinkの計10 nested checkoutを固定した。
+- Wakuはknown output `dist`とframework-owned `.wrangler`だけをsandbox writable pathへ追加する。source tree全体はwrite-deniedのまま。
+- 実benchmarkは`ok=true`、auto onboarding `1.0`、human intervention `0`、deterministic replay `1.0`、adapter LOC `0`。32 states / 31 transitions / 9 actionsを観測した。
+- benchmark cleanupはroot `_build`、`apps/web/node_modules`、`apps/web/dist`、`apps/web/.wrangler`を削除し、parent + 10 nested checkoutを全件pin/cleanへrestoreした。

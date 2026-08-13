@@ -15,8 +15,9 @@ const inspection = inspectWebProject(path.join(ROOT, "web/next-ssr-hydration"));
 const generated = createWebProjectManifestV2FromInspection(inspection, { projectRoot: "web/next-ssr-hydration" });
 assert.equal(generated.schemaVersion, 2);
 assert.equal(generated.project.framework, "next");
-assert.equal(generated.server.mode, "review-required");
-assert.equal(generated.server.start, null);
+assert.equal(generated.server.mode, "command");
+assert.equal(generated.server.outputDir, ".next");
+assert.deepEqual(generated.server.start, ["npm", "exec", "--offline", "--", "next", "start"]);
 assert.deepEqual(generated.server.hooks, { reset: null, readOnly: [] });
 assert.equal(generated.server.mutationPolicy, "deny");
 assert.equal(generated.replay.attempts, 3);
@@ -24,7 +25,8 @@ assert.equal(generated.sandbox.mode, "strict");
 assert.ok(generated.properties.packs.includes("browser-safety"));
 validateWebProjectManifestV2(generated);
 
-assert.throws(() => compileWebProjectManifestV2(generated, ROOT), /review-required/);
+const generatedCompiled = compileWebProjectManifestV2(generated, ROOT);
+assert.deepEqual(generatedCompiled.execution.writablePaths, ["web/next-ssr-hydration/.next"]);
 const resolved = {
   ...generated,
   server: { ...generated.server, mode: "external", url: "http://127.0.0.1:3000", outputDir: null, start: null },
@@ -93,6 +95,8 @@ if (fs.existsSync(path.join(canopyRoot, "package.json"))) {
   assert.equal(manifest.project.framework, "waku");
   assert.equal(manifest.server.mode, "command");
   assert.deepEqual(manifest.server.start, ["npm", "run", "preview"]);
+  assert.equal(manifest.server.outputDir, "dist");
+  assert.deepEqual(compiled.execution.writablePaths, ["dist", ".wrangler"]);
   assert.ok(manifest.properties.packs.includes("navigation"));
   assert.ok(manifest.properties.packs.includes("reload-persistence"));
   assert.equal(compiled.manifest.stages.find((stage) => stage.id === "generic-browser")?.command.includes("--start-json"), true);

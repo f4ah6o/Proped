@@ -205,6 +205,7 @@ export function createWebProjectManifestV2FromInspection(inspection, { projectRo
     outputDir = inspection.project.outputDir;
   } else if (inspection.commands.serve.argv) {
     serverMode = "command";
+    outputDir = inspection.project.outputDir ?? null;
     start = clone(inspection.commands.serve.argv);
   }
 
@@ -364,8 +365,11 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
   };
   validateWebProjectManifest(v1, repositoryRoot);
   const writablePaths = [];
-  if (manifest.bootstrap.build && manifest.server.mode === "static-output" && manifest.server.outputDir) {
+  if (manifest.bootstrap.build && manifest.server.outputDir) {
     writablePaths.push(path.join(manifest.project.root, manifest.server.outputDir));
+  }
+  if (manifest.bootstrap.build && manifest.project.framework === "waku") {
+    writablePaths.push(path.join(manifest.project.root, ".wrangler"));
   }
   return {
     manifest: v1,

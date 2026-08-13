@@ -69,6 +69,21 @@
             "path": "deps/svg-dsl",
             "url": "https://github.com/dowdiness/svg-dsl.git",
             "revision": "5e643ae674fc6e6d76f991be3eccdd62f7e62f77"
+          },
+          {
+            "path": "deps/loom/incr",
+            "url": "https://github.com/dowdiness/incr.git",
+            "revision": "afc715b261d99f35245f1a14a2390ae8ad86d7d0"
+          },
+          {
+            "path": "deps/loom/egraph",
+            "url": "https://github.com/dowdiness/egraph.git",
+            "revision": "6a74bcffd5fd560f9209ba32456444148129dcc9"
+          },
+          {
+            "path": "deps/loom/egglog",
+            "url": "https://github.com/dowdiness/egglog.git",
+            "revision": "d5934f272755133cc9e21b626461f1102e9f9d3c"
           }
         ]
       }

@@ -287,7 +287,7 @@ function json(value) {
   const report = inspectWebProject(root);
   assert.equal(report.framework.name, "waku");
   assert.equal(report.project.mode, "server-rendered");
-  assert.equal(report.project.outputDir, null);
+  assert.equal(report.project.outputDir, "dist");
   assert.equal(report.commands.serve.source, "scripts.preview");
   assert.equal(report.runtime.routing.model, "waku-router");
   assert.equal(report.runtime.server.detected, true);

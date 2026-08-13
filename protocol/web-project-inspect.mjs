@@ -365,9 +365,10 @@ function inferModeAndOutput(root, framework, pkg, evidence, ambiguities) {
   } else if (framework.name === "waku") {
     mode = "server-rendered";
     modeConfidence = 0.99;
-    outputDir = null;
-    outputConfidence = 0;
+    outputDir = "dist";
+    outputConfidence = 0.99;
     evidence.push("waku:managed-server-runtime");
+    evidence.push("waku:default-build-dir=dist");
   } else if (framework.name === "docusaurus") {
     mode = "static-export";
     modeConfidence = 0.99;

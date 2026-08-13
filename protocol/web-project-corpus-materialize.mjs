@@ -177,35 +177,74 @@ function parseGitmodules(text) {
   return entries;
 }
 
-function assertNestedSourceDeclarations(checkout, group) {
-  if ((group.nestedSources ?? []).length === 0) return [];
-  const modules = git(["show", `${group.revision}:.gitmodules`], { cwd: checkout, allowFailure: true });
-  if (modules.status !== 0) fail(`${group.checkoutKey} declares nested sources but has no readable .gitmodules`, { code: "nested_gitmodules_missing" });
+function nestedPathDepth(relative) {
+  return relative.split("/").length;
+}
+
+function orderedNestedSources(group) {
+  return [...(group.nestedSources ?? [])].sort((a, b) =>
+    nestedPathDepth(a.path) - nestedPathDepth(b.path) || a.path.localeCompare(b.path));
+}
+
+function declaredNestedParent(group, nested) {
+  return orderedNestedSources(group)
+    .filter((candidate) => candidate.path !== nested.path && nested.path.startsWith(`${candidate.path}/`))
+    .sort((a, b) => nestedPathDepth(b.path) - nestedPathDepth(a.path) || b.path.localeCompare(a.path))[0] ?? null;
+}
+
+function nestedDeclarationContext(parentCheckout, group, nested) {
+  const parent = declaredNestedParent(group, nested);
+  if (!parent) {
+    return { checkout: parentCheckout, revision: group.revision, relativePath: nested.path, label: group.checkoutKey };
+  }
+  const state = nestedCheckoutState(parentCheckout, parent);
+  if (!state.exists || !state.git || state.origin !== parent.url || state.head !== parent.revision || state.dirty !== false) {
+    fail(`${group.checkoutKey} nested source ${nested.path} requires verified declared parent ${parent.path}`, {
+      code: "nested_parent_unavailable",
+      parentPath: parent.path,
+    });
+  }
+  return {
+    checkout: state.checkout,
+    revision: parent.revision,
+    relativePath: nested.path.slice(parent.path.length + 1),
+    label: `${group.checkoutKey}:${parent.path}`,
+  };
+}
+
+function assertNestedSourceDeclaration(parentCheckout, group, nested) {
+  const context = nestedDeclarationContext(parentCheckout, group, nested);
+  const modules = git(["show", `${context.revision}:.gitmodules`], { cwd: context.checkout, allowFailure: true });
+  if (modules.status !== 0) {
+    fail(`${context.label} declares nested source ${nested.path} but has no readable .gitmodules`, { code: "nested_gitmodules_missing" });
+  }
   const declarations = parseGitmodules(modules.stdout);
-  return group.nestedSources.map((nested) => {
-    const tree = git(["ls-tree", group.revision, "--", nested.path], { cwd: checkout, allowFailure: true });
-    const match = tree.status === 0 ? tree.stdout.trim().match(/^160000\s+commit\s+([0-9a-f]{40})\t(.+)$/) : null;
-    if (!match || match[2] !== nested.path) {
-      fail(`${group.checkoutKey} nested source ${nested.path} is not a gitlink at the parent revision`, { code: "nested_gitlink_missing" });
-    }
-    if (match[1] !== nested.revision) {
-      fail(`${group.checkoutKey} nested source ${nested.path} revision mismatch`, {
-        code: "nested_gitlink_revision_mismatch",
-        expected: nested.revision,
-        observed: match[1],
-      });
-    }
-    const declared = declarations.find((entry) => entry.path === nested.path);
-    if (!declared) fail(`${group.checkoutKey} nested source ${nested.path} is absent from .gitmodules`, { code: "nested_gitmodules_path_missing" });
-    if (declared.url !== nested.url) {
-      fail(`${group.checkoutKey} nested source ${nested.path} URL mismatch`, {
-        code: "nested_gitmodules_url_mismatch",
-        expected: nested.url,
-        observed: declared.url,
-      });
-    }
-    return { path: nested.path, url: nested.url, revision: nested.revision };
-  });
+  const tree = git(["ls-tree", context.revision, "--", context.relativePath], { cwd: context.checkout, allowFailure: true });
+  const match = tree.status === 0 ? tree.stdout.trim().match(/^160000\s+commit\s+([0-9a-f]{40})\t(.+)$/) : null;
+  if (!match || match[2] !== context.relativePath) {
+    fail(`${context.label} nested source ${nested.path} is not a gitlink at the declaring revision`, { code: "nested_gitlink_missing" });
+  }
+  if (match[1] !== nested.revision) {
+    fail(`${context.label} nested source ${nested.path} revision mismatch`, {
+      code: "nested_gitlink_revision_mismatch",
+      expected: nested.revision,
+      observed: match[1],
+    });
+  }
+  const declared = declarations.find((entry) => entry.path === context.relativePath);
+  if (!declared) fail(`${context.label} nested source ${nested.path} is absent from .gitmodules`, { code: "nested_gitmodules_path_missing" });
+  if (declared.url !== nested.url) {
+    fail(`${context.label} nested source ${nested.path} URL mismatch`, {
+      code: "nested_gitmodules_url_mismatch",
+      expected: nested.url,
+      observed: declared.url,
+    });
+  }
+  return { path: nested.path, url: nested.url, revision: nested.revision };
+}
+
+function assertNestedSourceDeclarations(checkout, group) {
+  return orderedNestedSources(group).map((nested) => assertNestedSourceDeclaration(checkout, group, nested));
 }
 
 function nestedCheckoutState(parentCheckout, nested) {
@@ -443,7 +482,9 @@ function assertNoCheckoutFilters(checkout, revision, checkoutKey) {
   }
 }
 
-function materializeNestedSource(parentCheckout, nested, checkoutKey, { fetch = true } = {}) {
+function materializeNestedSource(parentCheckout, nested, group, { fetch = true } = {}) {
+  const checkoutKey = group.checkoutKey;
+  assertNestedSourceDeclaration(parentCheckout, group, nested);
   const checkout = safeNestedCheckoutPath(parentCheckout, nested.path);
   let state = nestedCheckoutState(parentCheckout, nested);
   if (state.exists && !state.git) {
@@ -508,9 +549,9 @@ export function restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot, base
       assertNestedSourceDeclarations(state.checkout, group);
       const baseline = baselineByCheckout.get(group.checkoutKey) ?? null;
       const nestedBaseline = new Map((baseline?.nestedSources ?? []).map((entry) => [entry.path, entry]));
-      const nestedSources = (group.nestedSources ?? []).map((nested) => restoreNestedSource(
+      const nestedSources = [...orderedNestedSources(group)].reverse().map((nested) => restoreNestedSource(
         state.checkout, nested, group.checkoutKey, nestedBaseline.get(nested.path) ?? null,
-      ));
+      )).sort((a, b) => a.path.localeCompare(b.path));
       git(["checkout", "--detach", group.revision], { cwd: state.checkout });
       git(["reset", "--hard", group.revision], { cwd: state.checkout });
       git(["clean", "-fd"], { cwd: state.checkout });
@@ -570,10 +611,9 @@ export function materializeWebProjectCorpus(corpus, { checkoutRoot, fetch = true
       git(["fetch", "--depth=1", group.url, group.revision], { cwd: state.checkout });
     }
     assertNoCheckoutFilters(state.checkout, group.revision, group.checkoutKey);
-    assertNestedSourceDeclarations(state.checkout, group);
     git(["checkout", "--detach", group.revision], { cwd: state.checkout });
-    for (const nested of group.nestedSources ?? []) {
-      const nestedVerified = materializeNestedSource(state.checkout, nested, group.checkoutKey, { fetch });
+    for (const nested of orderedNestedSources(group)) {
+      const nestedVerified = materializeNestedSource(state.checkout, nested, group, { fetch });
       materializedNestedSources.push({ checkoutKey: group.checkoutKey, ...nestedVerified });
     }
     const verified = verifyGroup(group, root);

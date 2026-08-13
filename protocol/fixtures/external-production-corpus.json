@@ -8,10 +8,11 @@
     "minDeterministicReplayRate": 1,
     "maxAdapterLoc": 0,
     "maxRegressions": 0,
-    "minTargetCount": 10,
-    "minRepositoryCount": 5,
+    "minTargetCount": 11,
+    "minRepositoryCount": 6,
     "requiredTags": [
       "framework-backed",
+      "pnpm",
       "stateful",
       "static"
     ]
@@ -199,6 +200,26 @@
         "kind": "git",
         "url": "https://github.com/justjavac/proton-demo.git",
         "checkout": "external-proton-demo"
+      }
+    },
+    {
+      "id": "ensenzu",
+      "project": "app",
+      "repository": "shiguri-01/ensenzu",
+      "revision": "f1fbec776a393e7023c8fa8324ea26c0774752e5",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "framework-backed",
+        "moonbit",
+        "nested-output",
+        "pnpm",
+        "vite"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/shiguri-01/ensenzu.git",
+        "checkout": "external-ensenzu"
       }
     }
   ]

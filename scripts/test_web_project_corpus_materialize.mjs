@@ -27,10 +27,20 @@ try {
   git(UPSTREAM, "config", "user.email", "proped-test@example.invalid");
   git(UPSTREAM, "config", "user.name", "Proped Test");
   fs.mkdirSync(path.join(UPSTREAM, "site"), { recursive: true });
+  fs.writeFileSync(path.join(UPSTREAM, ".gitignore"), "site/node_modules/\nsite/.generated-cache/\nsite/.preexisting-cache/\n");
   fs.writeFileSync(path.join(UPSTREAM, "site/index.html"), "<!doctype html><main><button>One</button></main>\n");
-  fs.writeFileSync(path.join(UPSTREAM, "site/package.json"), `${JSON.stringify({ name: "materialize-site", version: "1.0.0", scripts: { build: "node build.mjs" } }, null, 2)}\n`);
-  fs.writeFileSync(path.join(UPSTREAM, "site/package-lock.json"), `${JSON.stringify({ name: "materialize-site", version: "1.0.0", lockfileVersion: 3, requires: true, packages: { "": { name: "materialize-site", version: "1.0.0" } } }, null, 2)}\n`);
-  fs.writeFileSync(path.join(UPSTREAM, "site/build.mjs"), `import fs from "node:fs";\nfs.writeFileSync("index.html", "<!doctype html><main><button>Built</button></main>\\n");\nfs.writeFileSync("generated.txt", "generated\\n");\n`);
+  fs.mkdirSync(path.join(UPSTREAM, "site/vendor/demo"), { recursive: true });
+  fs.writeFileSync(path.join(UPSTREAM, "site/vendor/demo/package.json"), `${JSON.stringify({ name: "materialize-demo", version: "1.0.0" }, null, 2)}\n`);
+  fs.writeFileSync(path.join(UPSTREAM, "site/package.json"), `${JSON.stringify({
+    name: "materialize-site",
+    version: "1.0.0",
+    scripts: { build: "node build.mjs" },
+    dependencies: { "materialize-demo": "file:vendor/demo" },
+  }, null, 2)}\n`);
+  const lock = spawnSync("npm", ["install", "--package-lock-only", "--ignore-scripts", "--offline"], { cwd: path.join(UPSTREAM, "site"), encoding: "utf8", timeout: 30_000 });
+  assert.equal(lock.status, 0, lock.stderr || lock.stdout);
+  fs.rmSync(path.join(UPSTREAM, "site/node_modules"), { recursive: true, force: true });
+  fs.writeFileSync(path.join(UPSTREAM, "site/build.mjs"), `import fs from "node:fs";\nfs.writeFileSync("index.html", "<!doctype html><main><button>Built</button></main>\\n");\nfs.writeFileSync("generated.txt", "generated\\n");\nfs.mkdirSync(".generated-cache", { recursive: true });\nfs.writeFileSync(".generated-cache/cache.txt", "generated-cache\\n");\n`);
   git(UPSTREAM, "add", ".");
   git(UPSTREAM, "commit", "-m", "first");
   const first = git(UPSTREAM, "rev-parse", "HEAD");
@@ -92,7 +102,7 @@ try {
 
   const missingBenchmark = spawnSync(process.execPath, [
     CLI, "web", "benchmark", "--corpus", CORPUS_FILE,
-    "--checkout-root", CHECKOUTS, "--no-prepare", "--no-artifacts", "--sandbox-mode", "caller-enforced",
+    "--checkout-root", CHECKOUTS, "--no-artifacts", "--sandbox-mode", "caller-enforced",
   ], { cwd: ROOT, encoding: "utf8", timeout: 120_000 });
   assert.equal(missingBenchmark.status, 2, missingBenchmark.stderr || missingBenchmark.stdout);
   assert.match(missingBenchmark.stderr, /checkout verification failed/);
@@ -216,10 +226,13 @@ try {
 
   const verified = verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot: CHECKOUTS });
   assert.equal(verified.ok, true);
+  const preexistingIgnored = path.join(checkout, "site/.preexisting-cache/keep.txt");
+  fs.mkdirSync(path.dirname(preexistingIgnored), { recursive: true });
+  fs.writeFileSync(preexistingIgnored, "keep\n");
 
   const benchmark = spawnSync(process.execPath, [
     CLI, "web", "benchmark", "--corpus", CORPUS_FILE,
-    "--checkout-root", CHECKOUTS, "--no-prepare", "--no-artifacts", "--sandbox-mode", "caller-enforced",
+    "--checkout-root", CHECKOUTS, "--no-artifacts", "--sandbox-mode", "caller-enforced",
   ], { cwd: ROOT, encoding: "utf8", timeout: 120_000 });
   assert.equal(benchmark.status, 0, benchmark.stderr || benchmark.stdout);
   const summary = JSON.parse(benchmark.stdout);
@@ -231,16 +244,22 @@ try {
   assert.equal(summary.checkoutCleanup.ok, true);
   assert.equal(git(checkout, "status", "--porcelain"), "", "external benchmark must restore a clean checkout");
   assert.equal(fs.existsSync(path.join(checkout, "site/generated.txt")), false, "run-created untracked output must be removed");
+  assert.equal(fs.existsSync(path.join(checkout, "site/.generated-cache")), false, "run-created ignored output must be removed");
+  assert.equal(fs.readFileSync(preexistingIgnored, "utf8"), "keep\n", "pre-existing ignored state must be preserved");
+  assert.ok(summary.checkoutCleanup.checkouts[0].removedIgnoredPaths.includes("site/.generated-cache"));
+  assert.ok(summary.checkoutCleanup.checkouts[0].removedIgnoredPaths.includes("site/node_modules"), "auto-prepare dependency tree must be restored away when absent before the benchmark");
+  assert.equal(fs.existsSync(path.join(checkout, "site/node_modules")), false);
   assert.match(fs.readFileSync(path.join(checkout, "site/index.html"), "utf8"), /button>One<\/button>/, "tracked build output must be restored to the pinned revision");
 
   const external = resolveWebProjectCorpus("external");
   assert.equal(external.id, "external-production");
-  assert.equal(external.targets.length, 10);
+  assert.equal(external.targets.length, 11);
   assert.equal(external.targets.every((target) => target.adapterLoc === 0), true);
-  assert.equal(external.gate.minTargetCount, 10);
-  assert.equal(external.gate.minRepositoryCount, 5);
-  assert.deepEqual(external.gate.requiredTags, ["framework-backed", "stateful", "static"]);
-  assert.equal(new Set(external.targets.map((target) => target.source.checkout)).size, 5);
+  assert.equal(external.gate.minTargetCount, 11);
+  assert.equal(external.gate.minRepositoryCount, 6);
+  assert.deepEqual(external.gate.requiredTags, ["framework-backed", "pnpm", "stateful", "static"]);
+  assert.ok(external.targets.some((target) => target.id === "ensenzu" && target.source.checkout === "external-ensenzu" && target.adapterLoc === 0));
+  assert.equal(new Set(external.targets.map((target) => target.source.checkout)).size, 6);
 
   console.log(JSON.stringify({
     ok: true,

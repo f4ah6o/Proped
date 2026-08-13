@@ -16,7 +16,7 @@ const CLI = path.join(ROOT, "scripts/proped.mjs");
 function writeProject() {
   fs.mkdirSync(path.join(PROJECT, "vendor", "vite"), { recursive: true });
   fs.writeFileSync(path.join(PROJECT, "index.html"), "<!doctype html><main><h1>Campaign</h1><button>Add item</button></main>\n");
-  fs.writeFileSync(path.join(PROJECT, "build.mjs"), "import fs from 'node:fs'; fs.mkdirSync('dist', { recursive: true }); fs.writeFileSync('dist/index.html', '<!doctype html><main><h1>Campaign</h1><button>Add item</button></main>\\n'); fs.writeFileSync('dist/.build-ok', 'ok\\n');\n");
+  fs.writeFileSync(path.join(PROJECT, "build.mjs"), "import fs from 'node:fs'; fs.mkdirSync('dist/client/assets', { recursive: true }); fs.writeFileSync('dist/client/index.html', '<!doctype html><main><h1>Campaign</h1><button>Add item</button><script src=\"/assets/app.js\"></script></main>\\n'); fs.writeFileSync('dist/client/assets/app.js', 'document.body.dataset.nested=\"ready\";\\n'); fs.writeFileSync('dist/.build-ok', 'ok\\n');\n");
   fs.writeFileSync(path.join(PROJECT, "vendor", "vite", "package.json"), `${JSON.stringify({
     name: "vite",
     version: "1.0.0",

@@ -110,7 +110,7 @@ exit 0は全targetがhuman interventionなしでcampaign executionへ到達、ex
 
 ### 明示的なexternal OSS corpus
 
-`--corpus external`は`protocol/fixtures/external-production-corpus.json`に固定した実OSS corpusを使います。現在はfull commit SHAでpinした **5 repository / 10 target**（TodoMVC React/Vue、drawDB、MoonBit Isomorphic 5 app、Rabbita Xterm Web、Proton calculator）で、**project-specific executable adapter LOCは0**です。corpus gateは10 target、5 repository以上、`framework-backed` / `stateful` / `static` runtime shapeのcoverageを要求します。Git source取得は明示phaseとして分離され、benchmark自身がclone/fetchを暗黙実行することはありません。
+`--corpus external`は`protocol/fixtures/external-production-corpus.json`に固定した実OSS corpusを使います。現在はfull commit SHAでpinした **6 repository / 11 target**（TodoMVC React/Vue、drawDB、MoonBit Isomorphic 5 app、Rabbita Xterm Web、Proton calculator、Ensenzu）で、**project-specific executable adapter LOCは0**です。corpus gateは11 target、6 repository以上、`framework-backed` / `pnpm` / `stateful` / `static` runtime shapeのcoverageを要求します。EnsenzuではCorepackによるexact `pnpm@11.5.3`選択とdependency未準備checkoutからのauto-prepareを通し、Cloudflare/Vite buildが出力する`dist/client/index.html`も唯一のnested document rootとして自動認識します。Git source取得は明示phaseとして分離され、benchmark自身がclone/fetchを暗黙実行することはありません。
 
 ```bash
 ./target/debug/proped web corpus materialize external --checkout-root .proped/external-checkouts
@@ -118,7 +118,7 @@ exit 0は全targetがhuman interventionなしでcampaign executionへ到達、ex
 ./target/debug/proped web benchmark --corpus external --checkout-root .proped/external-checkouts
 ```
 
-Git-backed entryのmaterializeはfull revisionとcredentialを埋め込まないHTTPS/file/absolute-local sourceだけを受け付け、checkoutを明示root配下へ限定します。caller由来Git config injectionを無視し、credential helper、Git hook、fsmonitor、recursive submodule取得を無効にし、checkout filterとGit submodule配下targetを拒否します。親checkoutのcleanliness判定ではsubmodule worktree stateを無視する一方、target pathがgitlinkへ入ること自体を禁止するため、無関係な未materialize submoduleでverify不能にならず、submodule内容を暗黙信頼もしません。既存checkoutがdirty、またはorigin不一致ならfail closedです。`web corpus verify`はread-onlyでorigin、exact HEAD revision、親checkout cleanliness、path containment、全target subdirectoryを検証します。external benchmark開始前にも同じverifyを必須とし、実行後はtracked fileをpin revisionへ戻し、run中に生成したnon-ignored untracked fileを削除して、checkoutが再びcleanであることを確認します。dependency preparationは既存campaign phaseのままで、`--no-prepare`は準備済みdependencyを要求し、`--offline`はpackage-manager preparationをofflineに制限します。
+Git-backed entryのmaterializeはfull revisionとcredentialを埋め込まないHTTPS/file/absolute-local sourceだけを受け付け、checkoutを明示root配下へ限定します。caller由来Git config injectionを無視し、credential helper、Git hook、fsmonitor、recursive submodule取得を無効にし、checkout filterとGit submodule配下targetを拒否します。親checkoutのcleanliness判定ではsubmodule worktree stateを無視する一方、target pathがgitlinkへ入ること自体を禁止するため、無関係な未materialize submoduleでverify不能にならず、submodule内容を暗黙信頼もしません。既存checkoutがdirty、またはorigin不一致ならfail closedです。`web corpus verify`はread-onlyでorigin、exact HEAD revision、親checkout cleanliness、path containment、全target subdirectoryを検証します。external benchmark開始前にも同じverifyを必須とし、実行後はtracked fileをpin revisionへ戻し、run中に生成したnon-ignored untracked fileとbenchmark前には存在しなかった新規ignored rootを削除し、既存ignored rootは保持したままcheckoutが再びcleanであることを確認します。dependency preparationは既存campaign phaseのままで、`--no-prepare`は準備済みdependencyを要求し、`--offline`はpackage-manager preparationをofflineに制限します。
 
 ## 明示的なWeb project preparation
 

@@ -3,7 +3,7 @@ import path from "node:path";
 import { semanticHash } from "./ui-driver-v1.mjs";
 import { runUnknownWebProjectCampaign } from "./web-project-campaign.mjs";
 import { corpusHasExternalTargets, corpusProjectPaths, evaluateWebProjectBenchmarkGate } from "./web-project-corpus.mjs";
-import { restoreMaterializedWebProjectCorpus, verifyMaterializedWebProjectCorpus } from "./web-project-corpus-materialize.mjs";
+import { captureMaterializedWebProjectCorpusState, restoreMaterializedWebProjectCorpus, verifyMaterializedWebProjectCorpus } from "./web-project-corpus-materialize.mjs";
 import { evaluateWebProjectBenchmarkBaselineGate, loadWebProjectBenchmarkBaseline } from "./web-project-baseline.mjs";
 
 export const WEB_PROJECT_BENCHMARK_VERSION = 2;
@@ -153,6 +153,24 @@ function stableMaterializationEvidence(result) {
   };
 }
 
+function stableCheckoutCleanupEvidence(result) {
+  if (!result) return null;
+  return {
+    ok: result.ok,
+    corpus: result.corpus,
+    checkoutCount: result.checkoutCount,
+    checkouts: (result.checkouts ?? []).map((entry) => ({
+      checkoutKey: entry.checkoutKey,
+      repository: entry.repository,
+      revision: entry.revision,
+      ok: entry.ok,
+      errors: entry.errors ?? [],
+      head: entry.head,
+      dirty: entry.dirty,
+    })),
+  };
+}
+
 export function runWebProjectCorpusBenchmark(corpus, options = {}) {
   const materialization = corpusHasExternalTargets(corpus)
     ? verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot: options.checkoutRoot })
@@ -163,6 +181,9 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
     error.materialization = materialization;
     throw error;
   }
+  const materializationState = materialization
+    ? captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot: options.checkoutRoot })
+    : null;
   const projectPaths = corpusProjectPaths(corpus, { checkoutRoot: options.checkoutRoot });
   let base;
   let executionError = null;
@@ -176,7 +197,10 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
   } catch (error) {
     executionError = error;
   } finally {
-    if (materialization) checkoutCleanup = restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot: options.checkoutRoot });
+    if (materialization) checkoutCleanup = restoreMaterializedWebProjectCorpus(corpus, {
+      checkoutRoot: options.checkoutRoot,
+      baselineState: materializationState,
+    });
   }
   if (executionError) throw executionError;
   if (checkoutCleanup && !checkoutCleanup.ok) {
@@ -212,7 +236,7 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
       baselineGate,
       ...(materialization ? {
         materialization: stableMaterializationEvidence(materialization),
-        checkoutCleanup,
+        checkoutCleanup: stableCheckoutCleanupEvidence(checkoutCleanup),
       } : {}),
     }),
   };

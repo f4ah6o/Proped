@@ -111,6 +111,57 @@ function checkoutState(group, checkoutRoot) {
   };
 }
 
+function ignoredWorkingTreePaths(checkout) {
+  const result = git([
+    "status", "--porcelain=v1", "-z", "--ignored=matching", "--untracked-files=normal", "--ignore-submodules=all",
+  ], { cwd: checkout, allowFailure: true });
+  if (result.status !== 0) fail("ignored working-tree inventory failed", { code: "ignored_inventory_failed" });
+  return result.stdout.split("\0")
+    .filter((record) => record.startsWith("!! "))
+    .map((record) => record.slice(3).replace(/[\\/]+$/, ""))
+    .filter(Boolean)
+    .sort();
+}
+
+function safeGeneratedPath(checkout, relative) {
+  if (path.isAbsolute(relative) || relative.split(/[\\/]+/).some((part) => part === ".." || part === ".git")) {
+    fail(`unsafe generated path: ${relative}`, { code: "unsafe_generated_path" });
+  }
+  const absolute = path.resolve(checkout, relative);
+  const containment = path.relative(checkout, absolute);
+  if (!containment || containment.startsWith("..") || path.isAbsolute(containment)) {
+    fail(`generated path escapes checkout: ${relative}`, { code: "unsafe_generated_path" });
+  }
+  return absolute;
+}
+
+export function captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot } = {}) {
+  if (!corpusHasExternalTargets(corpus)) {
+    return { runtime: "web-project-corpus-state", corpus: corpus.id, checkoutCount: 0, checkouts: [] };
+  }
+  if (!checkoutRoot) fail("external corpus state capture requires --checkout-root", { code: "checkout_root_required" });
+  const root = path.resolve(checkoutRoot);
+  const checkouts = gitGroups(corpus).map((group) => {
+    const state = checkoutState(group, root);
+    if (!state.exists || !state.git || state.origin !== group.url || state.head !== group.revision || state.dirty !== false) {
+      fail(`${group.checkoutKey} is not in a verified state for capture`, { code: "state_capture_requires_verified_checkout" });
+    }
+    return {
+      checkoutKey: group.checkoutKey,
+      ignoredPaths: ignoredWorkingTreePaths(state.checkout),
+    };
+  });
+  return { runtime: "web-project-corpus-state", corpus: corpus.id, checkoutCount: checkouts.length, checkouts };
+}
+
+function removeNewIgnoredPaths(checkout, baselinePaths) {
+  const before = new Set(baselinePaths ?? []);
+  const added = ignoredWorkingTreePaths(checkout).filter((relative) => !before.has(relative));
+  added.sort((a, b) => b.split(/[\\/]+/).length - a.split(/[\\/]+/).length || b.length - a.length);
+  for (const relative of added) fs.rmSync(safeGeneratedPath(checkout, relative), { recursive: true, force: true });
+  return added.sort();
+}
+
 function assertTargetsOutsideGitlinks(checkout, group) {
   const result = git(["ls-files", "--stage"], { cwd: checkout, allowFailure: true });
   if (result.status !== 0) fail(`${group.checkoutKey} gitlink inventory failed`, { code: "gitlink_inventory_failed" });
@@ -242,12 +293,13 @@ function assertNoCheckoutFilters(checkout, revision, checkoutKey) {
   }
 }
 
-export function restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot } = {}) {
+export function restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot, baselineState = null } = {}) {
   if (!corpusHasExternalTargets(corpus)) {
     return { ok: true, runtime: "web-project-corpus-restore", corpus: corpus.id, checkoutCount: 0, checkouts: [] };
   }
   if (!checkoutRoot) fail("external corpus restore requires --checkout-root", { code: "checkout_root_required" });
   const root = path.resolve(checkoutRoot);
+  const baselineByCheckout = new Map((baselineState?.checkouts ?? []).map((entry) => [entry.checkoutKey, entry.ignoredPaths ?? []]));
   const restored = [];
   for (const group of gitGroups(corpus)) {
     const state = checkoutState(group, root);
@@ -264,6 +316,7 @@ export function restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot } = {
       git(["checkout", "--detach", group.revision], { cwd: state.checkout });
       git(["reset", "--hard", group.revision], { cwd: state.checkout });
       git(["clean", "-fd"], { cwd: state.checkout });
+      const removedIgnoredPaths = baselineState ? removeNewIgnoredPaths(state.checkout, baselineByCheckout.get(group.checkoutKey) ?? []) : [];
       const verified = verifyGroup(group, root);
       restored.push({
         checkoutKey: group.checkoutKey,
@@ -273,6 +326,7 @@ export function restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot } = {
         errors: verified.errors,
         head: verified.head,
         dirty: verified.dirty,
+        removedIgnoredPaths,
       });
     } catch (error) {
       restored.push({ checkoutKey: group.checkoutKey, ok: false, errors: [error.code ?? "restore-failed"] });

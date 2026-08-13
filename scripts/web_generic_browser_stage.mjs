@@ -112,21 +112,63 @@ function contentType(file) {
   })[path.extname(file).toLowerCase()] ?? "application/octet-stream";
 }
 
-async function startStaticServer(root) {
-  const realRoot = fs.realpathSync(root);
-  const indexFile = path.join(realRoot, "index.html");
-  const htmlEntries = fs.readdirSync(realRoot, { withFileTypes: true })
+function resolveStaticDocumentRoot(realRoot, { maxDepth = 3, maxEntries = 4096 } = {}) {
+  const rootIndex = path.join(realRoot, "index.html");
+  if (fs.existsSync(rootIndex) && fs.statSync(rootIndex).isFile()) {
+    return { documentRoot: realRoot, entryFile: "index.html" };
+  }
+
+  const rootHtml = fs.readdirSync(realRoot, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".html"))
     .map((entry) => entry.name)
     .sort();
-  const entryFile = fs.existsSync(indexFile) ? "index.html" : htmlEntries.length === 1 ? htmlEntries[0] : null;
-  if (!entryFile) throw new Error(`static output requires index.html or one unambiguous root HTML entry: ${realRoot}`);
+  if (rootHtml.length === 1) return { documentRoot: realRoot, entryFile: rootHtml[0] };
+  if (rootHtml.length > 1) {
+    throw new Error(`static output has multiple root HTML entries and no index.html: ${realRoot}`);
+  }
+
+  const nestedHtml = [];
+  const queue = fs.readdirSync(realRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => ({ directory: path.join(realRoot, entry.name), depth: 1 }))
+    .sort((a, b) => a.directory.localeCompare(b.directory));
+  let scannedEntries = 0;
+  while (queue.length > 0 && nestedHtml.length <= 1) {
+    const current = queue.shift();
+    const entries = fs.readdirSync(current.directory, { withFileTypes: true })
+      .sort((a, b) => a.name.localeCompare(b.name));
+    scannedEntries += entries.length;
+    if (scannedEntries > maxEntries) {
+      throw new Error(`static output HTML discovery exceeded ${maxEntries} entries: ${realRoot}`);
+    }
+    for (const entry of entries) {
+      const absolute = path.join(current.directory, entry.name);
+      if (entry.isFile() && entry.name.toLowerCase().endsWith(".html")) {
+        nestedHtml.push(absolute);
+        if (nestedHtml.length > 1) break;
+      } else if (entry.isDirectory() && current.depth < maxDepth) {
+        queue.push({ directory: absolute, depth: current.depth + 1 });
+      }
+    }
+  }
+  if (nestedHtml.length !== 1) {
+    throw new Error(`static output requires index.html or one unambiguous HTML entry within depth ${maxDepth}: ${realRoot}`);
+  }
+  return {
+    documentRoot: path.dirname(nestedHtml[0]),
+    entryFile: path.basename(nestedHtml[0]),
+  };
+}
+
+async function startStaticServer(root) {
+  const realRoot = fs.realpathSync(root);
+  const { documentRoot, entryFile } = resolveStaticDocumentRoot(realRoot);
   const server = http.createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     let pathname = decodeURIComponent(url.pathname);
     if (pathname === "/") pathname = `/${entryFile}`;
-    let file = path.resolve(realRoot, `.${pathname}`);
-    const relative = path.relative(realRoot, file);
+    let file = path.resolve(documentRoot, `.${pathname}`);
+    const relative = path.relative(documentRoot, file);
     if (relative.startsWith("..") || path.isAbsolute(relative)) {
       response.writeHead(403).end("forbidden");
       return;
@@ -136,7 +178,7 @@ async function startStaticServer(root) {
       response.writeHead(404, { "content-type": "text/plain" }).end("not found");
       return;
     }
-    if (!exists) file = path.join(realRoot, entryFile);
+    if (!exists) file = path.join(documentRoot, entryFile);
     response.writeHead(200, { "content-type": contentType(file), "cache-control": "no-store" });
     fs.createReadStream(file).pipe(response);
   });

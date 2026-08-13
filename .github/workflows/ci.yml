@@ -139,8 +139,13 @@ jobs:
           node scripts/test_web_package_manager_runtime.mjs
           node scripts/test_proped_web_cli.mjs
 
+      - name: Install strict sandbox backend for production gate
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes bubblewrap
+
       - name: Production onboarding baseline gate
-        run: node scripts/web_project_benchmark.mjs --corpus production --baseline protocol/fixtures/production-campaign-baseline.json --offline --no-artifacts
+        run: node scripts/web_project_benchmark.mjs --corpus production --baseline protocol/fixtures/production-campaign-baseline.json --offline --no-artifacts --sandbox-mode strict
 
       - name: Web project quality manifest
         env:

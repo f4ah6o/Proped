@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { inspectWebProject } from "../protocol/web-project-inspect.mjs";
 import { createWebProjectManifestV2FromInspection } from "../protocol/web-project-manifest-v2.mjs";
-import { webProjectDependencyReadiness } from "../protocol/web-project-bootstrap.mjs";
+import { prepareWebProject, webProjectDependencyReadiness } from "../protocol/web-project-bootstrap.mjs";
 import { diagnoseWebProjectManifestV2 } from "../protocol/web-project-doctor.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -15,6 +15,7 @@ const PROJECT = path.join(TMP, "fixture");
 const CONFLICT_PROJECT = path.join(TMP, "conflicting-node-fixture");
 const ZERO_DEP_PROJECT = path.join(TMP, "zero-dependency-fixture");
 const DECLARED_READY_PROJECT = path.join(TMP, "declared-dependencies-ready-fixture");
+const TIMEOUT_PROJECT = path.join(TMP, "timeout-fixture");
 const MANIFEST = path.join(PROJECT, "proped.web.json");
 const CLI = path.join(ROOT, "scripts/proped.mjs");
 
@@ -219,6 +220,26 @@ try {
   assert.equal(offlineEnvironment.networkPolicy, "bootstrap-offline-requested");
   assert.equal(offlineEnvironment.corepackNetwork, "0");
 
+
+  fs.mkdirSync(TIMEOUT_PROJECT, { recursive: true });
+  fs.writeFileSync(path.join(TIMEOUT_PROJECT, "package.json"), `${JSON.stringify({ name: "timeout-fixture" }, null, 2)}\n`);
+  fs.writeFileSync(path.join(TIMEOUT_PROJECT, "package-lock.json"), "{}\n");
+  fs.writeFileSync(path.join(TIMEOUT_PROJECT, "hang-install.mjs"), `
+    import { spawn } from "node:child_process";
+    spawn(process.execPath, ["-e", "setTimeout(() => require('fs').writeFileSync('late-marker', 'unexpected'), 500)"], { stdio: "ignore" });
+    setInterval(() => {}, 10_000);
+  `);
+  const timeoutInspection = inspectWebProject(TIMEOUT_PROJECT);
+  const timeoutManifest = createWebProjectManifestV2FromInspection(timeoutInspection, { projectRoot: ".", id: "timeout-fixture" });
+  timeoutManifest.bootstrap.install = [process.execPath, "hang-install.mjs"];
+  const timeoutResult = prepareWebProject(TIMEOUT_PROJECT, timeoutManifest, { timeoutMs: 100 });
+  assert.equal(timeoutResult.ok, false);
+  assert.equal(timeoutResult.status, "timed-out");
+  assert.equal(timeoutResult.timedOut, true);
+  assert.equal(timeoutResult.timeoutMs, 100);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 700);
+  assert.equal(fs.existsSync(path.join(TIMEOUT_PROJECT, "late-marker")), false, "prepare timeout must terminate the install process tree");
+
   console.log(JSON.stringify({
     ok: true,
     runtime: "web-project-prepare-test",
@@ -231,6 +252,7 @@ try {
     ambiguousNodeRequirementDenied: true,
     conflictingNodeFixtureFailClosed: { doctor: true, prepare: true, run: true },
     readinessAfter: offlineReport.readinessAfter.ready,
+    boundedPrepareTimeout: true,
   }));
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });

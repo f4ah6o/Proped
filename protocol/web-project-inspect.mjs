@@ -32,6 +32,33 @@ const SKIP_DIRECTORIES = new Set([
 const MAX_SOURCE_FILES = 500;
 const MAX_SOURCE_BYTES = 2 * 1024 * 1024;
 
+const PNPM_LOCKFILE_RUNTIME_PINS = Object.freeze({
+  "5.4": "7.33.7",
+  "6.0": "8.15.9",
+});
+
+function readFilePrefix(file, maxBytes = 4096) {
+  let fd = null;
+  try {
+    fd = fs.openSync(file, "r");
+    const buffer = Buffer.alloc(maxBytes);
+    const bytes = fs.readSync(fd, buffer, 0, maxBytes, 0);
+    return buffer.subarray(0, bytes).toString("utf8");
+  } catch {
+    return null;
+  } finally {
+    if (fd !== null) fs.closeSync(fd);
+  }
+}
+
+function inferredPackageManagerReference(manager, lockfile) {
+  if (manager !== "pnpm" || !lockfile || path.basename(lockfile) !== "pnpm-lock.yaml") return null;
+  const prefix = readFilePrefix(lockfile);
+  const version = prefix?.match(/^lockfileVersion:\s*["']?([^"'\s]+)["']?/m)?.[1] ?? null;
+  const runtimeVersion = version ? PNPM_LOCKFILE_RUNTIME_PINS[version] ?? null : null;
+  return runtimeVersion ? { raw: `pnpm@${runtimeVersion}`, version: runtimeVersion, lockfileVersion: version } : null;
+}
+
 function readJson(file) {
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -249,11 +276,18 @@ function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
       severity: "info",
     });
   }
+  const inferredReference = !declaration && nearest[0]
+    ? inferredPackageManagerReference(name, nearest[0].file)
+    : null;
+  const reference = declaration?.raw ?? inferredReference?.raw ?? null;
+  const referenceVersion = declaration?.version ?? inferredReference?.version ?? null;
+  const referenceSource = declaration?.raw ? "packageManager" : inferredReference ? "lockfile-compatibility" : null;
   const installRoot = nearest[0] ? path.dirname(nearest[0].file) : root;
   const pnpRoot = ancestorDirectories(root, searchRoot).find((directory) => fs.existsSync(path.join(directory, ".pnp.cjs"))) ?? null;
   const installMode = name === "yarn" && pnpRoot ? "pnp" : name ? "node-modules" : null;
   if (name) evidence.push(`package-manager:${name}:${source}`);
-  if (declaration?.raw) evidence.push(`package-manager-reference:${declaration.raw}`);
+  if (reference) evidence.push(`package-manager-reference:${reference}:${referenceSource}`);
+  if (inferredReference?.lockfileVersion) evidence.push(`package-manager-lockfile-compatibility:pnpm-lock-${inferredReference.lockfileVersion}`);
   if (pnpRoot) evidence.push(`package-manager-install-mode:pnp:${path.relative(root, pnpRoot) || "."}`);
   if (installRoot !== root) evidence.push(`package-manager-install-root:${path.relative(root, installRoot)}`);
   return {
@@ -263,9 +297,10 @@ function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
     lockfile: nearest[0] ? path.relative(root, nearest[0].file) || path.basename(nearest[0].file) : null,
     installRoot: path.relative(root, installRoot) || ".",
     installMode,
-    reference: declaration?.raw ?? null,
-    version: declaration?.version ?? null,
-    corepack: declaration?.corepack ?? false,
+    reference,
+    referenceSource,
+    version: referenceVersion,
+    corepack: declaration?.corepack ?? Boolean(inferredReference),
   };
 }
 
@@ -487,7 +522,10 @@ function inferCommands(pkg, packageManager, framework, mode, ambiguities) {
     };
   }
   const manager = packageManager?.name ?? null;
-  const prefix = manager ? (packageManager.corepack ? ["corepack", manager] : [manager]) : null;
+  const corepackProxy = packageManager?.referenceSource === "lockfile-compatibility"
+    ? packageManager.reference
+    : manager;
+  const prefix = manager ? (packageManager.corepack ? ["corepack", corepackProxy] : [manager]) : null;
   const run = (script) => prefix ? [...prefix, "run", script] : null;
   const packageExec = (binary, args = []) => {
     if (!prefix) return null;

@@ -4,6 +4,25 @@ import { spawnSync } from "node:child_process";
 import { safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
 
 export const WEB_PROJECT_BOOTSTRAP_VERSION = "1";
+export const DEFAULT_WEB_PROJECT_PREPARE_TIMEOUT_MS = 300_000;
+
+function prepareTimeoutMs(value) {
+  if (!Number.isSafeInteger(value) || value <= 0) throw new Error("Web project bootstrap: timeoutMs must be a positive safe integer");
+  return value;
+}
+
+function killTimedOutProcessTree(child) {
+  if (child?.error?.code !== "ETIMEDOUT" || !Number.isSafeInteger(child.pid) || child.pid <= 0) return;
+  try {
+    if (process.platform === "win32") {
+      spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], { encoding: "utf8", shell: false, timeout: 10_000 });
+    } else {
+      process.kill(-child.pid, "SIGKILL");
+    }
+  } catch {
+    // The process group may already be gone after the direct child timeout.
+  }
+}
 
 function inside(parent, child) {
   const relative = path.relative(parent, child);
@@ -103,7 +122,8 @@ export function webProjectDependencyReadiness(repositoryRoot, manifest, { forRun
   return { ready: null, reason: "unknown-package-manager-readiness", projectRoot, evidence };
 }
 
-export function prepareWebProject(repositoryRoot, manifest, { offline = false, sourceEnvironment = process.env } = {}) {
+export function prepareWebProject(repositoryRoot, manifest, { offline = false, sourceEnvironment = process.env, timeoutMs = DEFAULT_WEB_PROJECT_PREPARE_TIMEOUT_MS } = {}) {
+  const boundedTimeoutMs = prepareTimeoutMs(timeoutMs);
   const readinessBefore = webProjectDependencyReadiness(repositoryRoot, manifest);
   if (!manifest.bootstrap.install) {
     return {
@@ -132,13 +152,20 @@ export function prepareWebProject(repositoryRoot, manifest, { offline = false, s
     shell: false,
     env: environment,
     stdio: ["ignore", "pipe", "pipe"],
+    timeout: boundedTimeoutMs,
+    killSignal: "SIGKILL",
+    detached: process.platform !== "win32",
   });
+  killTimedOutProcessTree(child);
+  const timedOut = child?.error?.code === "ETIMEDOUT";
   const readinessAfter = webProjectDependencyReadiness(repositoryRoot, manifest);
   const result = {
-    ok: child.status === 0,
+    ok: child.status === 0 && !timedOut,
     runtime: "web-project-prepare",
     version: WEB_PROJECT_BOOTSTRAP_VERSION,
-    status: child.status === 0 ? "prepared" : "failed",
+    status: timedOut ? "timed-out" : child.status === 0 ? "prepared" : "failed",
+    timedOut,
+    timeoutMs: boundedTimeoutMs,
     exitCode: child.status,
     signal: child.signal ?? null,
     command,

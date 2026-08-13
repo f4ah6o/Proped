@@ -18,6 +18,7 @@ export function applyPackageManagerRuntimeEnvironment(manifest, environment = pr
   const result = { ...environment };
   if (!corepackManaged(manifest)) return result;
   result.COREPACK_ENABLE_NETWORK = allowNetwork ? "1" : "0";
+  result.COREPACK_ENABLE_AUTO_PIN = "0";
   const home = defaultCorepackHome(environment);
   if (home) result.COREPACK_HOME = home;
   return result;
@@ -42,7 +43,14 @@ export function probePackageManagerRuntime(repositoryRoot, manifest, environment
   const projectRoot = path.resolve(repositoryRoot, manifest.project.root);
   if (!fs.existsSync(projectRoot)) return { status: "unavailable", manager, reference, executable, corepack: true, reason: "project-root-missing" };
   const probeEnvironment = applyPackageManagerRuntimeEnvironment(manifest, environment, { allowNetwork: false });
-  const result = spawnSync(executable, [manager, "--version"], {
+  const installCommand = manifest?.bootstrap?.install;
+  const corepackProxy = Array.isArray(installCommand)
+    && installCommand[0] === "corepack"
+    && typeof installCommand[1] === "string"
+    && installCommand[1].startsWith(`${manager}@`)
+    ? installCommand[1]
+    : manager;
+  const result = spawnSync(executable, [corepackProxy, "--version"], {
     cwd: projectRoot,
     encoding: "utf8",
     shell: false,
@@ -50,7 +58,7 @@ export function probePackageManagerRuntime(repositoryRoot, manifest, environment
     timeout: 10_000,
   });
   if (result.status === 0) {
-    return { status: "ready", manager, reference, executable, corepack: true, version: result.stdout.trim(), corepackHome: probeEnvironment.COREPACK_HOME ?? null };
+    return { status: "ready", manager, reference, executable, corepack: true, proxy: corepackProxy, version: result.stdout.trim(), corepackHome: probeEnvironment.COREPACK_HOME ?? null };
   }
   const stderr = (result.stderr ?? "").trim();
   const networkDenied = /Network access disabled by the environment/i.test(stderr);
@@ -60,6 +68,7 @@ export function probePackageManagerRuntime(repositoryRoot, manifest, environment
     reference,
     executable,
     corepack: true,
+    proxy: corepackProxy,
     reason: networkDenied ? "corepack-manager-not-cached" : "corepack-probe-failed",
     stderrTail: stderr.slice(-2048),
     corepackHome: probeEnvironment.COREPACK_HOME ?? null,

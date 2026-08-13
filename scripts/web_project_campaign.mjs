@@ -3,7 +3,7 @@ import { runUnknownWebProjectCampaign } from "../protocol/web-project-campaign.m
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
-  else console.log("Usage: node scripts/web_project_campaign.mjs <project> [--no-prepare] [--offline] [--no-artifacts] [--sandbox-mode <auto|manifest|strict|constrained|caller-enforced>]\n\nRuns blind inspect -> runtime/package-manager resolution -> safe prepare -> managed exploration -> replay/failure summary without requiring a handwritten manifest.");
+  else console.log("Usage: node scripts/web_project_campaign.mjs <project> [--no-prepare] [--prepare-timeout-ms <ms>] [--offline] [--no-artifacts] [--sandbox-mode <auto|manifest|strict|constrained|caller-enforced>]\n\nRuns blind inspect -> runtime/package-manager resolution -> safe prepare -> managed exploration -> replay/failure summary without requiring a handwritten manifest.");
   process.exit(message ? 2 : 0);
 }
 
@@ -15,12 +15,18 @@ let prepare = true;
 let offline = false;
 let writeArtifacts = true;
 let sandboxMode = "auto";
+let prepareTimeoutMs = undefined;
 for (let index = 0; index < argv.length; index += 1) {
   const arg = argv[index];
   if (arg === "--no-prepare") prepare = false;
   else if (arg === "--offline") offline = true;
   else if (arg === "--no-artifacts") writeArtifacts = false;
-  else if (arg === "--sandbox-mode") {
+  else if (arg === "--prepare-timeout-ms") {
+    const value = argv[++index];
+    if (!value || value.startsWith("--")) usage("--prepare-timeout-ms requires a value");
+    prepareTimeoutMs = Number(value);
+    if (!Number.isSafeInteger(prepareTimeoutMs) || prepareTimeoutMs <= 0) usage("--prepare-timeout-ms must be a positive integer");
+  } else if (arg === "--sandbox-mode") {
     const value = argv[++index];
     if (!value || value.startsWith("--")) usage("--sandbox-mode requires a value");
     sandboxMode = value;
@@ -37,6 +43,7 @@ try {
     offline,
     writeArtifacts,
     sandboxMode,
+    prepareTimeoutMs,
   });
   (result.ok ? console.log : console.error)(JSON.stringify(result));
   if (result.ok) process.exitCode = 0;

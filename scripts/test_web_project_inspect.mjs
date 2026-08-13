@@ -86,6 +86,40 @@ function json(value) {
 
 {
   const root = fixture({
+    "package.json": json({
+      name: "pnpm-lockfile-v6",
+      scripts: { build: "astro build" },
+      dependencies: { astro: "5.0.0" },
+    }),
+    "pnpm-lock.yaml": "lockfileVersion: '6.0'\npackages: {}\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.packageManager.reference, "pnpm@8.15.9");
+  assert.equal(report.packageManager.referenceSource, "lockfile-compatibility");
+  assert.equal(report.packageManager.version, "8.15.9");
+  assert.equal(report.packageManager.corepack, true);
+  assert.deepEqual(report.commands.install.argv, ["corepack", "pnpm@8.15.9", "install", "--frozen-lockfile"]);
+  assert.ok(report.evidence.includes("package-manager-lockfile-compatibility:pnpm-lock-6.0"));
+}
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "pnpm-lockfile-v54",
+      scripts: { build: "vite build" },
+      dependencies: { vite: "3.0.0" },
+    }),
+    "pnpm-lock.yaml": "lockfileVersion: 5.4\nspecifiers: {}\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.packageManager.reference, "pnpm@7.33.7");
+  assert.equal(report.packageManager.referenceSource, "lockfile-compatibility");
+  assert.equal(report.packageManager.version, "7.33.7");
+  assert.deepEqual(report.commands.install.argv, ["corepack", "pnpm@7.33.7", "install", "--frozen-lockfile"]);
+}
+
+{
+  const root = fixture({
     "package.json": json({ name: "pnpm-unpinned", packageManager: "pnpm@latest" }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
   });

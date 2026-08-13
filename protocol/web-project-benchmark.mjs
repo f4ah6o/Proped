@@ -59,6 +59,9 @@ export function summarizeWebProjectBenchmark(campaignResults) {
   const failureClasses = unique(projects.flatMap((project) => project.failureClasses));
   const deterministicReplayProjectCount = projects.filter((project) => project.deterministicReplay === true).length;
   const replayObservedProjectCount = projects.filter((project) => typeof project.deterministicReplay === "boolean").length;
+  const deterministicReplayRate = replayObservedProjectCount > 0 ? deterministicReplayProjectCount / replayObservedProjectCount : null;
+  const projectSpecificAdapterLoc = projects.reduce((total, project) => total + (project.adapterLoc ?? 0), 0);
+  const interventionReasonDistribution = distribution(projects.flatMap((project) => project.interventionReasonCodes));
   const metrics = projects.reduce((total, project) => ({
     states: total.states + project.metrics.states,
     transitions: total.transitions + project.metrics.transitions,
@@ -84,6 +87,9 @@ export function summarizeWebProjectBenchmark(campaignResults) {
     failureClasses,
     deterministicReplayProjectCount,
     replayObservedProjectCount,
+    deterministicReplayRate,
+    projectSpecificAdapterLoc,
+    interventionReasonDistribution,
     metrics,
     runtimeDistribution,
     projects,
@@ -105,6 +111,7 @@ export function runUnknownWebProjectBenchmark(projectPaths, options = {}) {
       offline: options.offline,
       sandboxMode: options.sandboxMode,
       sourceEnvironment: options.sourceEnvironment,
+      prepareTimeoutMs: options.prepareTimeoutMs,
       workspaceRoot: options.workspaceRoots?.[index] ?? null,
       writeArtifacts: options.projectArtifacts === true,
     });
@@ -226,12 +233,29 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
     semanticHash: corpus.semanticHash,
     targetCount: corpus.targets.length,
   };
+  const frontierScore = corpus.id === "external-frontier" ? {
+    autoOnboarded: { count: base.autoOnboardedCount, total: base.projectCount, rate: base.autoOnboardingRate },
+    interventions: { projectCount: base.interventionProjectCount, total: base.humanInterventions, reasons: base.interventionReasonDistribution },
+    deterministicReplay: { count: base.deterministicReplayProjectCount, observed: base.replayObservedProjectCount, rate: base.deterministicReplayRate },
+    adapterLoc: base.projectSpecificAdapterLoc,
+    delta: previous ? {
+      absorbed: qualityGate.diff?.improved ?? [],
+      regressed: qualityGate.diff?.regressed ?? [],
+      added: qualityGate.diff?.added ?? [],
+      removed: qualityGate.diff?.removed ?? [],
+    } : null,
+    promotionEligible: base.autoOnboardedCount === base.projectCount
+      && base.replayObservedProjectCount === base.projectCount
+      && base.deterministicReplayProjectCount === base.projectCount
+      && base.projectSpecificAdapterLoc === 0,
+  } : null;
   const stable = {
     ...base,
     ok: qualityGate.ok && (baselineGate?.ok ?? true),
     corpus: corpusIdentity,
     qualityGate,
     baselineGate,
+    ...(frontierScore ? { frontierScore } : {}),
     ...(materialization ? { materialization, checkoutCleanup } : {}),
   };
   const result = {
@@ -241,6 +265,7 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
       corpus: corpusIdentity,
       qualityGate,
       baselineGate,
+      ...(frontierScore ? { frontierScore } : {}),
       ...(materialization ? {
         materialization: stableMaterializationEvidence(materialization),
         checkoutCleanup: stableCheckoutCleanupEvidence(checkoutCleanup),

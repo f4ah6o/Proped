@@ -285,14 +285,20 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
   if (needsPreparation) {
     let prepareEnvironment = applyNodeRuntimeToEnvironment(options.sourceEnvironment ?? process.env, nodeRuntime);
     prepareEnvironment = applyPackageManagerRuntimeEnvironment(manifest, prepareEnvironment, { allowNetwork: !offline });
-    preparation = prepareWebProject(projectRoot, manifest, { offline, sourceEnvironment: prepareEnvironment });
+    preparation = prepareWebProject(projectRoot, manifest, {
+      offline,
+      sourceEnvironment: prepareEnvironment,
+      timeoutMs: options.prepareTimeoutMs,
+    });
     if (!preparation.ok) {
       return interventionResult(
         projectRoot,
         manifest,
         inspection,
-        intervention("prepare_failed", "automatic dependency preparation failed", {
+        intervention(preparation.timedOut ? "prepare_timeout" : "prepare_failed", preparation.timedOut ? "automatic dependency preparation timed out" : "automatic dependency preparation failed", {
           exitCode: preparation.exitCode,
+          timedOut: preparation.timedOut === true,
+          timeoutMs: preparation.timeoutMs ?? null,
           stderrTail: preparation.stderrTail,
         }),
         { writeArtifacts },

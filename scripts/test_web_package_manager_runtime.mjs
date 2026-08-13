@@ -20,7 +20,7 @@ try {
   fs.mkdirSync(bin, { recursive: true });
   fs.writeFileSync(path.join(project, "package.json"), JSON.stringify({ name: "fixture", packageManager: "pnpm@9.15.0" }));
   const corepack = path.join(bin, "corepack");
-  fs.writeFileSync(corepack, `#!/usr/bin/env node\nif (process.env.FAKE_COREPACK_CACHED === '1') { console.log('9.15.0'); process.exit(0); }\nconsole.error('Network access disabled by the environment; cannot download package manager'); process.exit(1);\n`);
+  fs.writeFileSync(corepack, `#!/usr/bin/env node\nif (process.env.FAKE_COREPACK_CACHED === '1') { const proxy = process.argv[2] ?? 'pnpm'; console.log(proxy.includes('@') ? proxy.split('@').at(-1) : '9.15.0'); process.exit(0); }\nconsole.error('Network access disabled by the environment; cannot download package manager'); process.exit(1);\n`);
   fs.chmodSync(corepack, 0o755);
 
   const manifest = { project: { root: ".", packageManager: "pnpm", packageManagerReference: "pnpm@9.15.0" } };
@@ -33,6 +33,7 @@ try {
 
   const deniedEnvironment = applyPackageManagerRuntimeEnvironment(manifest, baseEnvironment, { allowNetwork: false });
   assert.equal(deniedEnvironment.COREPACK_ENABLE_NETWORK, "0");
+  assert.equal(deniedEnvironment.COREPACK_ENABLE_AUTO_PIN, "0");
   assert.equal(deniedEnvironment.COREPACK_HOME, path.join(root, "home", ".cache", "node", "corepack"));
   const prepareRequired = probePackageManagerRuntime(root, manifest, deniedEnvironment);
   assert.equal(prepareRequired.status, "prepare-required");
@@ -42,6 +43,15 @@ try {
   const ready = probePackageManagerRuntime(root, manifest, cachedEnvironment);
   assert.equal(ready.status, "ready");
   assert.equal(ready.version, "9.15.0");
+
+  const inferredManifest = {
+    project: { root: ".", packageManager: "pnpm", packageManagerReference: "pnpm@8.15.9" },
+    bootstrap: { install: ["corepack", "pnpm@8.15.9", "install", "--frozen-lockfile"] },
+  };
+  const inferredReady = probePackageManagerRuntime(root, inferredManifest, cachedEnvironment);
+  assert.equal(inferredReady.status, "ready");
+  assert.equal(inferredReady.proxy, "pnpm@8.15.9");
+  assert.equal(inferredReady.version, "8.15.9");
 
   const prepareEnvironment = applyPackageManagerRuntimeEnvironment(manifest, baseEnvironment, { allowNetwork: true });
   assert.equal(prepareEnvironment.COREPACK_ENABLE_NETWORK, "1");
@@ -59,7 +69,9 @@ try {
     cachedReady: true,
     strictCachePathPreserved: true,
     implicitNetworkDenied: true,
+    corepackAutoPinDenied: true,
     runPreflight: true,
+    versionedCorepackProxy: true,
   }));
 } finally {
   fs.rmSync(root, { recursive: true, force: true });

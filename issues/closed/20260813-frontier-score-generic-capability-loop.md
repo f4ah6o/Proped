@@ -1,6 +1,6 @@
 # Frontier score and generic capability absorption loop
 
-Status: open
+Status: closed
 Model: GPT-5.6 Sol
 Created: 2026-08-13
 Updated: 2026-08-13
@@ -63,7 +63,7 @@ Propedの進捗をfeature数ではなく、未知project topologyをproject固�
 - [x] 吸収後に全7 targetを再実行し、score deltaを記録する。
 - [x] Frontier scoreを継続比較できるmachine-readable summary / CLI出力を整備する。
 - [x] 7/7時のproduction昇格条件を自動判定できる。
-- [ ] frontier targetのupstream viability（frozen install / declared build / declared setup / managed start）をqualificationし、壊れたpinをgeneric capability failureと混同しない。
+- [x] frontier targetのupstream viability（frozen install / declared build / declared setup / managed start）をqualificationし、壊れたpinをgeneric capability failureと混同しない。
 
 ## 実測ベースライン（2026-08-13）
 
@@ -76,12 +76,17 @@ Propedの進捗をfeature数ではなく、未知project topologyをproject固�
 - completed: Astro, Lit Web Components, legacy React/Webpack
 - remaining: SvelteKit, Remix custom server, Remix+Prisma, Yarn Berry PnP monorepo
 - latest intervention distribution: `prepare_failed: 1`, `server_readiness_failed: 2`, `workspace_prepare_failed: 1`
+- canonical viability: **qualified 3 / failed 4 / unknown 0**
+- qualified-only generic capability: **3/3 = 100%**
+- viability failures: `declared_dependency_install_failed: 1`, `declared_server_unhealthy: 2`, `declared_workspace_build_failed: 1`
 
 実走から、dependency prepareを無期限に待つ問題をbounded timeout + process-tree cleanupへ一般化した。またYarn PnP monorepoではproject subdirectoryではなくpackage-manager lockfileのあるworkspace install rootを基準にprepare/readinessを見る必要があることを確認し、generic install-root inferenceへ修正した。さらにancestorのexact `packageManager`継承と、local `workspace:*` dependencyのdependency-order prebuildをgeneric JavaScript workspace capabilityとして追加した。実frontierのYarn targetは`dependency_prepare_incomplete`から`workspace_prepare_failed`まで前進し、失敗workspace `@packages/shared-data`を明示できるようになった。その先でpinned Yarn 3.3.1自身が`.pnp.cjs`を読む段階のruntime errorになるため、target固有書換えやYarn upgradeで隠さず未吸収として残す。
 
 残るtargetの調査ではcorpus viability問題も確認した。SvelteKitの元pinは重複mappingを含むbroken `pnpm-lock.yaml`、Remix custom-serverはupstream自身のproduction startがHTTP 500、Remix+PrismaはREADME記載の`npm run setup`がmigration/seed不整合で失敗する。PnP targetもworkspace dependency buildへ到達後、upstreamのnested Yarn scriptが失敗する。これらをframework固有hackで通すのではなく、健全なpin/targetへ置換するためのviability qualificationをfrontier KPIの前提条件として追加する。
 
 intervention reasonは粗い`campaign_stage_failed`から、`project_build_failed` / `server_readiness_failed` / `browser_stage_failed` / `campaign_stage_timeout`へ分類した。fresh 7-target runではRemix 2件が`server_readiness_failed`、PnPが`workspace_prepare_failed`へ分離され、generic capability不足とupstream不健全をtarget/class単位で追跡できる。
+
+Campaign schema v2では各targetに`viability`を付与し、declared dependency install / JavaScript workspace build / project build / managed start自体の失敗を`failed`、browser lifecycleまで到達したtargetを`qualified`として分離する。Benchmark schema v3は`viabilityDistribution`、`viabilityFailureDistribution`、qualified targetだけを分母にした`frontierScore.genericCapability`を出力し、production昇格には7 targetすべての`qualified`も必須とする。canonical `/tmp` runでは3 targetだけがqualifiedで、その3件は全てauto-onboardedかつdeterministic replayに成功したためgeneric capabilityは3/3=100%だった。残り4件はPropedのbrowser capabilityへ到達する前にupstream/pin lifecycleが失敗しており、次のfrontier refreshで健全な未知topologyへ置換する。
 
 ## 成功状態
 

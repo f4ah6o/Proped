@@ -6,7 +6,7 @@ import { corpusHasExternalTargets, corpusProjectPaths, evaluateWebProjectBenchma
 import { captureMaterializedWebProjectCorpusState, restoreMaterializedWebProjectCorpus, verifyMaterializedWebProjectCorpus } from "./web-project-corpus-materialize.mjs";
 import { evaluateWebProjectBenchmarkBaselineGate, loadWebProjectBenchmarkBaseline } from "./web-project-baseline.mjs";
 
-export const WEB_PROJECT_BENCHMARK_VERSION = 2;
+export const WEB_PROJECT_BENCHMARK_VERSION = 3;
 
 function unique(values) {
   return [...new Set(values.filter((value) => typeof value === "string" && value.length > 0))].sort();
@@ -29,6 +29,9 @@ function stableProjectResult(result, index) {
     interventionReasonCodes: unique((result.interventionReasons ?? []).map((reason) => reason?.code)),
     failureClasses: unique(result.failureClasses ?? []),
     deterministicReplay: result.deterministicReplay,
+    viability: result.viability ?? (result.autoOnboarded === true
+      ? { status: "qualified", stage: "campaign", reason: "full_campaign_completed" }
+      : { status: "unknown", stage: null, reason: "qualification_not_observed" }),
     runtimeProfile: result.runtimeProfile ?? null,
     metrics: {
       states: result.metrics?.states ?? 0,
@@ -62,6 +65,10 @@ export function summarizeWebProjectBenchmark(campaignResults) {
   const deterministicReplayRate = replayObservedProjectCount > 0 ? deterministicReplayProjectCount / replayObservedProjectCount : null;
   const projectSpecificAdapterLoc = projects.reduce((total, project) => total + (project.adapterLoc ?? 0), 0);
   const interventionReasonDistribution = distribution(projects.flatMap((project) => project.interventionReasonCodes));
+  const viabilityDistribution = distribution(projects.map((project) => project.viability?.status ?? "unknown"));
+  const viabilityFailureDistribution = distribution(projects
+    .filter((project) => project.viability?.status === "failed")
+    .map((project) => project.viability?.reason ?? "unknown"));
   const metrics = projects.reduce((total, project) => ({
     states: total.states + project.metrics.states,
     transitions: total.transitions + project.metrics.transitions,
@@ -90,6 +97,8 @@ export function summarizeWebProjectBenchmark(campaignResults) {
     deterministicReplayRate,
     projectSpecificAdapterLoc,
     interventionReasonDistribution,
+    viabilityDistribution,
+    viabilityFailureDistribution,
     metrics,
     runtimeDistribution,
     projects,
@@ -233,9 +242,24 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
     semanticHash: corpus.semanticHash,
     targetCount: corpus.targets.length,
   };
+  const qualifiedProjects = base.projects.filter((project) => project.viability?.status === "qualified");
+  const failedViabilityProjects = base.projects.filter((project) => project.viability?.status === "failed");
+  const unknownViabilityProjects = base.projects.filter((project) => project.viability?.status === "unknown");
+  const qualifiedAutoOnboardedCount = qualifiedProjects.filter((project) => project.autoOnboarded).length;
   const frontierScore = corpus.id === "external-frontier" ? {
     autoOnboarded: { count: base.autoOnboardedCount, total: base.projectCount, rate: base.autoOnboardingRate },
     interventions: { projectCount: base.interventionProjectCount, total: base.humanInterventions, reasons: base.interventionReasonDistribution },
+    viability: {
+      qualified: qualifiedProjects.length,
+      failed: failedViabilityProjects.length,
+      unknown: unknownViabilityProjects.length,
+      failures: base.viabilityFailureDistribution,
+    },
+    genericCapability: {
+      autoOnboarded: qualifiedAutoOnboardedCount,
+      observed: qualifiedProjects.length,
+      rate: qualifiedProjects.length > 0 ? qualifiedAutoOnboardedCount / qualifiedProjects.length : null,
+    },
     deterministicReplay: { count: base.deterministicReplayProjectCount, observed: base.replayObservedProjectCount, rate: base.deterministicReplayRate },
     adapterLoc: base.projectSpecificAdapterLoc,
     delta: previous ? {
@@ -244,7 +268,8 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
       added: qualityGate.diff?.added ?? [],
       removed: qualityGate.diff?.removed ?? [],
     } : null,
-    promotionEligible: base.autoOnboardedCount === base.projectCount
+    promotionEligible: qualifiedProjects.length === base.projectCount
+      && base.autoOnboardedCount === base.projectCount
       && base.replayObservedProjectCount === base.projectCount
       && base.deterministicReplayProjectCount === base.projectCount
       && base.projectSpecificAdapterLoc === 0,

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { classifyCampaignStageIntervention, resolveCampaignSandboxMode, runUnknownWebProjectCampaign } from "../protocol/web-project-campaign.mjs";
+import { classifyCampaignStageIntervention, classifyCampaignTargetViability, resolveCampaignSandboxMode, runUnknownWebProjectCampaign } from "../protocol/web-project-campaign.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, ".tmp/web-project-campaign-test");
@@ -46,6 +46,13 @@ assert.equal(classifyCampaignStageIntervention([{ id: "project-build", kind: "ch
 assert.equal(classifyCampaignStageIntervention([{ id: "generic-browser", kind: "browser", required: true, status: "usage_error", diagnostic: "server readiness timeout after 30000ms" }]).code, "server_readiness_failed");
 assert.equal(classifyCampaignStageIntervention([{ id: "generic-browser", kind: "browser", required: true, status: "timeout", diagnostic: null }]).code, "campaign_stage_timeout");
 assert.equal(classifyCampaignStageIntervention([{ id: "generic-browser", kind: "browser", required: true, status: "usage_error", diagnostic: "static output missing" }]).code, "browser_stage_failed");
+assert.deepEqual(classifyCampaignTargetViability({ autoOnboarded: true }), { status: "qualified", stage: "campaign", reason: "full_campaign_completed" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "prepare_failed" }] }), { status: "failed", stage: "dependency-install", reason: "declared_dependency_install_failed" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "prepare_timeout" }] }), { status: "unknown", stage: "dependency-install", reason: "dependency_install_timeout" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "workspace_prepare_failed" }], details: { workspacePreparation: { descriptor: "package.json#workspaces" } } }), { status: "failed", stage: "workspace-build", reason: "declared_workspace_build_failed" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "project_build_failed" }], inspection: { commands: { build: { source: "scripts.build" } } } }), { status: "failed", stage: "project-build", reason: "declared_project_build_failed" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "server_readiness_failed" }], inspection: { commands: { serve: { source: "scripts.start" } } } }), { status: "failed", stage: "managed-start", reason: "declared_server_unhealthy" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "browser_stage_failed" }] }), { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" });
 try {
   writeProject();
 
@@ -89,6 +96,7 @@ try {
     sandboxMode: "caller-enforced",
   });
   assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.schemaVersion, 2);
   assert.equal(result.status, "completed");
   assert.equal(result.autoOnboarded, true);
   assert.equal(result.humanInterventions, 0);

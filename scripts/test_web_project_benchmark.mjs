@@ -27,6 +27,7 @@ try {
     },
   ]);
   assert.equal(aggregate.ok, false);
+  assert.equal(aggregate.schemaVersion, 3);
   assert.equal(aggregate.projectCount, 2);
   assert.equal(aggregate.autoOnboardedCount, 1);
   assert.equal(aggregate.autoOnboardingRate, 0.5);
@@ -40,6 +41,8 @@ try {
   assert.equal(aggregate.deterministicReplayRate, 1);
   assert.equal(aggregate.projectSpecificAdapterLoc, 0);
   assert.deepEqual(aggregate.interventionReasonDistribution, { server_review_required: 1 });
+  assert.deepEqual(aggregate.viabilityDistribution, { qualified: 1, unknown: 1 });
+  assert.deepEqual(aggregate.viabilityFailureDistribution, {});
   assert.deepEqual(aggregate.metrics, { states: 3, transitions: 5, actions: 2 });
   assert.deepEqual(aggregate.runtimeDistribution.frameworks, { "react-vite": 1, unknown: 1 });
   assert.deepEqual(aggregate.runtimeDistribution.packageManagers, { none: 1, npm: 1 });
@@ -69,6 +72,8 @@ try {
   assert.equal(result.interventionProjectCount, 1);
   assert.equal(result.humanInterventions, 1);
   assert.deepEqual(result.interventionReasonDistribution, { server_review_required: 1 });
+  assert.deepEqual(result.viabilityDistribution, { qualified: 1, unknown: 1 });
+  assert.deepEqual(result.viabilityFailureDistribution, {});
   assert.equal(result.projectSpecificAdapterLoc, 0);
   assert.equal(result.projects[0].status, "completed");
   assert.equal(result.projects[1].status, "intervention-required");

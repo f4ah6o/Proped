@@ -20,7 +20,7 @@ import {
 import { runWebProject } from "./web-project-runner.mjs";
 import { discoverWebProjectWorkspacePrebuild, prepareWebProjectWorkspace } from "./web-project-workspace-prebuild.mjs";
 
-export const WEB_PROJECT_CAMPAIGN_VERSION = 1;
+export const WEB_PROJECT_CAMPAIGN_VERSION = 2;
 
 const COMPLETED_STAGE_STATUSES = new Set(["pass", "quality_gate_failed"]);
 const SANDBOX_MODES = new Set(["auto", "manifest", "strict", "constrained", "caller-enforced"]);
@@ -72,6 +72,47 @@ function stableStages(report) {
     diagnostic: typeof stage?.payload?.error === "string" ? stage.payload.error : null,
     failureClasses: stageFailureClasses(stage),
   }));
+}
+
+export function classifyCampaignTargetViability({ autoOnboarded = false, interventionReasons = [], stages = [], inspection = null, details = {} } = {}) {
+  if (autoOnboarded) {
+    return { status: "qualified", stage: "campaign", reason: "full_campaign_completed" };
+  }
+  const code = interventionReasons?.[0]?.code ?? null;
+  if (code === "prepare_failed") {
+    return { status: "failed", stage: "dependency-install", reason: "declared_dependency_install_failed" };
+  }
+  if (code === "prepare_timeout") {
+    return { status: "unknown", stage: "dependency-install", reason: "dependency_install_timeout" };
+  }
+  if (code === "workspace_prepare_failed") {
+    const descriptor = details?.workspacePreparation?.descriptor ?? null;
+    return descriptor === "package.json#workspaces"
+      ? { status: "failed", stage: "workspace-build", reason: "declared_workspace_build_failed" }
+      : { status: "unknown", stage: "workspace-build", reason: "workspace_build_failed" };
+  }
+  if (code === "project_build_failed") {
+    const source = inspection?.commands?.build?.source ?? null;
+    return typeof source === "string" && source.startsWith("scripts.")
+      ? { status: "failed", stage: "project-build", reason: "declared_project_build_failed" }
+      : { status: "unknown", stage: "project-build", reason: "inferred_project_build_failed" };
+  }
+  if (code === "server_readiness_failed") {
+    const source = inspection?.commands?.serve?.source ?? null;
+    return typeof source === "string" && source.startsWith("scripts.")
+      ? { status: "failed", stage: "managed-start", reason: "declared_server_unhealthy" }
+      : { status: "unknown", stage: "managed-start", reason: "inferred_server_unhealthy" };
+  }
+  if (code === "browser_stage_failed") {
+    return { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" };
+  }
+  if (code === "campaign_stage_timeout") {
+    return { status: "unknown", stage: "campaign", reason: "campaign_stage_timeout" };
+  }
+  if (stages.some((stage) => stage?.id === "generic-browser" && stage?.status !== "blocked")) {
+    return { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" };
+  }
+  return { status: "unknown", stage: null, reason: code ?? "qualification_not_observed" };
 }
 
 export function classifyCampaignStageIntervention(stages) {
@@ -153,6 +194,11 @@ function interventionResult(projectRoot, manifest, inspection, reason, options =
     ...baseResult(projectRoot, manifest, inspection),
     ...details,
     interventionReasons: [reason],
+    viability: classifyCampaignTargetViability({
+      interventionReasons: [reason],
+      inspection,
+      details,
+    }),
   };
   return finalize(projectRoot, manifest, result, options.writeArtifacts !== false);
 }
@@ -481,6 +527,13 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     deterministicReplay: replayDeterministic,
     metrics,
     runtimeProfile: campaignRuntimeProfile(manifest, inspection),
+    viability: classifyCampaignTargetViability({
+      autoOnboarded: executionCompleted,
+      interventionReasons: executionInterventions,
+      stages: stableStages(report),
+      inspection,
+      details: { preparation, workspacePreparation },
+    }),
     stages: stableStages(report),
     preparation,
     workspacePreparation,

@@ -15,8 +15,6 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -150,7 +148,7 @@ jobs:
         run: |
           sudo env \
             "PATH=$PATH" \
-            "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" \
+            "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
             "$(command -v node)" scripts/web_project_benchmark.mjs \
               --corpus production \
               --baseline protocol/fixtures/production-campaign-baseline.json \

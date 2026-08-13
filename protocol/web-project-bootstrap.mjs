@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
+import { spawnSyncIsolated } from "./web-process-tree.mjs";
 
 export const WEB_PROJECT_BOOTSTRAP_VERSION = "1";
 export const DEFAULT_WEB_PROJECT_PREPARE_TIMEOUT_MS = 300_000;
@@ -9,19 +9,6 @@ export const DEFAULT_WEB_PROJECT_PREPARE_TIMEOUT_MS = 300_000;
 function prepareTimeoutMs(value) {
   if (!Number.isSafeInteger(value) || value <= 0) throw new Error("Web project bootstrap: timeoutMs must be a positive safe integer");
   return value;
-}
-
-function killTimedOutProcessTree(child) {
-  if (child?.error?.code !== "ETIMEDOUT" || !Number.isSafeInteger(child.pid) || child.pid <= 0) return;
-  try {
-    if (process.platform === "win32") {
-      spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], { encoding: "utf8", shell: false, timeout: 10_000 });
-    } else {
-      process.kill(-child.pid, "SIGKILL");
-    }
-  } catch {
-    // The process group may already be gone after the direct child timeout.
-  }
 }
 
 function inside(parent, child) {
@@ -186,7 +173,7 @@ export function prepareWebProject(repositoryRoot, manifest, { offline = false, s
     environment.YARN_ENABLE_NETWORK = "0";
   }
   const command = [...manifest.bootstrap.install];
-  const child = spawnSync(command[0], command.slice(1), {
+  const child = spawnSyncIsolated(command[0], command.slice(1), {
     cwd: readinessBefore.installRoot ?? readinessBefore.projectRoot,
     encoding: "utf8",
     shell: false,
@@ -194,9 +181,7 @@ export function prepareWebProject(repositoryRoot, manifest, { offline = false, s
     stdio: ["ignore", "pipe", "pipe"],
     timeout: boundedTimeoutMs,
     killSignal: "SIGKILL",
-    detached: process.platform !== "win32",
   });
-  killTimedOutProcessTree(child);
   const timedOut = child?.error?.code === "ETIMEDOUT";
   const readinessAfter = webProjectDependencyReadiness(repositoryRoot, manifest);
   const result = {

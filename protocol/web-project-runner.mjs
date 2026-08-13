@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import {
   assertConstrainedSandboxCapabilities,
   assertStrictSandboxCapabilities,
@@ -14,6 +13,7 @@ import {
 } from "./web-execution-sandbox.mjs";
 import { semanticHash } from "./ui-driver-v1.mjs";
 import { clusterWebFailures } from "./web-failure-classifier.mjs";
+import { spawnSyncIsolated } from "./web-process-tree.mjs";
 
 export const WEB_PROJECT_MANIFEST_VERSION = 1;
 export const WEB_PROJECT_RUNNER_VERSION = "1";
@@ -349,7 +349,7 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
     }
     let child;
     try {
-      child = spawnSync(executable, args, {
+      child = spawnSyncIsolated(executable, args, {
         cwd,
         encoding: "utf8",
         timeout: stage.timeoutMs,

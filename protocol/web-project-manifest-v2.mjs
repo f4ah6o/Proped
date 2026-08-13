@@ -283,11 +283,16 @@ function genericBrowserStageTimeoutMs(manifest) {
   const transitions = manifest.exploration.mode === "coverage-guided"
     ? (manifest.exploration.maxTransitions ?? Math.min(manifest.exploration.maxStates * 2, 500))
     : 0;
+  const maxDepth = manifest.exploration.mode === "coverage-guided" ? manifest.exploration.maxDepth : 1;
   const readinessBudget = manifest.server.readiness.timeoutMs;
-  const explorationBudget = transitions * 4_000;
+  // Coverage-guided exploration restores a frontier state by replaying its
+  // trace before executing the next edge. Therefore wall-clock work is bounded
+  // by action executions (transitions * depth), not transitions alone. Keep the
+  // exploration bounds unchanged and size only the outer watchdog accordingly.
+  const explorationOperationBudget = transitions * maxDepth * 2_500;
   const replayBudget = manifest.replay.attempts * 15_000;
   const volatilityBudget = manifest.normalization.volatilityProbeRuns * 5_000;
-  return Math.min(600_000, Math.max(60_000, readinessBudget + 30_000 + explorationBudget + replayBudget + volatilityBudget));
+  return Math.min(900_000, Math.max(60_000, readinessBudget + 30_000 + explorationOperationBudget + replayBudget + volatilityBudget));
 }
 
 export function compileWebProjectManifestV2(manifest, repositoryRoot) {

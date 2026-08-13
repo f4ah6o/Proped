@@ -172,6 +172,26 @@ try {
   assert.match(missingBenchmark.stderr, /checkout verification failed/);
   assert.equal(fs.existsSync(path.join(CHECKOUTS, "sample")), false, "benchmark must not materialize implicitly");
 
+  const atomicFailureCorpus = validateWebProjectCorpus({
+    ...rawCorpus,
+    targets: [{
+      ...rawCorpus.targets[0],
+      id: "atomic-failure",
+      revision: "f".repeat(40),
+      source: { ...rawCorpus.targets[0].source, checkout: "atomic-failure", nestedSources: [] },
+    }],
+  });
+  assert.throws(
+    () => materializeWebProjectCorpus(atomicFailureCorpus, { checkoutRoot: CHECKOUTS }),
+    /git fetch failed/,
+  );
+  assert.equal(fs.existsSync(path.join(CHECKOUTS, "atomic-failure")), false, "failed fresh materialization must not expose a partial final checkout");
+  assert.deepEqual(
+    fs.existsSync(CHECKOUTS) ? fs.readdirSync(CHECKOUTS).filter((name) => name.startsWith(".atomic-failure.partial-")) : [],
+    [],
+    "failed fresh materialization must clean its staging checkout",
+  );
+
   const materializeCli = spawnSync(process.execPath, [
     CLI, "web", "corpus", "materialize", CORPUS_FILE, "--checkout-root", CHECKOUTS,
   ], { cwd: ROOT, encoding: "utf8", timeout: 120_000 });
@@ -310,6 +330,9 @@ try {
   const hook = path.join(checkout, ".git/hooks/post-checkout");
   fs.writeFileSync(hook, `#!/bin/sh\nprintf ran > '${hookMarker}'\n`);
   fs.chmodSync(hook, 0o755);
+  // Fresh materialization is intentionally shallow, so fetch the historical
+  // commit explicitly for this hook-suppression rematerialization test.
+  git(checkout, "fetch", "--depth=1", UPSTREAM, first);
   git(checkout, "reset", "--hard", first);
   fs.rmSync(hookMarker, { force: true });
   const savedGitConfig = {

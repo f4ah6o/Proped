@@ -43,6 +43,16 @@ function compareVersions(a, b) {
   return 0;
 }
 
+function isOpenEndedLowerBoundRequirement(requirement) {
+  if (typeof requirement !== "string" || !requirement.trim()) return false;
+  const clauses = requirement.split("||").map((part) => part.trim()).filter(Boolean);
+  if (clauses.length === 0) return false;
+  return clauses.every((clause) => {
+    const tokens = clause.split(/\s+/).filter(Boolean);
+    return tokens.length > 0 && tokens.every((token) => /^(?:>=|>)v?\d+(?:\.\d+){0,2}$/.test(token));
+  });
+}
+
 function nodeVersion(executable) {
   const result = spawnSync(executable, ["--version"], {
     encoding: "utf8",
@@ -157,6 +167,10 @@ export function resolveNodeRuntime(requirement = null, options = {}) {
     if (sameMajor.length > 0) return result("selected", sameMajor[0], "preferred-major-fallback", "preferred-runtime-not-installed");
   }
 
+  if (!preferredVersion && isOpenEndedLowerBoundRequirement(effectiveRequirement) && compatible.length > 0) {
+    const closestToLowerBound = [...compatible].sort((a, b) => compareVersions(a.version, b.version) || a.path.localeCompare(b.path))[0];
+    return result("selected", closestToLowerBound, "lowest-compatible-open-range");
+  }
   if (current?.engine.compatible === true) return result("selected", current, "current-compatible");
   if (compatible.length > 0) return result("selected", compatible[0], "highest-compatible", preferredVersion ? "preferred-runtime-not-installed" : null);
   if (current?.engine.status === "unknown") return result("unverified", current, "current-unverified", "unsupported-range-syntax");

@@ -79,7 +79,7 @@ try {
   assert.equal(compiledReport.execution.sandboxMode, "strict");
   assert.equal(compiledReport.execution.strictSandbox, true);
   assert.deepEqual(compiledReport.execution.writablePaths, ["dist"]);
-  assert.ok(compiledReport.manifest.stages.find((stage) => stage.id === "generic-browser").timeoutMs >= 360_000, "browser stage timeout must scale with bounded exploration/replay work");
+  assert.equal(compiledReport.manifest.stages.find((stage) => stage.id === "generic-browser").timeoutMs, 760_000, "browser stage timeout must account for bounded frontier trace replay operations");
 
   // Run the same generated configuration without the build stage, using the
   // already prepared static output. This proves the v2 -> v1 -> managed browser

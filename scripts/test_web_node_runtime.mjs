@@ -43,6 +43,11 @@ try {
   assert.equal(selected.selected.source, "nvm");
   assert.equal(selected.automaticDownload, false);
 
+  const openEnded = resolveNodeRuntime(">=18.12.0", { environment, currentExecutable: current });
+  assert.equal(openEnded.status, "selected");
+  assert.equal(openEnded.selected.version, "v20.20.0");
+  assert.equal(openEnded.selectedReason, "lowest-compatible-open-range");
+
   const preferredMajorFallback = resolveNodeRuntime(">=18.0", { environment, currentExecutable: current, preferredVersion: "22.10.0" });
   assert.equal(preferredMajorFallback.status, "selected");
   assert.equal(preferredMajorFallback.selected.version, "v22.22.3");

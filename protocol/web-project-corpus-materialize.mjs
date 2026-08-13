@@ -582,6 +582,51 @@ export function restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot, base
   };
 }
 
+function materializeFreshGroupAtomically(group, root, { fetch = true } = {}) {
+  const finalCheckout = safeCheckoutPath(root, group.checkoutKey).checkout;
+  const stagingCheckout = fs.mkdtempSync(path.join(root, `.${group.checkoutKey}.partial-`));
+  const stagingKey = path.basename(stagingCheckout);
+  const stagingGroup = { ...group, checkoutKey: stagingKey };
+  const nestedMaterialized = [];
+  try {
+    git(["init", "--quiet", stagingCheckout]);
+    git(["remote", "add", "origin", group.url], { cwd: stagingCheckout });
+    let state = checkoutState(stagingGroup, root);
+    if (!state.git || state.origin !== group.url) {
+      fail(`${group.checkoutKey} staging clone identity could not be verified`, { code: "origin_mismatch" });
+    }
+    // A fresh checkout has no local object graph to reuse. Fetch only the exact
+    // pinned commit so large-history repositories do not make frontier
+    // materialization proportional to upstream history size. `fetch=false`
+    // still permits this one required fetch; it only suppresses refreshes of
+    // already-materialized checkouts.
+    git(["fetch", "--depth=1", "origin", group.revision], { cwd: state.checkout });
+    assertNoCheckoutFilters(state.checkout, group.revision, group.checkoutKey);
+    git(["checkout", "--detach", group.revision], { cwd: state.checkout });
+    for (const nested of orderedNestedSources(group)) {
+      const nestedVerified = materializeNestedSource(state.checkout, nested, stagingGroup, { fetch });
+      nestedMaterialized.push({ path: nestedVerified.path, revision: nestedVerified.revision });
+    }
+    const stagedVerified = verifyGroup(stagingGroup, root);
+    if (!stagedVerified.ok) {
+      fail(`${group.checkoutKey} failed staging verification: ${stagedVerified.errors.join(",")}`, { code: "materialization_verification_failed" });
+    }
+    if (fs.existsSync(finalCheckout)) {
+      fail(`${group.checkoutKey} appeared while staging materialization was in progress`, { code: "checkout_race" });
+    }
+    fs.renameSync(stagingCheckout, finalCheckout);
+    const verified = verifyGroup(group, root);
+    if (!verified.ok) {
+      fs.rmSync(finalCheckout, { recursive: true, force: true });
+      fail(`${group.checkoutKey} failed post-rename verification: ${verified.errors.join(",")}`, { code: "materialization_verification_failed" });
+    }
+    return { verified, nestedMaterialized };
+  } catch (error) {
+    if (fs.existsSync(stagingCheckout)) fs.rmSync(stagingCheckout, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 export function materializeWebProjectCorpus(corpus, { checkoutRoot, fetch = true } = {}) {
   if (!corpusHasExternalTargets(corpus)) {
     return verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot });
@@ -600,10 +645,12 @@ export function materializeWebProjectCorpus(corpus, { checkoutRoot, fetch = true
       if (state.dirty === null) fail(`${group.checkoutKey} cleanliness could not be verified`, { code: "cleanliness_unavailable" });
       if (state.dirty) fail(`${group.checkoutKey} has local changes`, { code: "dirty_checkout" });
     } else {
-      const { checkout } = safeCheckoutPath(root, group.checkoutKey);
-      git(["clone", "--no-checkout", "--no-recurse-submodules", group.url, checkout]);
-      state = checkoutState(group, root);
-      if (!state.git || state.origin !== group.url) fail(`${group.checkoutKey} clone identity could not be verified`, { code: "origin_mismatch" });
+      const fresh = materializeFreshGroupAtomically(group, root, { fetch });
+      materialized.push(fresh.verified);
+      for (const nested of fresh.nestedMaterialized) {
+        materializedNestedSources.push({ checkoutKey: group.checkoutKey, ...nested });
+      }
+      continue;
     }
 
     const hasRevision = git(["cat-file", "-e", `${group.revision}^{commit}`], { cwd: state.checkout, allowFailure: true }).status === 0;

@@ -47,6 +47,31 @@ try {
     if (previousSecret === undefined) delete process.env.PROPED_COMMAND_SERVER_SECRET; else process.env.PROPED_COMMAND_SERVER_SECRET = previousSecret;
     if (previousToken === undefined) delete process.env.NPM_TOKEN; else process.env.NPM_TOKEN = previousToken;
   }
+  if (process.platform !== "win32") {
+    const helper = path.join(root, "detached-helper.mjs");
+    const helperPidFile = path.join(root, "detached-helper.pid");
+    fs.writeFileSync(helper, `setInterval(() => {}, 1000);\n`);
+    const treeServer = path.join(root, "tree-server.mjs");
+    fs.writeFileSync(treeServer, `
+      import fs from 'node:fs';
+      import http from 'node:http';
+      import { spawn } from 'node:child_process';
+      const helper = spawn(process.execPath, [${JSON.stringify(helper)}], { detached: true, stdio: 'ignore' });
+      helper.unref();
+      fs.writeFileSync(${JSON.stringify(helperPidFile)}, String(helper.pid));
+      const server = http.createServer((_req,res) => { res.writeHead(200); res.end('ok'); });
+      server.listen(Number(process.env.PORT), '127.0.0.1');
+      process.on('SIGTERM', () => server.close(() => process.exit(0)));
+    `);
+    const tree = await startWebCommandServer(root, [process.execPath, treeServer], 5000, { requestedPort: 39125 });
+    const helperPid = Number(fs.readFileSync(helperPidFile, 'utf8'));
+    await tree.stop();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    let helperAlive = true;
+    try { process.kill(helperPid, 0); } catch { helperAlive = false; }
+    assert.equal(helperAlive, false, 'managed server stop must terminate descendants that created a separate process group');
+  }
+
   const hanging = path.join(root, "hanging.mjs");
   const pidFile = path.join(root, "hanging.pid");
   fs.writeFileSync(hanging, `
@@ -63,7 +88,7 @@ try {
   try { process.kill(hangingPid, 0); } catch { alive = false; }
   assert.equal(alive, false, 'readiness failure must terminate the child process');
 
-  console.log(JSON.stringify({ ok: true, runtime: "web-command-server-test", fallbackToStdoutUrl: true, splitChunkUrlDiscovery: true, loopbackOnly: true, credentialsDenied: true, cleanupOnSuccess: true, cleanupOnReadinessFailure: true, restartStableOrigin: true }));
+  console.log(JSON.stringify({ ok: true, runtime: "web-command-server-test", fallbackToStdoutUrl: true, splitChunkUrlDiscovery: true, loopbackOnly: true, credentialsDenied: true, cleanupOnSuccess: true, cleanupOnReadinessFailure: true, restartStableOrigin: true, cleanupDetachedProcessGroup: process.platform !== "win32" }));
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

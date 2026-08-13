@@ -1,8 +1,8 @@
 import net from "node:net";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
 
-export const WEB_COMMAND_SERVER_VERSION = "2";
+export const WEB_COMMAND_SERVER_VERSION = "3";
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function boundedAppend(current, chunk, maximum = 8192) {
@@ -40,23 +40,62 @@ export function extractLoopbackServerUrls(text) {
   return urls;
 }
 
-async function stopChild(child) {
-  if (!child || child.exitCode !== null) return;
-  try {
-    if (process.platform !== "win32") process.kill(-child.pid, "SIGTERM");
-    else child.kill("SIGTERM");
-  } catch {
-    try { child.kill("SIGTERM"); } catch {}
+function posixDescendantPids(rootPid) {
+  if (process.platform === "win32" || !Number.isSafeInteger(rootPid) || rootPid < 1) return [];
+  const result = spawnSync("ps", ["-axo", "pid=,ppid="], { encoding: "utf8", shell: false });
+  if (result.status !== 0) return [];
+  const children = new Map();
+  for (const line of result.stdout.split(/\r?\n/)) {
+    const match = line.match(/^\s*(\d+)\s+(\d+)\s*$/);
+    if (!match) continue;
+    const pid = Number(match[1]);
+    const ppid = Number(match[2]);
+    const list = children.get(ppid) ?? [];
+    list.push(pid);
+    children.set(ppid, list);
   }
-  await delay(100);
-  if (child.exitCode === null) {
-    try {
-      if (process.platform !== "win32") process.kill(-child.pid, "SIGKILL");
-      else child.kill("SIGKILL");
-    } catch {
-      try { child.kill("SIGKILL"); } catch {}
+  const queue = [rootPid];
+  const descendants = [];
+  const seen = new Set([rootPid]);
+  while (queue.length > 0) {
+    const parent = queue.shift();
+    for (const pid of (children.get(parent) ?? []).sort((a, b) => a - b)) {
+      if (seen.has(pid)) continue;
+      seen.add(pid);
+      descendants.push(pid);
+      queue.push(pid);
     }
   }
+  return descendants;
+}
+
+function signalPid(pid, signal) {
+  try { process.kill(pid, signal); return true; } catch { return false; }
+}
+
+function signalProcessGroup(child, signal) {
+  if (!child?.pid) return false;
+  try { process.kill(-child.pid, signal); return true; }
+  catch { try { return child.kill(signal); } catch { return false; } }
+}
+
+async function stopChild(child) {
+  if (!child?.pid) return;
+  if (process.platform === "win32") {
+    const killed = spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { encoding: "utf8", shell: false, windowsHide: true });
+    if (killed.status !== 0 && child.exitCode === null) signalProcessGroup(child, "SIGKILL");
+    return;
+  }
+
+  // Helpers may create their own process group (for example workerd). Snapshot
+  // descendants before stopping the root so those helpers cannot escape the
+  // managed lifecycle merely by leaving the root process group.
+  const descendants = posixDescendantPids(child.pid);
+  for (const pid of [...descendants].reverse()) signalPid(pid, "SIGTERM");
+  if (child.exitCode === null) signalProcessGroup(child, "SIGTERM");
+  await delay(150);
+  for (const pid of [...descendants].reverse()) signalPid(pid, "SIGKILL");
+  if (child.exitCode === null) signalProcessGroup(child, "SIGKILL");
 }
 
 function candidateRecord(url, source) {

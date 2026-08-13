@@ -128,6 +128,24 @@ try {
   assert.equal(targetRuntimeRun.ok, true);
   assert.match(targetRuntimeRun.stages[0].stdoutTail, /v22\.22\.3/);
 
+  if (process.platform !== "win32") {
+    const lingeringPidFile = path.join(TMP, "lingering-child.pid");
+    const lingering = runWebProject(
+      ROOT,
+      manifest([stage("isolated-process-tree", [
+        process.execPath,
+        "-e",
+        `const {spawn}=require('node:child_process');const fs=require('node:fs');const c=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore'});c.unref();fs.writeFileSync(${JSON.stringify(lingeringPidFile)},String(c.pid));`,
+      ])], ".tmp/web-project-runner-test/isolated"),
+      { writeArtifacts: false },
+    );
+    assert.equal(lingering.ok, true);
+    const lingeringPid = fs.readFileSync(lingeringPidFile, "utf8").trim();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const lingeringCheck = spawnSync("ps", ["-p", lingeringPid, "-o", "pid="], { encoding: "utf8", shell: false });
+    assert.equal(lingeringCheck.stdout.trim(), "", "successful stage cleanup must terminate background descendants");
+  }
+
   assert.deepEqual(
     fs.readdirSync(path.join(TMP, "out")).sort(),
     ["atlas.dot", "atlas.html", "atlas.json", "atlas.svg", "summary.json"],
@@ -239,4 +257,5 @@ console.log(JSON.stringify({
   sampleStageCount: sample.stages.length,
   classifications: ["pass", "quality_gate_failed", "blocked", "usage_error", "execution_failed", "timeout"],
   targetRuntimeEnvironment: true,
+  isolatedProcessTreeCleanup: process.platform !== "win32",
 }));

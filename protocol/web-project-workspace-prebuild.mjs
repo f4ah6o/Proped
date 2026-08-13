@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
+import { spawnSyncIsolated } from "./web-process-tree.mjs";
 
 function inside(parent, child) {
   const relative = path.relative(parent, child);
@@ -166,30 +166,15 @@ export function discoverWebProjectWorkspacePrebuild(projectRoot, workspaceRoot, 
   return javaScriptWorkspacePrebuild(project, workspace);
 }
 
-function killTimedOutProcessTree(result) {
-  if (result?.error?.code !== "ETIMEDOUT" || !Number.isSafeInteger(result.pid) || result.pid <= 0) return;
-  try {
-    if (process.platform === "win32") {
-      spawnSync("taskkill", ["/pid", String(result.pid), "/t", "/f"], { encoding: "utf8", shell: false, timeout: 10_000 });
-    } else {
-      process.kill(-result.pid, "SIGKILL");
-    }
-  } catch {
-    // The process group may already be gone after the direct child timeout.
-  }
-}
-
 function executeWorkspaceCommand(entry, environment, timeoutMs) {
-  const result = spawnSync(entry.command[0], entry.command.slice(1), {
+  const result = spawnSyncIsolated(entry.command[0], entry.command.slice(1), {
     cwd: entry.cwd,
     env: environment,
     encoding: "utf8",
     shell: false,
     timeout: timeoutMs,
     killSignal: "SIGKILL",
-    detached: process.platform !== "win32",
   });
-  killTimedOutProcessTree(result);
   return result;
 }
 

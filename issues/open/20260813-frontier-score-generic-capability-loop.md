@@ -75,12 +75,13 @@ Propedの進捗をfeature数ではなく、未知project topologyをproject固�
 - project-specific adapter LOC: **0**
 - completed: Astro, Lit Web Components, legacy React/Webpack
 - remaining: SvelteKit, Remix custom server, Remix+Prisma, Yarn Berry PnP monorepo
+- latest intervention distribution: `prepare_failed: 1`, `server_readiness_failed: 2`, `workspace_prepare_failed: 1`
 
-実走から、dependency prepareを無期限に待つ問題をbounded timeout + process-tree cleanupへ一般化した。またYarn PnP monorepoではproject subdirectoryではなくpackage-manager lockfileのあるworkspace install rootを基準にprepare/readinessを見る必要があることを確認し、generic install-root inferenceへ修正した。さらにancestorのexact `packageManager`継承と、local `workspace:*` dependencyのdependency-order prebuildをgeneric JavaScript workspace capabilityとして追加し、synthetic campaignではauto-onboarding/replayまで通した。実frontierのYarn targetはその先でpinned Yarn 3.3.1自身が`.pnp.cjs`を読む段階のruntime errorへ到達しており、target固有書換えやYarn upgradeで隠さず未吸収として残す。
+実走から、dependency prepareを無期限に待つ問題をbounded timeout + process-tree cleanupへ一般化した。またYarn PnP monorepoではproject subdirectoryではなくpackage-manager lockfileのあるworkspace install rootを基準にprepare/readinessを見る必要があることを確認し、generic install-root inferenceへ修正した。さらにancestorのexact `packageManager`継承と、local `workspace:*` dependencyのdependency-order prebuildをgeneric JavaScript workspace capabilityとして追加した。実frontierのYarn targetは`dependency_prepare_incomplete`から`workspace_prepare_failed`まで前進し、失敗workspace `@packages/shared-data`を明示できるようになった。その先でpinned Yarn 3.3.1自身が`.pnp.cjs`を読む段階のruntime errorになるため、target固有書換えやYarn upgradeで隠さず未吸収として残す。
 
 残るtargetの調査ではcorpus viability問題も確認した。SvelteKitの元pinは重複mappingを含むbroken `pnpm-lock.yaml`、Remix custom-serverはupstream自身のproduction startがHTTP 500、Remix+PrismaはREADME記載の`npm run setup`がmigration/seed不整合で失敗する。PnP targetもworkspace dependency buildへ到達後、upstreamのnested Yarn scriptが失敗する。これらをframework固有hackで通すのではなく、健全なpin/targetへ置換するためのviability qualificationをfrontier KPIの前提条件として追加する。
 
-intervention reasonは粗い`campaign_stage_failed`だけでなく、少なくとも`project_build_failed` / `server_readiness_failed` / `browser_stage_failed` / `campaign_stage_timeout`へ分類し、generic capability不足とupstream不健全を追跡しやすくする。
+intervention reasonは粗い`campaign_stage_failed`から、`project_build_failed` / `server_readiness_failed` / `browser_stage_failed` / `campaign_stage_timeout`へ分類した。fresh 7-target runではRemix 2件が`server_readiness_failed`、PnPが`workspace_prepare_failed`へ分離され、generic capability不足とupstream不健全をtarget/class単位で追跡できる。
 
 ## 成功状態
 

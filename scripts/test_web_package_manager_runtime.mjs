@@ -59,6 +59,7 @@ try {
   const strictEnvironment = safeExecutionEnvironment(deniedEnvironment, { osEnforced: true });
   assert.equal(strictEnvironment.HOME, "/tmp");
   assert.equal(strictEnvironment.COREPACK_ENABLE_NETWORK, "0");
+  assert.equal(strictEnvironment.COREPACK_ENABLE_AUTO_PIN, "0");
   assert.equal(strictEnvironment.COREPACK_HOME, path.join(root, "home", ".cache", "node", "corepack"));
 
   console.log(JSON.stringify({

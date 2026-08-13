@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { resolveCampaignSandboxMode, runUnknownWebProjectCampaign } from "../protocol/web-project-campaign.mjs";
+import { classifyCampaignStageIntervention, resolveCampaignSandboxMode, runUnknownWebProjectCampaign } from "../protocol/web-project-campaign.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, ".tmp/web-project-campaign-test");
@@ -42,6 +42,10 @@ assert.equal(resolveCampaignSandboxMode("auto", "strict", "linux"), "strict");
 assert.equal(resolveCampaignSandboxMode("auto", "strict", "win32"), "strict");
 assert.equal(resolveCampaignSandboxMode("manifest", "strict", "darwin"), "strict");
 assert.equal(resolveCampaignSandboxMode("caller-enforced", "strict", "darwin"), "caller-enforced");
+assert.equal(classifyCampaignStageIntervention([{ id: "project-build", kind: "check", required: true, status: "execution_failed", diagnostic: "build failed" }]).code, "project_build_failed");
+assert.equal(classifyCampaignStageIntervention([{ id: "generic-browser", kind: "browser", required: true, status: "usage_error", diagnostic: "server readiness timeout after 30000ms" }]).code, "server_readiness_failed");
+assert.equal(classifyCampaignStageIntervention([{ id: "generic-browser", kind: "browser", required: true, status: "timeout", diagnostic: null }]).code, "campaign_stage_timeout");
+assert.equal(classifyCampaignStageIntervention([{ id: "generic-browser", kind: "browser", required: true, status: "usage_error", diagnostic: "static output missing" }]).code, "browser_stage_failed");
 try {
   writeProject();
 

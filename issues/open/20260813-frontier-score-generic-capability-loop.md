@@ -54,15 +54,33 @@ Propedの進捗をfeature数ではなく、未知project topologyをproject固�
 
 ## 受け入れ条件
 
-- [ ] frontier 7 targetを実materializeしてbenchmarkする。
-- [ ] 初回Frontier scoreを記録する。
-- [ ] intervention reasonをtarget別/class別に記録する。
-- [ ] deterministic replay率を記録する。
-- [ ] adapter LOC = 0を維持する。
-- [ ] 最初のfrontier failureを1件、generic capabilityとして吸収する。
-- [ ] 吸収後に全7 targetを再実行し、score deltaを記録する。
-- [ ] Frontier scoreを継続比較できるmachine-readable summary / CLI出力を整備する。
-- [ ] 7/7時のproduction昇格条件を自動判定できる。
+- [x] frontier 7 targetを実materializeしてbenchmarkする。
+- [x] 初回Frontier scoreを記録する。
+- [x] intervention reasonをtarget別/class別に記録する。
+- [x] deterministic replay率を記録する。
+- [x] adapter LOC = 0を維持する。
+- [x] 最初のfrontier failureを1件、generic capabilityとして吸収する。
+- [x] 吸収後に全7 targetを再実行し、score deltaを記録する。
+- [x] Frontier scoreを継続比較できるmachine-readable summary / CLI出力を整備する。
+- [x] 7/7時のproduction昇格条件を自動判定できる。
+- [ ] frontier targetのupstream viability（frozen install / declared build / declared setup / managed start）をqualificationし、壊れたpinをgeneric capability failureと混同しない。
+
+## 実測ベースライン（2026-08-13）
+
+外付けvolume上の初回runはnative package binaryの起動停滞を含み`1/7`だったため、benchmark環境ノイズとして分離した。内部`/tmp`へ同じ7 repositoryをfresh materializeして再計測した結果をcanonical baselineとする。
+
+- auto-onboarded: **3/7**
+- absorbed from noisy first run: `astroship`, `lit-web-components`
+- deterministic replay: **3/3 = 100%**
+- project-specific adapter LOC: **0**
+- completed: Astro, Lit Web Components, legacy React/Webpack
+- remaining: SvelteKit, Remix custom server, Remix+Prisma, Yarn Berry PnP monorepo
+
+実走から、dependency prepareを無期限に待つ問題をbounded timeout + process-tree cleanupへ一般化した。またYarn PnP monorepoではproject subdirectoryではなくpackage-manager lockfileのあるworkspace install rootを基準にprepare/readinessを見る必要があることを確認し、generic install-root inferenceへ修正した。さらにancestorのexact `packageManager`継承と、local `workspace:*` dependencyのdependency-order prebuildをgeneric JavaScript workspace capabilityとして追加し、synthetic campaignではauto-onboarding/replayまで通した。実frontierのYarn targetはその先でpinned Yarn 3.3.1自身が`.pnp.cjs`を読む段階のruntime errorへ到達しており、target固有書換えやYarn upgradeで隠さず未吸収として残す。
+
+残るtargetの調査ではcorpus viability問題も確認した。SvelteKitの元pinは重複mappingを含むbroken `pnpm-lock.yaml`、Remix custom-serverはupstream自身のproduction startがHTTP 500、Remix+PrismaはREADME記載の`npm run setup`がmigration/seed不整合で失敗する。PnP targetもworkspace dependency buildへ到達後、upstreamのnested Yarn scriptが失敗する。これらをframework固有hackで通すのではなく、健全なpin/targetへ置換するためのviability qualificationをfrontier KPIの前提条件として追加する。
+
+intervention reasonは粗い`campaign_stage_failed`だけでなく、少なくとも`project_build_failed` / `server_readiness_failed` / `browser_stage_failed` / `campaign_stage_timeout`へ分類し、generic capability不足とupstream不健全を追跡しやすくする。
 
 ## 成功状態
 

@@ -15,6 +15,8 @@ const PROJECT = path.join(TMP, "fixture");
 const CONFLICT_PROJECT = path.join(TMP, "conflicting-node-fixture");
 const ZERO_DEP_PROJECT = path.join(TMP, "zero-dependency-fixture");
 const DECLARED_READY_PROJECT = path.join(TMP, "declared-dependencies-ready-fixture");
+const PNP_WORKSPACE_ROOT = path.join(TMP, "pnp-workspace-fixture");
+const PNP_WORKSPACE_PROJECT = path.join(PNP_WORKSPACE_ROOT, "packages", "web");
 const TIMEOUT_PROJECT = path.join(TMP, "timeout-fixture");
 const MANIFEST = path.join(PROJECT, "proped.web.json");
 const CLI = path.join(ROOT, "scripts/proped.mjs");
@@ -105,6 +107,40 @@ try {
   assert.equal(declaredReady.ready, true);
   assert.equal(declaredReady.reason, "declared-dependencies-present");
   assert.ok(declaredReady.evidence.includes("declared-dependencies-present:2"));
+
+  fs.mkdirSync(path.join(PNP_WORKSPACE_ROOT, ".git"), { recursive: true });
+  fs.mkdirSync(PNP_WORKSPACE_PROJECT, { recursive: true });
+  fs.writeFileSync(path.join(PNP_WORKSPACE_ROOT, "yarn.lock"), "# workspace lock\n");
+  fs.writeFileSync(path.join(PNP_WORKSPACE_PROJECT, "package.json"), `${JSON.stringify({
+    name: "pnp-workspace-web",
+    dependencies: { react: "1.0.0" },
+  }, null, 2)}\n`);
+  const pnpWorkspaceManifest = {
+    project: { root: ".", packageManager: "yarn" },
+    bootstrap: { install: ["yarn", "install", "--immutable"], build: ["yarn", "run", "build"] },
+    server: { mode: "static-output" },
+  };
+  const pnpBefore = webProjectDependencyReadiness(PNP_WORKSPACE_PROJECT, pnpWorkspaceManifest, { forRun: true });
+  assert.equal(pnpBefore.ready, false);
+  assert.equal(pnpBefore.reason, "yarn-install-incomplete");
+  assert.equal(pnpBefore.installRoot, fs.realpathSync(PNP_WORKSPACE_ROOT));
+  assert.ok(pnpBefore.evidence.includes("install-root:../.."));
+  const versionedPnpManifest = {
+    ...pnpWorkspaceManifest,
+    bootstrap: { ...pnpWorkspaceManifest.bootstrap, install: ["corepack", "yarn@3.3.1", "install", "--immutable"] },
+  };
+  const versionedPnpBefore = webProjectDependencyReadiness(PNP_WORKSPACE_PROJECT, versionedPnpManifest, { forRun: true });
+  assert.equal(versionedPnpBefore.installRoot, fs.realpathSync(PNP_WORKSPACE_ROOT));
+  assert.equal(versionedPnpBefore.ready, false);
+  fs.writeFileSync(path.join(PNP_WORKSPACE_ROOT, ".pnp.cjs"), "module.exports = {};\n");
+  fs.mkdirSync(path.join(PNP_WORKSPACE_ROOT, ".yarn"), { recursive: true });
+  fs.writeFileSync(path.join(PNP_WORKSPACE_ROOT, ".yarn", "install-state.gz"), "fixture\n");
+  const pnpAfter = webProjectDependencyReadiness(PNP_WORKSPACE_PROJECT, pnpWorkspaceManifest, { forRun: true });
+  assert.equal(pnpAfter.ready, true);
+  assert.equal(pnpAfter.reason, "yarn-install-complete");
+  assert.equal(pnpAfter.installRoot, fs.realpathSync(PNP_WORKSPACE_ROOT));
+  assert.ok(pnpAfter.evidence.includes(".pnp.cjs"));
+  assert.ok(pnpAfter.evidence.includes("yarn-install-state"));
 
   fs.mkdirSync(CONFLICT_PROJECT, { recursive: true });
   fs.writeFileSync(path.join(CONFLICT_PROJECT, "package.json"), `${JSON.stringify({
@@ -253,6 +289,7 @@ try {
     conflictingNodeFixtureFailClosed: { doctor: true, prepare: true, run: true },
     readinessAfter: offlineReport.readinessAfter.ready,
     boundedPrepareTimeout: true,
+    workspaceInstallRootReadiness: true,
   }));
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });

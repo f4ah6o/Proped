@@ -74,6 +74,26 @@ function stableStages(report) {
   }));
 }
 
+export function classifyCampaignStageIntervention(stages) {
+  const failed = (stages ?? []).filter((stage) => stage?.required && !COMPLETED_STAGE_STATUSES.has(stage.status));
+  const primary = failed.find((stage) => stage.status !== "blocked") ?? failed[0] ?? null;
+  if (!primary) return null;
+  const diagnostic = String(primary.diagnostic ?? "");
+  if (primary.status === "timeout") {
+    return { code: "campaign_stage_timeout", message: `required stage timed out: ${primary.id}` };
+  }
+  if (primary.id === "project-build") {
+    return { code: "project_build_failed", message: "inferred project build did not complete" };
+  }
+  if (primary.id === "generic-browser" && /server readiness timeout|server exited before readiness/i.test(diagnostic)) {
+    return { code: "server_readiness_failed", message: "managed project server did not become healthy" };
+  }
+  if (primary.id === "generic-browser") {
+    return { code: "browser_stage_failed", message: "generic browser stage did not complete" };
+  }
+  return { code: "campaign_stage_failed", message: "one or more required campaign stages did not complete" };
+}
+
 function writeCampaignArtifacts(projectRoot, result, manifest) {
   const output = path.join(projectRoot, ".proped", "campaign");
   fs.mkdirSync(output, { recursive: true });
@@ -344,7 +364,11 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
   let workspacePrebuild = null;
   let workspacePreparation = null;
   try {
-    workspacePrebuild = discoverWebProjectWorkspacePrebuild(projectRoot, options.workspaceRoot ?? null);
+    const explicitWorkspaceRoot = options.workspaceRoot ?? null;
+    const workspaceRoot = explicitWorkspaceRoot ?? inspection.target.gitRoot ?? null;
+    workspacePrebuild = discoverWebProjectWorkspacePrebuild(projectRoot, workspaceRoot, {
+      allowMoonBit: explicitWorkspaceRoot !== null,
+    });
   } catch (error) {
     return interventionResult(
       projectRoot,
@@ -368,7 +392,10 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     );
   }
   if (workspacePrebuild) {
-    workspacePreparation = prepareWebProjectWorkspace(workspacePrebuild, { sourceEnvironment: runEnvironment });
+    workspacePreparation = prepareWebProjectWorkspace(workspacePrebuild, {
+      sourceEnvironment: runEnvironment,
+      timeoutMs: options.prepareTimeoutMs ?? 300_000,
+    });
     if (!workspacePreparation?.ok) {
       return interventionResult(
         projectRoot,
@@ -429,12 +456,14 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
   const failureClasses = campaignFailureClasses(report);
   const replayDeterministic = campaignReplayDeterminism(report);
   const metrics = campaignExplorationMetrics(report);
+  const failedStages = stableStages(report).filter((stage) => stage.required && !COMPLETED_STAGE_STATUSES.has(stage.status));
+  const classifiedIntervention = classifyCampaignStageIntervention(failedStages);
   const executionInterventions = executionCompleted
     ? []
     : [intervention(
-        "campaign_stage_failed",
-        "one or more required campaign stages did not complete",
-        { stages: stableStages(report).filter((stage) => stage.required && !COMPLETED_STAGE_STATUSES.has(stage.status)) },
+        classifiedIntervention?.code ?? "campaign_stage_failed",
+        classifiedIntervention?.message ?? "one or more required campaign stages did not complete",
+        { stages: failedStages },
       )];
 
   const result = {

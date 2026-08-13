@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { inspectWebProject } from "../protocol/web-project-inspect.mjs";
 import { compileWebProjectManifestV2, createWebProjectManifestV2FromInspection } from "../protocol/web-project-manifest-v2.mjs";
@@ -22,6 +23,11 @@ function fixture(structure) {
 
 function json(value) {
   return JSON.stringify(value, null, 2);
+}
+
+function initGit(root) {
+  const result = spawnSync("git", ["init", "-q"], { cwd: root, encoding: "utf8", shell: false });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
 }
 
 {
@@ -486,6 +492,36 @@ ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
   assert.equal(report.packageManager.installRoot, ".");
   assert.deepEqual(report.commands.install.argv, ["corepack", "yarn", "install", "--immutable"]);
   assert.ok(report.evidence.includes("package-manager-install-mode:pnp:."));
+}
+
+
+{
+  const workspace = fixture({
+    "package.json": json({
+      name: "workspace-root",
+      private: true,
+      packageManager: "yarn@3.3.1",
+      workspaces: ["packages/*"],
+    }),
+    "yarn.lock": "__metadata:\n  version: 6\n",
+    ".pnp.cjs": "module.exports = {};\n",
+    "packages/web/package.json": json({
+      name: "@workspace/web",
+      scripts: { build: "vite build", preview: "vite preview" },
+      dependencies: { react: "18.2.0", vite: "4.0.0" },
+    }),
+  });
+  initGit(workspace);
+  const report = inspectWebProject(path.join(workspace, "packages/web"));
+  assert.equal(report.packageManager.name, "yarn");
+  assert.equal(report.packageManager.reference, "yarn@3.3.1");
+  assert.equal(report.packageManager.referenceSource, "ancestor-packageManager");
+  assert.equal(report.packageManager.corepack, true);
+  assert.equal(report.packageManager.installRoot, "../..");
+  assert.equal(report.packageManager.installMode, "pnp");
+  assert.deepEqual(report.commands.install.argv, ["corepack", "yarn", "install", "--immutable"]);
+  assert.deepEqual(report.commands.build.argv, ["corepack", "yarn", "run", "build"]);
+  assert.ok(report.evidence.includes("package-manager-declaration-root:../.."));
 }
 
 const committed = [

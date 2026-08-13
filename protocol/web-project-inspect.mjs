@@ -102,6 +102,25 @@ function packageManagerDeclaration(value) {
   return { name, raw, selector, version, corepack: ["npm", "pnpm", "yarn"].includes(name) && version !== null };
 }
 
+function ancestorPackageManagerDeclaration(root, searchRoot) {
+  for (const directory of ancestorDirectories(root, searchRoot).slice(1)) {
+    const packageFile = path.join(directory, "package.json");
+    if (!fs.existsSync(packageFile)) continue;
+    let ancestorPackage;
+    try { ancestorPackage = JSON.parse(fs.readFileSync(packageFile, "utf8")); } catch { continue; }
+    const declaration = packageManagerDeclaration(ancestorPackage?.packageManager);
+    if (declaration) {
+      return {
+        declaration,
+        file: packageFile,
+        root: directory,
+        distance: path.relative(root, directory).split(path.sep).filter(Boolean).length,
+      };
+    }
+  }
+  return null;
+}
+
 function normalizeNodeSelector(value) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -221,7 +240,11 @@ function detectNodeRequirement(root, pkg, ambiguities, evidence) {
 }
 
 function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
-  const declaration = packageManagerDeclaration(pkg?.packageManager);
+  const searchRoot = gitRoot && pathInsideOrEqual(gitRoot, root) ? gitRoot : root;
+  const localDeclaration = packageManagerDeclaration(pkg?.packageManager);
+  const inheritedDeclaration = localDeclaration ? null : ancestorPackageManagerDeclaration(root, searchRoot);
+  const declaration = localDeclaration ?? inheritedDeclaration?.declaration ?? null;
+  const declarationSource = localDeclaration ? "packageManager" : inheritedDeclaration ? "ancestor-packageManager" : null;
   const declared = declaration?.name ?? null;
   if (declaration && ["npm", "pnpm", "yarn"].includes(declaration.name) && !declaration.version) {
     ambiguities.push({
@@ -230,7 +253,6 @@ function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
       severity: "error",
     });
   }
-  const searchRoot = gitRoot && pathInsideOrEqual(gitRoot, root) ? gitRoot : root;
   const found = [];
   for (const directory of ancestorDirectories(root, searchRoot)) {
     for (const [filename, manager] of LOCKFILES) {
@@ -259,7 +281,7 @@ function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
   }
 
   let name = declared ?? nearest[0]?.manager ?? null;
-  let source = declared ? "packageManager" : nearest[0] ? "lockfile" : null;
+  let source = declared ? declarationSource : nearest[0] ? "lockfile" : null;
   let confidence = declared ? 1 : nearest[0] ? 0.99 : 0;
   if (!name && pkg?.engines?.npm) {
     name = "npm";
@@ -281,11 +303,12 @@ function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
     : null;
   const reference = declaration?.raw ?? inferredReference?.raw ?? null;
   const referenceVersion = declaration?.version ?? inferredReference?.version ?? null;
-  const referenceSource = declaration?.raw ? "packageManager" : inferredReference ? "lockfile-compatibility" : null;
+  const referenceSource = declaration?.raw ? declarationSource : inferredReference ? "lockfile-compatibility" : null;
   const installRoot = nearest[0] ? path.dirname(nearest[0].file) : root;
   const pnpRoot = ancestorDirectories(root, searchRoot).find((directory) => fs.existsSync(path.join(directory, ".pnp.cjs"))) ?? null;
   const installMode = name === "yarn" && pnpRoot ? "pnp" : name ? "node-modules" : null;
   if (name) evidence.push(`package-manager:${name}:${source}`);
+  if (inheritedDeclaration) evidence.push(`package-manager-declaration-root:${path.relative(root, inheritedDeclaration.root)}`);
   if (reference) evidence.push(`package-manager-reference:${reference}:${referenceSource}`);
   if (inferredReference?.lockfileVersion) evidence.push(`package-manager-lockfile-compatibility:pnpm-lock-${inferredReference.lockfileVersion}`);
   if (pnpRoot) evidence.push(`package-manager-install-mode:pnp:${path.relative(root, pnpRoot) || "."}`);

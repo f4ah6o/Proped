@@ -24,8 +24,10 @@ fs.mkdirSync(WRITABLE, { recursive: true });
 try {
   const environment = safeExecutionEnvironment({
     ...process.env,
+    PROPED_COMPONENT_BENCHMARK_MAX_MS: "150000",
     PROPED_WEB_SANDBOX_SECRET: "must-not-cross-boundary",
   }, { osEnforced: true });
+  assert.equal(environment.PROPED_COMPONENT_BENCHMARK_MAX_MS, "150000");
   assert.equal(environment.PROPED_WEB_SANDBOX_SECRET, undefined);
   assert.equal(environment.HOME, "/tmp");
   assert.equal(environment.PROPED_NETWORK_POLICY, "os-enforced-deny");

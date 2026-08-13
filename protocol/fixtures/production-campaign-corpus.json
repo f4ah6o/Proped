@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "production",
+  "description": "Offline self-contained production onboarding corpus for stable Proped capability tracking.",
+  "gate": {
+    "minAutoOnboardingRate": 0.8,
+    "maxInterventionProjectRate": 0.2,
+    "minDeterministicReplayRate": 1,
+    "maxAdapterLoc": 0,
+    "maxRegressions": 0
+  },
+  "targets": [
+    {
+      "id": "static-basic",
+      "project": "production-campaign-targets/static-basic",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "adapterLoc": 0,
+      "tags": ["static", "accessibility"]
+    },
+    {
+      "id": "static-form",
+      "project": "production-campaign-targets/static-form",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "adapterLoc": 0,
+      "tags": ["static", "form"]
+    },
+    {
+      "id": "static-storage",
+      "project": "production-campaign-targets/static-storage",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "adapterLoc": 0,
+      "tags": ["static", "localStorage", "reload"]
+    },
+    {
+      "id": "static-navigation",
+      "project": "production-campaign-targets/static-navigation",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "adapterLoc": 0,
+      "tags": ["static", "navigation"]
+    },
+    {
+      "id": "local-build",
+      "project": "production-campaign-targets/local-build",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "adapterLoc": 0,
+      "tags": ["npm", "offline-prepare", "build", "spa"]
+    }
+  ]
+}

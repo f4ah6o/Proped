@@ -353,7 +353,7 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
   };
   validateWebProjectManifest(v1, repositoryRoot);
   const writablePaths = [];
-  if (manifest.server.mode === "static-output" && manifest.server.outputDir) {
+  if (manifest.bootstrap.build && manifest.server.mode === "static-output" && manifest.server.outputDir) {
     writablePaths.push(path.join(manifest.project.root, manifest.server.outputDir));
   }
   return {

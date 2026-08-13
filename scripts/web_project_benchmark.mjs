@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { runUnknownWebProjectBenchmark } from "../protocol/web-project-benchmark.mjs";
+import { runUnknownWebProjectBenchmark, runWebProjectCorpusBenchmark } from "../protocol/web-project-benchmark.mjs";
+import { resolveWebProjectCorpus } from "../protocol/web-project-corpus.mjs";
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
-  else console.log("Usage: node scripts/web_project_benchmark.mjs <project> [project ...] [--no-prepare] [--offline] [--no-artifacts] [--project-artifacts] [--output <dir>] [--sandbox-mode <auto|manifest|strict|constrained|caller-enforced>]\n\nRuns the same unknown-project campaign across multiple targets and aggregates auto-onboarding, intervention, finding, replay, and exploration metrics. Quality findings do not make the benchmark exit nonzero; intervention-required targets do.");
+  else console.log("Usage: node scripts/web_project_benchmark.mjs <project> [project ...] [--corpus <production|file>] [--previous <summary.json>] [--no-prepare] [--offline] [--no-artifacts] [--project-artifacts] [--output <dir>] [--sandbox-mode <auto|manifest|strict|constrained|caller-enforced>]\n\nDirect paths require all targets to auto-onboard. Corpus mode evaluates its versioned production quality gate, keeps findings separate, and can fail on onboarding regressions relative to --previous.");
   process.exit(message ? 2 : 0);
 }
 
@@ -16,31 +17,33 @@ let writeArtifacts = true;
 let projectArtifacts = false;
 let output = null;
 let sandboxMode = "auto";
+let corpus = null;
+let previous = null;
 for (let index = 0; index < argv.length; index += 1) {
   const arg = argv[index];
   if (arg === "--no-prepare") prepare = false;
   else if (arg === "--offline") offline = true;
   else if (arg === "--no-artifacts") writeArtifacts = false;
   else if (arg === "--project-artifacts") projectArtifacts = true;
-  else if (arg === "--output" || arg === "--sandbox-mode") {
+  else if (arg === "--output" || arg === "--sandbox-mode" || arg === "--corpus" || arg === "--previous") {
     const value = argv[++index];
     if (!value || value.startsWith("--")) usage(`${arg} requires a value`);
     if (arg === "--output") output = value;
-    else sandboxMode = value;
+    else if (arg === "--sandbox-mode") sandboxMode = value;
+    else if (arg === "--corpus") corpus = value;
+    else previous = value;
   } else if (arg.startsWith("--")) usage(`unknown option: ${arg}`);
   else projects.push(arg);
 }
-if (projects.length === 0) usage("web benchmark requires at least one project path");
+if (!corpus && projects.length === 0) usage("web benchmark requires project paths or --corpus");
+if (corpus && projects.length > 0) usage("web benchmark accepts either project paths or --corpus, not both");
+if (previous && !corpus) usage("--previous requires --corpus");
 
 try {
-  const result = runUnknownWebProjectBenchmark(projects, {
-    prepare,
-    offline,
-    writeArtifacts,
-    projectArtifacts,
-    output,
-    sandboxMode,
-  });
+  const options = { prepare, offline, writeArtifacts, projectArtifacts, output, sandboxMode, previous };
+  const result = corpus
+    ? runWebProjectCorpusBenchmark(resolveWebProjectCorpus(corpus), options)
+    : runUnknownWebProjectBenchmark(projects, options);
   console.log(JSON.stringify(result));
   process.exitCode = result.ok ? 0 : 1;
 } catch (error) {

@@ -101,6 +101,20 @@ A completed campaign reports `autoOnboarded`, `humanInterventions`, `interventio
 
 Exit 0 means every target reached campaign execution without human intervention, exit 1 means at least one target requires intervention, and exit 2 is reserved for benchmark/CLI errors. The aggregate artifact is written to `.proped/benchmark/summary.json` by default. `--no-prepare`, `--offline`, `--no-artifacts`, and the campaign sandbox modes are supported.
 
+For continuous production capability tracking, `--corpus production` runs the versioned offline corpus in `protocol/fixtures/production-campaign-corpus.json`. The corpus pins target identity, repository/revision metadata, tags, and project-specific executable adapter LOC, then evaluates explicit thresholds: auto-onboarding >= 80%, intervention-project rate <= 20%, deterministic replay = 100% where replay evidence exists, adapter LOC = 0, and zero onboarding regressions when `--previous <summary.json>` is supplied. Quality findings remain independent from this onboarding gate.
+
+```bash
+./target/debug/proped web benchmark --corpus production --offline
+./target/debug/proped web benchmark --corpus production --offline --previous .proped/benchmark/previous.json
+```
+
+For continuous production capability tracking, `--corpus production` runs the versioned offline corpus in `protocol/fixtures/production-campaign-corpus.json`. The corpus pins target identity, repository/revision metadata, tags, and project-specific executable adapter LOC, then evaluates explicit thresholds: auto-onboarding >= 80%, intervention-project rate <= 20%, deterministic replay = 100% where replay evidence exists, adapter LOC = 0, and zero onboarding regressions when `--previous <summary.json>` is supplied. Quality findings remain independent from this onboarding gate.
+
+```bash
+./target/debug/proped web benchmark --corpus production --offline
+./target/debug/proped web benchmark --corpus production --offline --previous .proped/benchmark/previous.json
+```
+
 ## Explicit Web project preparation
 
 `web run` never installs target dependencies implicitly. If a generated manifest has an install command and the target dependency artifact is missing, `web run` exits with `prepare_required`. Run the explicit setup phase first:

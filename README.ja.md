@@ -101,6 +101,13 @@ Web onboardingのcanonical入口を`proped web`へまとめました。repositor
 
 exit 0は全targetがhuman interventionなしでcampaign executionへ到達、exit 1は1件以上がintervention-required、exit 2はbenchmark/CLI自体のerrorです。aggregate artifactは既定で`.proped/benchmark/summary.json`へ保存します。`--no-prepare`、`--offline`、`--no-artifacts`、campaignと同じsandbox modeを利用できます。
 
+継続的なproduction能力測定には`--corpus production`を使います。`protocol/fixtures/production-campaign-corpus.json`のversioned offline corpusがtarget identity、repository/revision metadata、tags、project-specific executable adapter LOCを固定し、auto-onboarding >= 80%、intervention project rate <= 20%、replay evidenceがあるprojectのdeterministic replay = 100%、adapter LOC = 0をgateします。`--previous <summary.json>`を指定した場合はonboarding regressionも0件を要求します。quality findingはこのonboarding gateとは独立です。
+
+```bash
+./target/debug/proped web benchmark --corpus production --offline
+./target/debug/proped web benchmark --corpus production --offline --previous .proped/benchmark/previous.json
+```
+
 ## 明示的なWeb project preparation
 
 `web run`はtarget dependencyを暗黙installしません。生成manifestにinstall commandがあり、dependency artifactが未準備なら`prepare_required`で終了します。先に明示setup phaseを実行します。

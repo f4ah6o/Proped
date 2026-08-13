@@ -1,3 +1,4 @@
+- Added a versioned offline production campaign corpus and onboarding quality gate with corpus identity, 80% minimum auto-onboarding, 100% replay determinism, zero project-specific adapter LOC, and previous-summary regression detection.
 - Added blind stateful-server dogfood: managed command servers can restart on a stable loopback origin, explicit `bounded-managed` policy enables bounded local mutations, the `stateful-server` pack verifies CRUD/reload/restart/session/invalid behavior against read-only server-hook projections, and replay now hashes generic coverage projections. Real OSC2026/TaskFlow evidence remains explicit about unverified or upstream-runtime-blocked boundaries.
 # Changes
 - Added multi-project unknown-Web benchmarking with stable auto-onboarding/intervention/finding/replay/exploration metrics, plus safe framework-native Next/Nuxt production server inference when package scripts omit start/preview commands.

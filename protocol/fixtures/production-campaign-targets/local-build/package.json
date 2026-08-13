@@ -1,0 +1,10 @@
+{
+  "name": "proped-production-local-build",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "vite": "file:vendor/vite"
+  }
+}

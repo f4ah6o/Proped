@@ -14,7 +14,7 @@ const LOCKFILES = Object.freeze([
   ["npm-shrinkwrap.json", "npm"],
 ]);
 
-const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".vue", ".html", ".py"]);
+const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".vue", ".svelte", ".astro", ".html", ".py"]);
 const SKIP_DIRECTORIES = new Set([
   ".git",
   "node_modules",
@@ -22,6 +22,8 @@ const SKIP_DIRECTORIES = new Set([
   "build",
   ".next",
   ".nuxt",
+  ".svelte-kit",
+  ".astro",
   ".output",
   "coverage",
   ".cache",
@@ -247,13 +249,20 @@ function detectPackageManager(root, gitRoot, pkg, ambiguities, evidence) {
       severity: "info",
     });
   }
+  const installRoot = nearest[0] ? path.dirname(nearest[0].file) : root;
+  const pnpRoot = ancestorDirectories(root, searchRoot).find((directory) => fs.existsSync(path.join(directory, ".pnp.cjs"))) ?? null;
+  const installMode = name === "yarn" && pnpRoot ? "pnp" : name ? "node-modules" : null;
   if (name) evidence.push(`package-manager:${name}:${source}`);
   if (declaration?.raw) evidence.push(`package-manager-reference:${declaration.raw}`);
+  if (pnpRoot) evidence.push(`package-manager-install-mode:pnp:${path.relative(root, pnpRoot) || "."}`);
+  if (installRoot !== root) evidence.push(`package-manager-install-root:${path.relative(root, installRoot)}`);
   return {
     name,
     source,
     confidence,
     lockfile: nearest[0] ? path.relative(root, nearest[0].file) || path.basename(nearest[0].file) : null,
+    installRoot: path.relative(root, installRoot) || ".",
+    installMode,
     reference: declaration?.raw ?? null,
     version: declaration?.version ?? null,
     corepack: declaration?.corepack ?? false,
@@ -283,6 +292,15 @@ function detectFramework(root, pkg, evidence, ambiguities) {
   if (has("waku")) candidates.push({ name: "waku", confidence: 1, evidence: "dependency:waku" });
   if (has("next")) candidates.push({ name: "next", confidence: 1, evidence: "dependency:next" });
   if (has("nuxt") || has("nuxi")) candidates.push({ name: "nuxt", confidence: 1, evidence: has("nuxt") ? "dependency:nuxt" : "dependency:nuxi" });
+  if (has("@sveltejs/kit")) candidates.push({ name: "sveltekit", confidence: 1, evidence: "dependency:@sveltejs/kit" });
+  if (has("astro")) candidates.push({ name: "astro", confidence: 1, evidence: "dependency:astro" });
+  if (has("@remix-run/react") || has("@remix-run/node")) candidates.push({ name: "remix", confidence: 1, evidence: has("@remix-run/react") ? "dependency:@remix-run/react" : "dependency:@remix-run/node" });
+  if (has("lit") || has("@lit/reactive-element")) {
+    const variant = has("vite") || fs.existsSync(path.join(root, "vite.config.js")) || fs.existsSync(path.join(root, "vite.config.mjs")) || fs.existsSync(path.join(root, "vite.config.ts"))
+      ? "web-components-vite"
+      : "web-components";
+    candidates.push({ name: variant, confidence: 0.99, evidence: has("lit") ? "dependency:lit" : "dependency:@lit/reactive-element" });
+  }
   if (has("react")) {
     const variant = has("vite") || fs.existsSync(path.join(root, "vite.config.js")) || fs.existsSync(path.join(root, "vite.config.mjs")) || fs.existsSync(path.join(root, "vite.config.ts"))
       ? "react-vite"
@@ -308,7 +326,7 @@ function detectFramework(root, pkg, evidence, ambiguities) {
   if (candidates.length === 0) candidates.push({ name: "unknown", confidence: 0, evidence: "no-known-framework-signal" });
 
   const ranked = candidates.sort((a, b) => {
-    const priority = (name) => ["next", "nuxt", "docusaurus", "waku", "python-http-server"].includes(name) ? 3 : name.startsWith("react") || name.startsWith("vue") ? 2 : 1;
+    const priority = (name) => ["next", "nuxt", "docusaurus", "waku", "sveltekit", "astro", "remix", "python-http-server"].includes(name) ? 3 : name.startsWith("react") || name.startsWith("vue") || name.startsWith("web-components") ? 2 : 1;
     return priority(b.name) - priority(a.name) || b.confidence - a.confidence;
   });
   const primary = ranked[0];
@@ -316,7 +334,11 @@ function detectFramework(root, pkg, evidence, ambiguities) {
     (primary.name === "next" && candidate.name.startsWith("react")) ||
     (primary.name === "nuxt" && candidate.name.startsWith("vue")) ||
     (primary.name === "docusaurus" && candidate.name.startsWith("react")) ||
-    (primary.name === "waku" && candidate.name.startsWith("react"))
+    (primary.name === "waku" && candidate.name.startsWith("react")) ||
+    (primary.name === "remix" && candidate.name.startsWith("react")) ||
+    (primary.name === "astro" && candidate.name === "vite") ||
+    (primary.name === "sveltekit" && candidate.name === "vite") ||
+    (primary.name.startsWith("web-components") && candidate.name === "vite")
   ));
   if (materiallyDifferent.length > 0) {
     ambiguities.push({
@@ -391,7 +413,29 @@ function inferModeAndOutput(root, framework, pkg, evidence, ambiguities) {
     outputDir = ".output";
     outputConfidence = 0.95;
     evidence.push(spa ? "nuxt:ssr=false" : "nuxt:default-ssr");
-  } else if (["react-vite", "vue-vite", "vite"].includes(framework.name)) {
+  } else if (framework.name === "sveltekit") {
+    const dependencies = allDependencies(pkg);
+    const staticAdapter = hasDependency(dependencies, "@sveltejs/adapter-static");
+    mode = staticAdapter ? "static-export" : "server-rendered";
+    modeConfidence = staticAdapter ? 0.98 : 0.92;
+    outputDir = staticAdapter ? "build" : ".svelte-kit";
+    outputConfidence = staticAdapter ? 0.9 : 0.8;
+    evidence.push(staticAdapter ? "sveltekit:adapter-static" : "sveltekit:server-rendered-default");
+  } else if (framework.name === "astro") {
+    const config = configText(root, ["astro.config"]);
+    const serverOutput = config && /output\s*:\s*["'](?:server|hybrid)["']/.test(config.text);
+    mode = serverOutput ? "server-rendered" : "static-export";
+    modeConfidence = serverOutput ? 0.98 : 0.95;
+    outputDir = "dist";
+    outputConfidence = 0.95;
+    evidence.push(serverOutput ? "astro:server-output" : "astro:static-output-default");
+  } else if (framework.name === "remix") {
+    mode = "server-rendered";
+    modeConfidence = 0.98;
+    outputDir = "build";
+    outputConfidence = 0.85;
+    evidence.push("remix:server-rendered");
+  } else if (["react-vite", "vue-vite", "vite", "web-components-vite"].includes(framework.name)) {
     mode = "spa";
     modeConfidence = 0.92;
     outputDir = "dist";
@@ -403,6 +447,10 @@ function inferModeAndOutput(root, framework, pkg, evidence, ambiguities) {
       outputConfidence = 0.98;
       evidence.push(`vite:outDir=${outDir}`);
     } else evidence.push("vite:default-outDir=dist");
+  } else if (framework.name === "web-components") {
+    mode = "component";
+    modeConfidence = 0.8;
+    evidence.push("web-components:component-library");
   } else if (framework.name === "react-webpack") {
     mode = "spa";
     modeConfidence = 0.85;
@@ -642,6 +690,9 @@ function detectRuntimeHints(root, pkg, evidence) {
   else if (hasDep("nuxt")) routeModel = "nuxt-file-system";
   else if (hasDep("@docusaurus/core")) routeModel = "docusaurus-client-router";
   else if (hasDep("waku")) routeModel = "waku-router";
+  else if (hasDep("@sveltejs/kit")) routeModel = "sveltekit-file-system";
+  else if (hasDep("astro")) routeModel = "astro-file-system";
+  else if (hasDep("@remix-run/react") || hasDep("@remix-run/node")) routeModel = "remix-file-system";
   if (dexie) evidence.push("state:dexie");
   if (websocket) evidence.push("runtime:websocket");
   if (authDependencies.length) evidence.push(`auth:${authDependencies.join(",")}`);

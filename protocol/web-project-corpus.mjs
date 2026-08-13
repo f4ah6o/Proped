@@ -6,6 +6,7 @@ import { semanticHash } from "./ui-driver-v1.mjs";
 export const WEB_PROJECT_CORPUS_VERSION = 1;
 export const DEFAULT_PRODUCTION_CORPUS = new URL("./fixtures/production-campaign-corpus.json", import.meta.url);
 export const DEFAULT_EXTERNAL_PRODUCTION_CORPUS = new URL("./fixtures/external-production-corpus.json", import.meta.url);
+export const DEFAULT_EXTERNAL_FRONTIER_CORPUS = new URL("./fixtures/external-frontier-corpus.json", import.meta.url);
 
 function fail(message) {
   const error = new Error(`Web project corpus: ${message}`);
@@ -130,6 +131,7 @@ export function loadWebProjectCorpus(file) {
 export function resolveWebProjectCorpus(value) {
   if (value === "production") return loadWebProjectCorpus(fileURLToPath(DEFAULT_PRODUCTION_CORPUS));
   if (value === "external" || value === "external-production") return loadWebProjectCorpus(fileURLToPath(DEFAULT_EXTERNAL_PRODUCTION_CORPUS));
+  if (value === "frontier" || value === "external-frontier" || value === "novelty") return loadWebProjectCorpus(fileURLToPath(DEFAULT_EXTERNAL_FRONTIER_CORPUS));
   return loadWebProjectCorpus(value);
 }
 

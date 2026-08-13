@@ -431,6 +431,17 @@ try {
   assert.ok(external.targets.some((target) => target.id === "ensenzu" && target.source.checkout === "external-ensenzu" && target.adapterLoc === 0));
   assert.equal(new Set(external.targets.map((target) => target.source.checkout)).size, 6);
 
+  const frontier = resolveWebProjectCorpus("frontier");
+  assert.equal(frontier.id, "external-frontier");
+  assert.equal(frontier.targets.length, 7);
+  assert.equal(frontier.targets.every((target) => target.adapterLoc === 0), true);
+  assert.equal(frontier.gate.minTargetCount, 7);
+  assert.equal(frontier.gate.minRepositoryCount, 7);
+  assert.deepEqual(frontier.gate.requiredTags, ["astro", "custom-server", "legacy-webpack", "monorepo", "pnp", "remix", "ssr-db", "sveltekit", "web-components"]);
+  assert.equal(new Set(frontier.targets.map((target) => target.repository)).size, 7);
+  for (const tag of frontier.gate.requiredTags) assert.ok(frontier.targets.some((target) => target.tags.includes(tag)), `frontier missing tag: ${tag}`);
+  assert.equal(resolveWebProjectCorpus("novelty").semanticHash, frontier.semanticHash);
+
   console.log(JSON.stringify({
     ok: true,
     runtime: "web-project-corpus-materialize-test",

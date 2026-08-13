@@ -350,6 +350,110 @@ ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
   assert.equal(manifest.server.mode, "review-required");
 }
 
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "sveltekit-app",
+      packageManager: "pnpm@10.20.0",
+      scripts: { build: "vite build", preview: "vite preview" },
+      dependencies: {
+        "@sveltejs/kit": "2.52.2",
+        "@sveltejs/adapter-node": "5.0.0",
+        svelte: "5.55.7",
+        vite: "7.3.2",
+      },
+    }),
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+    "src/routes/+page.svelte": "<button>Save</button>\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "sveltekit");
+  assert.equal(report.project.mode, "server-rendered");
+  assert.equal(report.project.outputDir, ".svelte-kit");
+  assert.equal(report.runtime.routing.model, "sveltekit-file-system");
+  assert.equal(report.commands.serve.source, "scripts.preview");
+}
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "astro-site",
+      scripts: { build: "astro build", preview: "astro preview" },
+      dependencies: { astro: "5.5.2" },
+    }),
+    "package-lock.json": "{}\n",
+    "src/pages/index.astro": "<main>Astro</main>\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "astro");
+  assert.equal(report.project.mode, "static-export");
+  assert.equal(report.project.outputDir, "dist");
+  assert.equal(report.runtime.routing.model, "astro-file-system");
+  assert.equal(report.commands.serve.source, "scripts.preview");
+}
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "remix-custom-server",
+      scripts: { build: "vite build && vite build --ssr", start: "vite-node server.ts" },
+      dependencies: {
+        "@remix-run/express": "2.4.0",
+        "@remix-run/node": "2.4.0",
+        "@remix-run/react": "2.4.0",
+        express: "4.18.2",
+        react: "18.2.0",
+        "vite-node": "1.1.0",
+      },
+    }),
+    "package-lock.json": "{}\n",
+    "server.ts": "import express from 'express'; const app = express(); app.get('/health', () => {});\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "remix");
+  assert.equal(report.project.mode, "server-rendered");
+  assert.equal(report.project.outputDir, "build");
+  assert.equal(report.runtime.routing.model, "remix-file-system");
+  assert.equal(report.commands.serve.source, "scripts.start");
+  assert.ok(report.runtime.server.frameworks.includes("express"));
+}
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "lit-widget",
+      scripts: { build: "vite build", preview: "vite preview" },
+      devDependencies: { lit: "3.0.0", vite: "6.0.0" },
+    }),
+    "package-lock.json": "{}\n",
+    "src/widget.ts": "import { LitElement } from 'lit'; customElements.define('x-widget', class extends LitElement {});\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "web-components-vite");
+  assert.equal(report.project.mode, "spa");
+  assert.equal(report.project.outputDir, "dist");
+}
+
+{
+  const root = fixture({
+    "package.json": json({
+      name: "yarn-pnp-app",
+      packageManager: "yarn@3.3.1",
+      scripts: { build: "vite build", preview: "vite preview" },
+      dependencies: { vite: "4.0.0" },
+    }),
+    "yarn.lock": "__metadata:\n  version: 6\n",
+    ".pnp.cjs": "module.exports = {};\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.packageManager.name, "yarn");
+  assert.equal(report.packageManager.installMode, "pnp");
+  assert.equal(report.packageManager.installRoot, ".");
+  assert.deepEqual(report.commands.install.argv, ["corepack", "yarn", "install", "--immutable"]);
+  assert.ok(report.evidence.includes("package-manager-install-mode:pnp:."));
+}
+
 const committed = [
   ["web/next-ssr-hydration", "next"],
   ["web/nuxt-ssr-hydration", "nuxt"],

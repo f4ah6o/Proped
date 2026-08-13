@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "id": "external-frontier",
+  "description": "Pinned real OSS Web projects selected for topology novelty rather than target volume. This corpus is intentionally allowed to expose unsupported onboarding shapes without weakening the production regression gate.",
+  "gate": {
+    "minAutoOnboardingRate": 0,
+    "maxInterventionProjectRate": 1,
+    "minDeterministicReplayRate": 0,
+    "maxAdapterLoc": 0,
+    "maxRegressions": 0,
+    "minTargetCount": 7,
+    "minRepositoryCount": 7,
+    "requiredTags": [
+      "astro",
+      "custom-server",
+      "legacy-webpack",
+      "monorepo",
+      "pnp",
+      "remix",
+      "ssr-db",
+      "sveltekit",
+      "web-components"
+    ]
+  },
+  "targets": [
+    {
+      "id": "sveltekit-realworld",
+      "project": ".",
+      "repository": "sveltejs/realworld",
+      "revision": "df796708040f5200ec572b28ab7f88ecee5794dd",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "framework-backed",
+        "frontier",
+        "pnpm",
+        "server-rendered",
+        "sveltekit"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/sveltejs/realworld.git",
+        "checkout": "frontier-sveltekit-realworld"
+      }
+    },
+    {
+      "id": "astroship",
+      "project": ".",
+      "repository": "surjithctly/astroship",
+      "revision": "1a844c57df3a40d3264b68add519626f1d8f0bff",
+      "adapterLoc": 0,
+      "tags": [
+        "astro",
+        "external",
+        "framework-backed",
+        "frontier",
+        "static-export"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/surjithctly/astroship.git",
+        "checkout": "frontier-astroship"
+      }
+    },
+    {
+      "id": "remix-vite-node",
+      "project": ".",
+      "repository": "xHomu/remix-vite-node",
+      "revision": "c2497ecee4132e9d847fe14a48b001f0f0759e9c",
+      "adapterLoc": 0,
+      "tags": [
+        "custom-server",
+        "express",
+        "external",
+        "framework-backed",
+        "frontier",
+        "remix",
+        "server-rendered"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/xHomu/remix-vite-node.git",
+        "checkout": "frontier-remix-vite-node"
+      }
+    },
+    {
+      "id": "remix-prisma-blog",
+      "project": ".",
+      "repository": "prateekvarma/Remix-indie-stack-blog",
+      "revision": "adea789449512033a9536b1ca7aba311deb2b666",
+      "adapterLoc": 0,
+      "tags": [
+        "database",
+        "external",
+        "framework-backed",
+        "frontier",
+        "prisma",
+        "remix",
+        "server-rendered",
+        "ssr-db"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/prateekvarma/Remix-indie-stack-blog.git",
+        "checkout": "frontier-remix-prisma-blog"
+      }
+    },
+    {
+      "id": "lit-web-components",
+      "project": ".",
+      "repository": "butopen/web-components-tailwind-starter-kit",
+      "revision": "c1f5d07699934e36bbce9a1f3f121bfe8f7aafdf",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "framework-backed",
+        "frontier",
+        "lit",
+        "web-components"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/butopen/web-components-tailwind-starter-kit.git",
+        "checkout": "frontier-lit-web-components"
+      }
+    },
+    {
+      "id": "yarn-pnp-monorepo-web",
+      "project": "packages/web",
+      "repository": "atjsh/yarn-berry-pnp-monorepo",
+      "revision": "cecf7dd4078141ed6a76faaa9b87807d24bae4f5",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "frontier",
+        "monorepo",
+        "pnp",
+        "workspace-dependency",
+        "yarn-berry"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/atjsh/yarn-berry-pnp-monorepo.git",
+        "checkout": "frontier-yarn-pnp-monorepo"
+      }
+    },
+    {
+      "id": "todomvc-react-legacy-webpack",
+      "project": "examples/react",
+      "repository": "tastejs/todomvc",
+      "revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "framework-backed",
+        "frontier",
+        "legacy-webpack",
+        "react",
+        "webpack"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/tastejs/todomvc.git",
+        "checkout": "frontier-todomvc"
+      }
+    }
+  ]
+}

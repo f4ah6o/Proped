@@ -10,7 +10,7 @@ function inside(parent, child) {
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
-function declaredDependencyCount(projectRoot) {
+function declaredDependencyNames(projectRoot) {
   const packageFile = path.join(projectRoot, "package.json");
   if (!fs.existsSync(packageFile)) return null;
   try {
@@ -21,10 +21,23 @@ function declaredDependencyCount(projectRoot) {
       if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) continue;
       for (const name of Object.keys(dependencies)) names.add(name);
     }
-    return names.size;
+    return [...names].sort();
   } catch {
     return null;
   }
+}
+
+function declaredDependencyCount(projectRoot) {
+  return declaredDependencyNames(projectRoot)?.length ?? null;
+}
+
+function declaredDependenciesPresent(projectRoot) {
+  const names = declaredDependencyNames(projectRoot);
+  if (!names || names.length === 0) return null;
+  const nodeModules = path.join(projectRoot, "node_modules");
+  if (!fs.existsSync(nodeModules)) return { present: 0, total: names.length, missing: names };
+  const missing = names.filter((name) => !fs.existsSync(path.join(nodeModules, ...name.split("/"))));
+  return { present: names.length - missing.length, total: names.length, missing };
 }
 
 function isCanonicalPackageManagerInstall(manifest) {
@@ -64,20 +77,24 @@ export function webProjectDependencyReadiness(repositoryRoot, manifest, { forRun
   const pnp = path.join(projectRoot, ".pnp.cjs");
   const yarnState = path.join(nodeModules, ".yarn-state.yml");
   const yarnIntegrity = path.join(nodeModules, ".yarn-integrity");
+  const declaredPresence = declaredDependenciesPresent(projectRoot);
   for (const [label, candidate] of [["node_modules", nodeModules], ["pnpm-modules", pnpmModules], ["npm-hidden-lock", npmHiddenLock], [".pnp.cjs", pnp], ["yarn-state", yarnState], ["yarn-integrity", yarnIntegrity]]) {
     if (fs.existsSync(candidate)) evidence.push(label);
   }
+  const declaredReady = Boolean(declaredPresence && declaredPresence.total > 0 && declaredPresence.missing.length === 0 && isCanonicalPackageManagerInstall(manifest));
+  if (declaredReady) evidence.push(`declared-dependencies-present:${declaredPresence.total}`);
   if (manager === "pnpm") {
-    const ready = fs.existsSync(pnpmModules);
-    return { ready, reason: ready ? "pnpm-install-complete" : "pnpm-install-incomplete", projectRoot, evidence };
+    const ready = fs.existsSync(pnpmModules) || declaredReady;
+    return { ready, reason: fs.existsSync(pnpmModules) ? "pnpm-install-complete" : ready ? "declared-dependencies-present" : "pnpm-install-incomplete", projectRoot, evidence };
   }
   if (manager === "npm") {
-    const ready = fs.existsSync(npmHiddenLock);
-    return { ready, reason: ready ? "npm-install-complete" : "npm-install-incomplete", projectRoot, evidence };
+    const ready = fs.existsSync(npmHiddenLock) || declaredReady;
+    return { ready, reason: fs.existsSync(npmHiddenLock) ? "npm-install-complete" : ready ? "declared-dependencies-present" : "npm-install-incomplete", projectRoot, evidence };
   }
   if (manager === "yarn") {
-    const ready = fs.existsSync(pnp) || fs.existsSync(yarnState) || fs.existsSync(yarnIntegrity);
-    return { ready, reason: ready ? "yarn-install-complete" : "yarn-install-incomplete", projectRoot, evidence };
+    const markerReady = fs.existsSync(pnp) || fs.existsSync(yarnState) || fs.existsSync(yarnIntegrity);
+    const ready = markerReady || declaredReady;
+    return { ready, reason: markerReady ? "yarn-install-complete" : ready ? "declared-dependencies-present" : "yarn-install-incomplete", projectRoot, evidence };
   }
   if (manager === "bun") {
     const ready = fs.existsSync(nodeModules);

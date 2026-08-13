@@ -66,7 +66,12 @@ async function replayTrace(driver, trace) {
     const inventory = await driver.actions();
     const action = inventory.actions.find((candidate) => candidate.id === actionId);
     if (!action) return { ok: false, missingActionId: actionId, snapshot };
-    const result = await driver.execute(action);
+    let result;
+    try {
+      result = await driver.execute(action);
+    } catch (error) {
+      return { ok: false, executionError: error.message, failedActionId: actionId, snapshot };
+    }
     snapshot = result.snapshot;
   }
   return { ok: true, snapshot };
@@ -118,7 +123,13 @@ export async function exploreWebCoverageGuided(driver, {
 
     const replay = await replayTrace(driver, source.trace);
     if (!replay.ok) {
-      diagnostics.push({
+      diagnostics.push(replay.executionError ? {
+        code: "frontier_trace_replay_execution_failed",
+        sourceFingerprint: source.snapshot.fingerprint,
+        actionId: replay.failedActionId,
+        trace: source.trace,
+        error: replay.executionError,
+      } : {
         code: "frontier_trace_replay_missing_action",
         sourceFingerprint: source.snapshot.fingerprint,
         missingActionId: replay.missingActionId,
@@ -138,7 +149,19 @@ export async function exploreWebCoverageGuided(driver, {
       continue;
     }
 
-    const result = await driver.execute(replayAction);
+    let result;
+    try {
+      result = await driver.execute(replayAction);
+    } catch (error) {
+      diagnostics.push({
+        code: "frontier_action_execution_failed",
+        sourceFingerprint: source.snapshot.fingerprint,
+        actionId: action.id,
+        trace: source.trace,
+        error: error.message,
+      });
+      continue;
+    }
     const nextSnapshot = result.snapshot;
     const nextInventory = await driver.actions();
     const nextTrace = [...source.trace, action.id];

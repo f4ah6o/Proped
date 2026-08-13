@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { semanticHash } from "./ui-driver-v1.mjs";
 import { runUnknownWebProjectCampaign } from "./web-project-campaign.mjs";
-import { corpusProjectPaths, evaluateWebProjectBenchmarkGate } from "./web-project-corpus.mjs";
+import { corpusHasExternalTargets, corpusProjectPaths, evaluateWebProjectBenchmarkGate } from "./web-project-corpus.mjs";
+import { restoreMaterializedWebProjectCorpus, verifyMaterializedWebProjectCorpus } from "./web-project-corpus-materialize.mjs";
 import { evaluateWebProjectBenchmarkBaselineGate, loadWebProjectBenchmarkBaseline } from "./web-project-baseline.mjs";
 
 export const WEB_PROJECT_BENCHMARK_VERSION = 2;
@@ -108,13 +109,64 @@ function readPreviousSummary(file) {
   return JSON.parse(fs.readFileSync(path.resolve(file), "utf8"));
 }
 
+function stableMaterializationEvidence(result) {
+  if (!result) return null;
+  return {
+    ok: result.ok,
+    corpus: result.corpus,
+    checkoutCount: result.checkoutCount,
+    targetCount: result.targetCount,
+    checkouts: (result.checkouts ?? []).map((entry) => ({
+      checkoutKey: entry.checkoutKey,
+      repository: entry.repository,
+      revision: entry.revision,
+      targetIds: entry.targetIds ?? [],
+      origin: entry.origin,
+      head: entry.head,
+      dirty: entry.dirty,
+      ok: entry.ok,
+      errors: entry.errors ?? [],
+    })),
+    projects: (result.projects ?? []).map((entry) => ({
+      id: entry.id,
+      checkoutKey: entry.checkoutKey ?? null,
+      exists: entry.exists,
+    })),
+  };
+}
+
 export function runWebProjectCorpusBenchmark(corpus, options = {}) {
-  const projectPaths = corpusProjectPaths(corpus);
-  const base = runUnknownWebProjectBenchmark(projectPaths, {
-    ...options,
-    entries: corpus.targets,
-    writeArtifacts: false,
-  });
+  const materialization = corpusHasExternalTargets(corpus)
+    ? verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot: options.checkoutRoot })
+    : null;
+  if (materialization && !materialization.ok) {
+    const error = new Error("external corpus checkout verification failed; run web corpus verify/materialize first");
+    error.code = "corpus_checkout_invalid";
+    error.materialization = materialization;
+    throw error;
+  }
+  const projectPaths = corpusProjectPaths(corpus, { checkoutRoot: options.checkoutRoot });
+  let base;
+  let executionError = null;
+  let checkoutCleanup = null;
+  try {
+    base = runUnknownWebProjectBenchmark(projectPaths, {
+      ...options,
+      entries: corpus.targets,
+      writeArtifacts: false,
+    });
+  } catch (error) {
+    executionError = error;
+  } finally {
+    if (materialization) checkoutCleanup = restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot: options.checkoutRoot });
+  }
+  if (executionError) throw executionError;
+  if (checkoutCleanup && !checkoutCleanup.ok) {
+    const error = new Error("external corpus checkout cleanup failed");
+    error.code = "corpus_checkout_cleanup_failed";
+    error.checkoutCleanup = checkoutCleanup;
+    throw error;
+  }
   const previous = readPreviousSummary(options.previous);
   const qualityGate = evaluateWebProjectBenchmarkGate(base, corpus, previous);
   const baseline = options.baseline ? loadWebProjectBenchmarkBaseline(options.baseline) : null;
@@ -131,6 +183,7 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
     corpus: corpusIdentity,
     qualityGate,
     baselineGate,
+    ...(materialization ? { materialization, checkoutCleanup } : {}),
   };
   const result = {
     ...stable,
@@ -139,6 +192,10 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
       corpus: corpusIdentity,
       qualityGate,
       baselineGate,
+      ...(materialization ? {
+        materialization: stableMaterializationEvidence(materialization),
+        checkoutCleanup,
+      } : {}),
     }),
   };
   if (options.writeArtifacts !== false) {

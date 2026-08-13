@@ -14,6 +14,7 @@ const TMP = path.join(ROOT, ".tmp/web-project-prepare-test");
 const PROJECT = path.join(TMP, "fixture");
 const CONFLICT_PROJECT = path.join(TMP, "conflicting-node-fixture");
 const ZERO_DEP_PROJECT = path.join(TMP, "zero-dependency-fixture");
+const DECLARED_READY_PROJECT = path.join(TMP, "declared-dependencies-ready-fixture");
 const MANIFEST = path.join(PROJECT, "proped.web.json");
 const CLI = path.join(ROOT, "scripts/proped.mjs");
 
@@ -80,6 +81,29 @@ try {
   assert.equal(zeroReadiness.ready, true);
   assert.equal(zeroReadiness.reason, "npm-no-dependencies");
   assert.deepEqual(zeroReadiness.evidence, ["declared-dependencies:0"]);
+
+  fs.mkdirSync(path.join(DECLARED_READY_PROJECT, "node_modules", "vite"), { recursive: true });
+  fs.mkdirSync(path.join(DECLARED_READY_PROJECT, "node_modules", "@vitejs", "plugin-vue"), { recursive: true });
+  fs.writeFileSync(path.join(DECLARED_READY_PROJECT, "index.html"), "<!doctype html><main>declared ready</main>\n");
+  fs.writeFileSync(path.join(DECLARED_READY_PROJECT, "package.json"), `${JSON.stringify({
+    name: "declared-dependencies-ready-fixture",
+    scripts: { build: "vite build" },
+    dependencies: { vite: "1.0.0" },
+    devDependencies: { "@vitejs/plugin-vue": "1.0.0" },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(DECLARED_READY_PROJECT, "package-lock.json"), `${JSON.stringify({
+    name: "declared-dependencies-ready-fixture",
+    lockfileVersion: 3,
+    requires: true,
+    packages: {},
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(DECLARED_READY_PROJECT, "node_modules/.modules.yaml"), "packageManager: pnpm\n");
+  const declaredReadyInspection = inspectWebProject(DECLARED_READY_PROJECT);
+  const declaredReadyManifest = createWebProjectManifestV2FromInspection(declaredReadyInspection, { projectRoot: ".", id: "declared-dependencies-ready-fixture" });
+  const declaredReady = webProjectDependencyReadiness(DECLARED_READY_PROJECT, declaredReadyManifest, { forRun: true });
+  assert.equal(declaredReady.ready, true);
+  assert.equal(declaredReady.reason, "declared-dependencies-present");
+  assert.ok(declaredReady.evidence.includes("declared-dependencies-present:2"));
 
   fs.mkdirSync(CONFLICT_PROJECT, { recursive: true });
   fs.writeFileSync(path.join(CONFLICT_PROJECT, "package.json"), `${JSON.stringify({

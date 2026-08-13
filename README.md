@@ -108,12 +108,17 @@ For continuous production capability tracking, `--corpus production` runs the ve
 ./target/debug/proped web benchmark --corpus production --offline --previous .proped/benchmark/previous.json
 ```
 
-For continuous production capability tracking, `--corpus production` runs the versioned offline corpus in `protocol/fixtures/production-campaign-corpus.json`. The corpus pins target identity, repository/revision metadata, tags, and project-specific executable adapter LOC, then evaluates explicit thresholds: auto-onboarding >= 80%, intervention-project rate <= 20%, deterministic replay = 100% where replay evidence exists, adapter LOC = 0, and zero onboarding regressions when `--previous <summary.json>` is supplied. Quality findings remain independent from this onboarding gate.
+### Explicit external OSS corpus
+
+`--corpus external` uses the checked-in pinned OSS corpus in `protocol/fixtures/external-production-corpus.json`: TodoMVC React, TodoMVC Vue, and drawDB at full commit SHAs with **0 project-specific executable adapter LOC**. Git source acquisition is a separate explicit phase; benchmark execution never clones or fetches implicitly.
 
 ```bash
-./target/debug/proped web benchmark --corpus production --offline
-./target/debug/proped web benchmark --corpus production --offline --previous .proped/benchmark/previous.json
+./target/debug/proped web corpus materialize external --checkout-root .proped/external-checkouts
+./target/debug/proped web corpus verify external --checkout-root .proped/external-checkouts
+./target/debug/proped web benchmark --corpus external --checkout-root .proped/external-checkouts
 ```
+
+Materialization accepts only full pinned revisions and HTTPS/file/absolute-local Git sources without embedded credentials, keeps each checkout under the explicit checkout root, ignores caller Git config injection, disables credential helpers, hooks, fsmonitor, and recursive submodule acquisition, rejects checkout filters, and fails closed on an existing dirty checkout or origin mismatch. `web corpus verify` is read-only and checks origin, exact HEAD revision, cleanliness, and every target subdirectory. Before an external benchmark starts, the same verification is mandatory; after execution Proped restores tracked files to the pinned revision, removes non-ignored untracked files created by the run, and verifies that the checkout is clean again. Dependency preparation remains the existing campaign phase; `--no-prepare` requires already-prepared dependencies and `--offline` keeps package-manager preparation offline.
 
 ## Explicit Web project preparation
 

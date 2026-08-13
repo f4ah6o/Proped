@@ -84,6 +84,20 @@ const bounded = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { 
 assert.equal(bounded.failureCount, 0);
 assert.equal(bounded.truncatedByTransitionLimit, true);
 
+class SyntheticExecutionFailureDriver {
+  constructor() { this.state = "home"; }
+  snapshot() { return { fingerprint: semanticHash({ state: this.state }), url: "http://app.local/", storage: { local: {}, session: {} }, applicationState: null }; }
+  async reset() { this.state = "home"; return this.snapshot(); }
+  async actions() {
+    return { actions: [{ id: "unstable-check", kind: "check", target: { role: "checkbox", name: "Done", within: [] }, destructiveRisk: "bounded-mutation" }], diagnostics: [], metrics: {} };
+  }
+  async execute() { throw new Error("synthetic action execution timeout"); }
+}
+
+const executionFailure = await exploreWebCoverageGuided(new SyntheticExecutionFailureDriver(), { maxStates: 4, maxTransitions: 2, maxDepth: 2 });
+assert.equal(executionFailure.failureCount, 0, "driver execution errors are exploration diagnostics, not application failures");
+assert.ok(executionFailure.diagnostics.some((item) => item.code === "frontier_action_execution_failed"));
+
 console.log(JSON.stringify({
   ok: true,
   runtime: "web-coverage-guided-exploration-test",
@@ -94,4 +108,5 @@ console.log(JSON.stringify({
   deterministic: second.semanticHash === first.semanticHash,
   failureProperty: first.failures[0].property,
   destructiveFiltered: safety.transitionGraph.every((edge) => edge.actionId !== "delete-account"),
+  executionFailureDiagnostic: executionFailure.diagnostics.find((item) => item.code === "frontier_action_execution_failed")?.code ?? null,
 }));

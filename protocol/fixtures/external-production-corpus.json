@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "external-production",
+  "description": "Pinned real OSS Web projects for unknown-project onboarding measurement after explicit Git materialization.",
+  "gate": {
+    "minAutoOnboardingRate": 1,
+    "maxInterventionProjectRate": 0,
+    "minDeterministicReplayRate": 1,
+    "maxAdapterLoc": 0,
+    "maxRegressions": 0
+  },
+  "targets": [
+    {
+      "id": "todomvc-react",
+      "project": "examples/react",
+      "repository": "tastejs/todomvc",
+      "revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "adapterLoc": 0,
+      "tags": ["external", "react", "todomvc", "webpack"],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/tastejs/todomvc.git",
+        "checkout": "todomvc"
+      }
+    },
+    {
+      "id": "todomvc-vue",
+      "project": "examples/vue",
+      "repository": "tastejs/todomvc",
+      "revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "adapterLoc": 0,
+      "tags": ["external", "todomvc", "vite", "vue"],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/tastejs/todomvc.git",
+        "checkout": "todomvc"
+      }
+    },
+    {
+      "id": "drawdb",
+      "project": ".",
+      "repository": "drawdb-io/drawdb",
+      "revision": "f15453be0b9a0a8ca99d040256c2d2edf7155510",
+      "adapterLoc": 0,
+      "tags": ["drawdb", "external", "indexeddb", "react", "vite"],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/drawdb-io/drawdb.git",
+        "checkout": "drawdb"
+      }
+    }
+  ]
+}

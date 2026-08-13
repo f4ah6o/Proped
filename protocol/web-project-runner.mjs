@@ -219,6 +219,7 @@ function payloadSummary(payload) {
     "ok",
     "schemaVersion",
     "runtime",
+    "error",
     "campaign",
     "actionCount",
     "targetCount",

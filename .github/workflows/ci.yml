@@ -131,6 +131,7 @@ jobs:
           node scripts/test_web_project_benchmark.mjs
           node scripts/test_web_project_baseline.mjs
           node scripts/test_web_project_corpus.mjs
+          node scripts/test_web_project_corpus_materialize.mjs
           node scripts/test_web_project_prepare.mjs
           node scripts/test_web_node_engine.mjs
           node scripts/test_web_node_runtime.mjs

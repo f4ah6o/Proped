@@ -68,6 +68,7 @@ function stableStages(report) {
     required: stage.required,
     status: stage.status,
     exitCode: stage.exitCode,
+    diagnostic: typeof stage?.payload?.error === "string" ? stage.payload.error : null,
     failureClasses: stageFailureClasses(stage),
   }));
 }

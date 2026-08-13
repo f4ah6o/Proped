@@ -278,6 +278,17 @@ export function createWebProjectManifestV2FromInspection(inspection, { projectRo
   return validateWebProjectManifestV2(manifest);
 }
 
+function genericBrowserStageTimeoutMs(manifest) {
+  const transitions = manifest.exploration.mode === "coverage-guided"
+    ? (manifest.exploration.maxTransitions ?? Math.min(manifest.exploration.maxStates * 2, 500))
+    : 0;
+  const readinessBudget = manifest.server.readiness.timeoutMs;
+  const explorationBudget = transitions * 4_000;
+  const replayBudget = manifest.replay.attempts * 15_000;
+  const volatilityBudget = manifest.normalization.volatilityProbeRuns * 5_000;
+  return Math.min(600_000, Math.max(60_000, readinessBudget + 30_000 + explorationBudget + replayBudget + volatilityBudget));
+}
+
 export function compileWebProjectManifestV2(manifest, repositoryRoot) {
   validateWebProjectManifestV2(manifest);
   const criticalAmbiguities = criticalWebProjectInferenceAmbiguities(manifest);
@@ -333,7 +344,7 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
     kind: "browser",
     cwd: ".",
     command: browserCommand,
-    timeoutMs: Math.max(60_000, manifest.server.readiness.timeoutMs + 30_000),
+    timeoutMs: genericBrowserStageTimeoutMs(manifest),
     dependsOn: stages.length ? [stages.at(-1).id] : [],
     required: true,
   });

@@ -5,6 +5,7 @@ import { semanticHash } from "./ui-driver-v1.mjs";
 
 export const WEB_PROJECT_CORPUS_VERSION = 1;
 export const DEFAULT_PRODUCTION_CORPUS = new URL("./fixtures/production-campaign-corpus.json", import.meta.url);
+export const DEFAULT_EXTERNAL_PRODUCTION_CORPUS = new URL("./fixtures/external-production-corpus.json", import.meta.url);
 
 function fail(message) {
   const error = new Error(`Web project corpus: ${message}`);
@@ -19,6 +20,17 @@ function finiteRate(value, label) {
 
 function nonNegativeInteger(value, label) {
   if (!Number.isSafeInteger(value) || value < 0) fail(`${label} must be a non-negative safe integer`);
+  return value;
+}
+
+function validateGitSourceUrl(value, label) {
+  if (typeof value !== "string" || value.length === 0) fail(`${label} is required`);
+  if (path.isAbsolute(value)) return value;
+  let url;
+  try { url = new URL(value); } catch { fail(`${label} must be https://, file://, or an absolute local path`); }
+  if (!new Set(["https:", "file:"]).has(url.protocol)) fail(`${label} must use https:// or file://`);
+  if (url.username || url.password) fail(`${label} must not embed credentials`);
+  if (url.protocol === "https:" && !url.hostname) fail(`${label} must include a host`);
   return value;
 }
 
@@ -38,7 +50,17 @@ export function validateWebProjectCorpus(value, { file = null } = {}) {
     if (typeof target.revision !== "string" || !(/^[0-9a-f]{40}$/.test(target.revision) || /^workspace:[a-z0-9][a-z0-9._-]*$/.test(target.revision))) fail(`${target.id}.revision must be a full commit SHA or workspace:<version>`);
     const adapterLoc = nonNegativeInteger(target.adapterLoc ?? 0, `${target.id}.adapterLoc`);
     const tags = Array.isArray(target.tags) ? [...new Set(target.tags.map(String))].sort() : [];
-    return { ...target, adapterLoc, tags };
+    let source = null;
+    if (target.source != null) {
+      if (!target.source || typeof target.source !== "object" || Array.isArray(target.source)) fail(`${target.id}.source must be an object`);
+      if (target.source.kind !== "git") fail(`${target.id}.source.kind must be git`);
+      validateGitSourceUrl(target.source.url, `${target.id}.source.url`);
+      if (typeof target.source.checkout !== "string" || !/^[a-z0-9][a-z0-9._-]*$/.test(target.source.checkout)) fail(`${target.id}.source.checkout is invalid`);
+      if (!/^[0-9a-f]{40}$/.test(target.revision)) fail(`${target.id}.revision must be a full commit SHA for git materialization`);
+      if (path.isAbsolute(target.project) || target.project.split(/[\\/]+/).includes("..")) fail(`${target.id}.project must stay within the checkout`);
+      source = { kind: "git", url: target.source.url, checkout: target.source.checkout };
+    }
+    return { ...target, adapterLoc, tags, ...(source ? { source } : {}) };
   });
   const gate = value.gate ?? {};
   const normalized = {
@@ -74,12 +96,24 @@ export function loadWebProjectCorpus(file) {
 
 export function resolveWebProjectCorpus(value) {
   if (value === "production") return loadWebProjectCorpus(fileURLToPath(DEFAULT_PRODUCTION_CORPUS));
+  if (value === "external" || value === "external-production") return loadWebProjectCorpus(fileURLToPath(DEFAULT_EXTERNAL_PRODUCTION_CORPUS));
   return loadWebProjectCorpus(value);
 }
 
-export function corpusProjectPaths(corpus) {
+export function corpusHasExternalTargets(corpus) {
+  return corpus.targets.some((target) => target.source?.kind === "git");
+}
+
+export function corpusProjectPaths(corpus, { checkoutRoot = null } = {}) {
   const base = corpus.sourceFile ? path.dirname(corpus.sourceFile) : process.cwd();
-  return corpus.targets.map((target) => path.resolve(base, target.project));
+  const externalRoot = checkoutRoot ? path.resolve(checkoutRoot) : null;
+  return corpus.targets.map((target) => {
+    if (target.source?.kind === "git") {
+      if (!externalRoot) fail(`${target.id} requires an explicit checkout root`);
+      return path.resolve(externalRoot, target.source.checkout, target.project);
+    }
+    return path.resolve(base, target.project);
+  });
 }
 
 export function diffWebProjectBenchmark(previous, current) {

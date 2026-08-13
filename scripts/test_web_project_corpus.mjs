@@ -90,6 +90,17 @@ try {
   assert.equal(adapterGate.ok, false);
   assert.equal(adapterGate.checks.find((check) => check.id === "project-specific-adapter-loc").pass, false);
 
+  const breadthCorpus = structuredClone(corpus);
+  breadthCorpus.gate.minTargetCount = 6;
+  breadthCorpus.gate.minRepositoryCount = 2;
+  breadthCorpus.gate.requiredTags = ["missing-required-tag"];
+  const breadthGate = evaluateWebProjectBenchmarkGate(result, breadthCorpus);
+  assert.equal(breadthGate.ok, false);
+  assert.equal(breadthGate.checks.find((check) => check.id === "target-count").pass, false);
+  assert.equal(breadthGate.checks.find((check) => check.id === "repository-count").pass, false);
+  assert.equal(breadthGate.checks.find((check) => check.id === "required-tag-coverage").pass, false);
+  assert.deepEqual(breadthGate.missingRequiredTags, ["missing-required-tag"]);
+
   console.log(JSON.stringify({
     ok: true,
     runtime: "web-project-corpus-test",

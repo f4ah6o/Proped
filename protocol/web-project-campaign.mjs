@@ -86,6 +86,16 @@ function writeCampaignArtifacts(projectRoot, result, manifest) {
   };
 }
 
+function campaignRuntimeProfile(manifest, inspection) {
+  return {
+    framework: inspection?.framework?.name ?? null,
+    projectMode: inspection?.project?.mode ?? null,
+    serverMode: manifest?.server?.mode ?? null,
+    packageManager: manifest?.project?.packageManager ?? inspection?.packageManager?.name ?? null,
+    stateSources: [...(inspection?.runtime?.stateSources ?? [])].sort(),
+  };
+}
+
 function baseResult(projectRoot, manifest, inspection) {
   return {
     schemaVersion: WEB_PROJECT_CAMPAIGN_VERSION,
@@ -101,6 +111,7 @@ function baseResult(projectRoot, manifest, inspection) {
     failureClasses: [],
     deterministicReplay: null,
     metrics: { states: 0, transitions: 0, actions: 0 },
+    runtimeProfile: campaignRuntimeProfile(manifest, inspection),
     stages: [],
     preparation: null,
     nodeRuntime: null,
@@ -388,6 +399,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     failureClasses,
     deterministicReplay: replayDeterministic,
     metrics,
+    runtimeProfile: campaignRuntimeProfile(manifest, inspection),
     stages: stableStages(report),
     preparation,
     nodeRuntime: nodeRuntimeSummary,

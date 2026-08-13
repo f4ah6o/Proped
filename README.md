@@ -93,7 +93,7 @@ A completed campaign reports `autoOnboarded`, `humanInterventions`, `interventio
 
 ## Multi-project production benchmark
 
-`proped web benchmark <project...>` applies the same blind campaign contract to multiple targets without stopping after one intervention-required project. It reports auto-onboarding rate, intervention projects and counts, reproducible failure classes, replay determinism, and total explored states/transitions/actions. Quality findings are intentionally independent from onboarding completion: a project can be automatically onboarded and still contribute reproducible findings without making the benchmark itself fail.
+`proped web benchmark <project...>` applies the same blind campaign contract to multiple targets without stopping after one intervention-required project. It reports auto-onboarding rate, intervention projects and counts, reproducible failure classes, replay determinism, total explored states/transitions/actions, and observed runtime distributions for framework, project/server mode, package manager, and state sources. Quality findings are intentionally independent from onboarding completion: a project can be automatically onboarded and still contribute reproducible findings without making the benchmark itself fail.
 
 ```bash
 ./target/debug/proped web benchmark ./targets/app-a ./targets/app-b
@@ -110,7 +110,7 @@ For continuous production capability tracking, `--corpus production` runs the ve
 
 ### Explicit external OSS corpus
 
-`--corpus external` uses the checked-in pinned OSS corpus in `protocol/fixtures/external-production-corpus.json`: TodoMVC React, TodoMVC Vue, and drawDB at full commit SHAs with **0 project-specific executable adapter LOC**. Git source acquisition is a separate explicit phase; benchmark execution never clones or fetches implicitly.
+`--corpus external` uses the checked-in pinned OSS corpus in `protocol/fixtures/external-production-corpus.json`: **10 targets across 5 repositories** (TodoMVC React/Vue, drawDB, five MoonBit Isomorphic apps, Rabbita Xterm Web, and Proton calculator), all pinned by full commit SHA with **0 project-specific executable adapter LOC**. The corpus gate requires all 10 targets, at least 5 distinct repositories, and coverage of `framework-backed`, `stateful`, and `static` runtime shapes. Git source acquisition is a separate explicit phase; benchmark execution never clones or fetches implicitly.
 
 ```bash
 ./target/debug/proped web corpus materialize external --checkout-root .proped/external-checkouts
@@ -118,7 +118,7 @@ For continuous production capability tracking, `--corpus production` runs the ve
 ./target/debug/proped web benchmark --corpus external --checkout-root .proped/external-checkouts
 ```
 
-Materialization accepts only full pinned revisions and HTTPS/file/absolute-local Git sources without embedded credentials, keeps each checkout under the explicit checkout root, ignores caller Git config injection, disables credential helpers, hooks, fsmonitor, and recursive submodule acquisition, rejects checkout filters, and fails closed on an existing dirty checkout or origin mismatch. `web corpus verify` is read-only and checks origin, exact HEAD revision, cleanliness, and every target subdirectory. Before an external benchmark starts, the same verification is mandatory; after execution Proped restores tracked files to the pinned revision, removes non-ignored untracked files created by the run, and verifies that the checkout is clean again. Dependency preparation remains the existing campaign phase; `--no-prepare` requires already-prepared dependencies and `--offline` keeps package-manager preparation offline.
+Materialization accepts only full pinned revisions and HTTPS/file/absolute-local Git sources without embedded credentials, keeps each checkout under the explicit checkout root, ignores caller Git config injection, disables credential helpers, hooks, fsmonitor, and recursive submodule acquisition, rejects checkout filters and targets inside Git submodules, and fails closed on an existing dirty checkout or origin mismatch. Parent-checkout cleanliness ignores submodule worktree state while target paths are forbidden from entering a gitlink, so an unrelated unmaterialized submodule cannot make verification unusable or become an implicit trust boundary. `web corpus verify` is read-only and checks origin, exact HEAD revision, parent-checkout cleanliness, path containment, and every target subdirectory. Before an external benchmark starts, the same verification is mandatory; after execution Proped restores tracked files to the pinned revision, removes non-ignored untracked files created by the run, and verifies that the checkout is clean again. Dependency preparation remains the existing campaign phase; `--no-prepare` requires already-prepared dependencies and `--offline` keeps package-manager preparation offline.
 
 ## Explicit Web project preparation
 

@@ -93,7 +93,7 @@ Web onboardingのcanonical入口を`proped web`へまとめました。repositor
 
 ## 複数projectのproduction benchmark
 
-`proped web benchmark <project...>`は同じblind campaign contractを複数targetへ適用し、1件がintervention-requiredでも残りを継続します。auto-onboarding率、intervention project数/回数、reproducible failure class、replay determinism、総states/transitions/actionsを集約します。quality findingとonboarding completionは意図的に別軸で、完全自動オンボードされたprojectからfailureを発見してもbenchmark自体の失敗にはしません。
+`proped web benchmark <project...>`は同じblind campaign contractを複数targetへ適用し、1件がintervention-requiredでも残りを継続します。auto-onboarding率、intervention project数/回数、reproducible failure class、replay determinism、総states/transitions/actionsに加え、framework、project/server mode、package manager、state sourceの実観測distributionを集約します。quality findingとonboarding completionは意図的に別軸で、完全自動オンボードされたprojectからfailureを発見してもbenchmark自体の失敗にはしません。
 
 ```bash
 ./target/debug/proped web benchmark ./targets/app-a ./targets/app-b
@@ -110,7 +110,7 @@ exit 0は全targetがhuman interventionなしでcampaign executionへ到達、ex
 
 ### 明示的なexternal OSS corpus
 
-`--corpus external`は`protocol/fixtures/external-production-corpus.json`に固定した実OSS corpusを使います。対象はfull commit SHAでpinしたTodoMVC React、TodoMVC Vue、drawDBで、**project-specific executable adapter LOCは0**です。Git source取得は明示phaseとして分離され、benchmark自身がclone/fetchを暗黙実行することはありません。
+`--corpus external`は`protocol/fixtures/external-production-corpus.json`に固定した実OSS corpusを使います。現在はfull commit SHAでpinした **5 repository / 10 target**（TodoMVC React/Vue、drawDB、MoonBit Isomorphic 5 app、Rabbita Xterm Web、Proton calculator）で、**project-specific executable adapter LOCは0**です。corpus gateは10 target、5 repository以上、`framework-backed` / `stateful` / `static` runtime shapeのcoverageを要求します。Git source取得は明示phaseとして分離され、benchmark自身がclone/fetchを暗黙実行することはありません。
 
 ```bash
 ./target/debug/proped web corpus materialize external --checkout-root .proped/external-checkouts
@@ -118,7 +118,7 @@ exit 0は全targetがhuman interventionなしでcampaign executionへ到達、ex
 ./target/debug/proped web benchmark --corpus external --checkout-root .proped/external-checkouts
 ```
 
-Git-backed entryのmaterializeはfull revisionとcredentialを埋め込まないHTTPS/file/absolute-local sourceだけを受け付け、checkoutを明示root配下へ限定します。caller由来Git config injectionを無視し、credential helper、Git hook、fsmonitor、recursive submodule取得を無効にし、checkout filterを拒否します。既存checkoutがdirty、またはorigin不一致ならfail closedです。`web corpus verify`はread-onlyでorigin、exact HEAD revision、cleanliness、全target subdirectoryを検証します。external benchmark開始前にも同じverifyを必須とし、実行後はtracked fileをpin revisionへ戻し、run中に生成したnon-ignored untracked fileを削除して、checkoutが再びcleanであることを確認します。dependency preparationは既存campaign phaseのままで、`--no-prepare`は準備済みdependencyを要求し、`--offline`はpackage-manager preparationをofflineに制限します。
+Git-backed entryのmaterializeはfull revisionとcredentialを埋め込まないHTTPS/file/absolute-local sourceだけを受け付け、checkoutを明示root配下へ限定します。caller由来Git config injectionを無視し、credential helper、Git hook、fsmonitor、recursive submodule取得を無効にし、checkout filterとGit submodule配下targetを拒否します。親checkoutのcleanliness判定ではsubmodule worktree stateを無視する一方、target pathがgitlinkへ入ること自体を禁止するため、無関係な未materialize submoduleでverify不能にならず、submodule内容を暗黙信頼もしません。既存checkoutがdirty、またはorigin不一致ならfail closedです。`web corpus verify`はread-onlyでorigin、exact HEAD revision、親checkout cleanliness、path containment、全target subdirectoryを検証します。external benchmark開始前にも同じverifyを必須とし、実行後はtracked fileをpin revisionへ戻し、run中に生成したnon-ignored untracked fileを削除して、checkoutが再びcleanであることを確認します。dependency preparationは既存campaign phaseのままで、`--no-prepare`は準備済みdependencyを要求し、`--offline`はpackage-manager preparationをofflineに制限します。
 
 ## 明示的なWeb project preparation
 

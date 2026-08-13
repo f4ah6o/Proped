@@ -181,6 +181,32 @@ try {
   assert.throws(() => materializeWebProjectCorpus(corpus, { checkoutRoot: CHECKOUTS, fetch: false }), /local changes/);
   fs.rmSync(path.join(checkout, "untracked.txt"));
 
+  const outside = path.join(TMP, "outside-project");
+  fs.mkdirSync(outside, { recursive: true });
+  fs.writeFileSync(path.join(outside, "index.html"), "<!doctype html><main>outside</main>\n");
+  const escapeLink = path.join(checkout, "escape-project");
+  fs.symlinkSync(outside, escapeLink, "dir");
+  const escapeCorpus = validateWebProjectCorpus({
+    ...rawCorpus,
+    targets: [{ ...rawCorpus.targets[0], id: "escape-site", project: "escape-project" }],
+  });
+  const escapeVerify = verifyMaterializedWebProjectCorpus(escapeCorpus, { checkoutRoot: CHECKOUTS });
+  assert.equal(escapeVerify.ok, false);
+  assert.equal(escapeVerify.projects[0].contained, false);
+  fs.rmSync(escapeLink);
+
+  git(checkout, "update-index", "--add", "--cacheinfo", `160000,${revision},gitlink`);
+  fs.mkdirSync(path.join(checkout, "gitlink"), { recursive: true });
+  const gitlinkCorpus = validateWebProjectCorpus({
+    ...rawCorpus,
+    targets: [{ ...rawCorpus.targets[0], id: "gitlink-site", project: "gitlink" }],
+  });
+  const gitlinkVerify = verifyMaterializedWebProjectCorpus(gitlinkCorpus, { checkoutRoot: CHECKOUTS });
+  assert.equal(gitlinkVerify.ok, false);
+  assert.ok(gitlinkVerify.checkouts[0].errors.includes("target-inside-gitlink"));
+  fs.rmSync(path.join(checkout, "gitlink"), { recursive: true, force: true });
+  git(checkout, "reset", "--hard", revision);
+
   git(checkout, "remote", "set-url", "origin", path.join(TMP, "wrong-origin"));
   const originVerify = verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot: CHECKOUTS });
   assert.equal(originVerify.ok, false);
@@ -209,9 +235,12 @@ try {
 
   const external = resolveWebProjectCorpus("external");
   assert.equal(external.id, "external-production");
-  assert.equal(external.targets.length, 3);
+  assert.equal(external.targets.length, 10);
   assert.equal(external.targets.every((target) => target.adapterLoc === 0), true);
-  assert.equal(new Set(external.targets.map((target) => target.source.checkout)).size, 2);
+  assert.equal(external.gate.minTargetCount, 10);
+  assert.equal(external.gate.minRepositoryCount, 5);
+  assert.deepEqual(external.gate.requiredTags, ["framework-backed", "stateful", "static"]);
+  assert.equal(new Set(external.targets.map((target) => target.source.checkout)).size, 5);
 
   console.log(JSON.stringify({
     ok: true,

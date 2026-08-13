@@ -9,6 +9,8 @@ import { resolveCampaignSandboxMode, runUnknownWebProjectCampaign } from "../pro
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, ".tmp/web-project-campaign-test");
 const PROJECT = path.join(TMP, "unknown-static-app");
+const SINGLE_HTML_PROJECT = path.join(TMP, "single-html-static-app");
+const MULTI_HTML_PROJECT = path.join(TMP, "multi-html-static-app");
 const CLI = path.join(ROOT, "scripts/proped.mjs");
 
 function writeProject() {
@@ -54,6 +56,30 @@ try {
   assert.equal(blocked.interventionReasons[0].code, "prepare_required");
   assert.equal(fs.existsSync(path.join(PROJECT, "node_modules")), false);
 
+  fs.mkdirSync(SINGLE_HTML_PROJECT, { recursive: true });
+  fs.writeFileSync(path.join(SINGLE_HTML_PROJECT, "calculator.html"), "<!doctype html><main><button>Calculate</button></main>\n");
+  const singleHtml = runUnknownWebProjectCampaign(SINGLE_HTML_PROJECT, {
+    prepare: false,
+    writeArtifacts: false,
+    sandboxMode: "caller-enforced",
+  });
+  assert.equal(singleHtml.ok, true, JSON.stringify(singleHtml));
+  assert.equal(singleHtml.autoOnboarded, true);
+  assert.equal(singleHtml.humanInterventions, 0);
+  assert.equal(singleHtml.deterministicReplay, true);
+
+  fs.mkdirSync(MULTI_HTML_PROJECT, { recursive: true });
+  fs.writeFileSync(path.join(MULTI_HTML_PROJECT, "one.html"), "<!doctype html><main>One</main>\n");
+  fs.writeFileSync(path.join(MULTI_HTML_PROJECT, "two.html"), "<!doctype html><main>Two</main>\n");
+  const multiHtml = runUnknownWebProjectCampaign(MULTI_HTML_PROJECT, {
+    prepare: false,
+    writeArtifacts: false,
+    sandboxMode: "caller-enforced",
+  });
+  assert.equal(multiHtml.ok, false);
+  assert.equal(multiHtml.autoOnboarded, false);
+  assert.equal(multiHtml.interventionReasons[0].code, "server_review_required");
+
   const result = runUnknownWebProjectCampaign(PROJECT, {
     writeArtifacts: false,
     sandboxMode: "caller-enforced",
@@ -67,6 +93,11 @@ try {
   assert.equal(result.preparation.credentials, "environment-allowlist-deny");
   assert.equal(result.preparation.shell, false);
   assert.equal(result.packageManagerRuntime.status, "ready");
+  assert.equal(result.runtimeProfile.framework, "vite");
+  assert.equal(result.runtimeProfile.projectMode, "spa");
+  assert.equal(result.runtimeProfile.packageManager, "npm");
+  assert.equal(singleHtml.runtimeProfile.framework, "static");
+  assert.equal(singleHtml.runtimeProfile.serverMode, "static-output");
   assert.equal(result.deterministicReplay, true);
   assert.ok(result.metrics.actions > 0, JSON.stringify(result.metrics));
   assert.ok(result.metrics.transitions > 0, JSON.stringify(result.metrics));
@@ -110,6 +141,8 @@ try {
     deterministicReplay: result.deterministicReplay,
     metrics: result.metrics,
     stages: result.stages,
+    singleHtmlAutoOnboarded: singleHtml.autoOnboarded,
+    multiHtmlFailClosed: multiHtml.interventionReasons[0].code,
   }));
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });

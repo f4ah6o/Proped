@@ -114,11 +114,17 @@ function contentType(file) {
 
 async function startStaticServer(root) {
   const realRoot = fs.realpathSync(root);
-  if (!fs.existsSync(path.join(realRoot, "index.html"))) throw new Error(`static output has no index.html: ${realRoot}`);
+  const indexFile = path.join(realRoot, "index.html");
+  const htmlEntries = fs.readdirSync(realRoot, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".html"))
+    .map((entry) => entry.name)
+    .sort();
+  const entryFile = fs.existsSync(indexFile) ? "index.html" : htmlEntries.length === 1 ? htmlEntries[0] : null;
+  if (!entryFile) throw new Error(`static output requires index.html or one unambiguous root HTML entry: ${realRoot}`);
   const server = http.createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     let pathname = decodeURIComponent(url.pathname);
-    if (pathname === "/") pathname = "/index.html";
+    if (pathname === "/") pathname = `/${entryFile}`;
     let file = path.resolve(realRoot, `.${pathname}`);
     const relative = path.relative(realRoot, file);
     if (relative.startsWith("..") || path.isAbsolute(relative)) {
@@ -130,7 +136,7 @@ async function startStaticServer(root) {
       response.writeHead(404, { "content-type": "text/plain" }).end("not found");
       return;
     }
-    if (!exists) file = path.join(realRoot, "index.html");
+    if (!exists) file = path.join(realRoot, entryFile);
     response.writeHead(200, { "content-type": contentType(file), "cache-control": "no-store" });
     fs.createReadStream(file).pipe(response);
   });

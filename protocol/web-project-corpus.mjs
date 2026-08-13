@@ -63,6 +63,13 @@ export function validateWebProjectCorpus(value, { file = null } = {}) {
     return { ...target, adapterLoc, tags, ...(source ? { source } : {}) };
   });
   const gate = value.gate ?? {};
+  const optionalGate = {};
+  if (gate.minTargetCount != null) optionalGate.minTargetCount = nonNegativeInteger(gate.minTargetCount, "gate.minTargetCount");
+  if (gate.minRepositoryCount != null) optionalGate.minRepositoryCount = nonNegativeInteger(gate.minRepositoryCount, "gate.minRepositoryCount");
+  if (gate.requiredTags != null) {
+    if (!Array.isArray(gate.requiredTags) || gate.requiredTags.some((tag) => typeof tag !== "string" || tag.length === 0)) fail("gate.requiredTags must be a string array");
+    optionalGate.requiredTags = [...new Set(gate.requiredTags)].sort();
+  }
   const normalized = {
     schemaVersion: WEB_PROJECT_CORPUS_VERSION,
     id: value.id,
@@ -73,6 +80,7 @@ export function validateWebProjectCorpus(value, { file = null } = {}) {
       minDeterministicReplayRate: finiteRate(gate.minDeterministicReplayRate ?? 1, "gate.minDeterministicReplayRate"),
       maxAdapterLoc: nonNegativeInteger(gate.maxAdapterLoc ?? 0, "gate.maxAdapterLoc"),
       maxRegressions: nonNegativeInteger(gate.maxRegressions ?? 0, "gate.maxRegressions"),
+      ...optionalGate,
     },
     targets,
   };
@@ -148,6 +156,10 @@ export function evaluateWebProjectBenchmarkGate(summary, corpus, previous = null
     ? (summary.deterministicReplayProjectCount ?? 0) / summary.replayObservedProjectCount
     : 0;
   const adapterLoc = corpus.targets.reduce((total, target) => total + target.adapterLoc, 0);
+  const repositoryCount = new Set(corpus.targets.map((target) => target.repository)).size;
+  const observedTags = new Set(corpus.targets.flatMap((target) => target.tags ?? []));
+  const requiredTags = corpus.gate.requiredTags ?? [];
+  const missingRequiredTags = requiredTags.filter((tag) => !observedTags.has(tag));
   const diff = previous ? diffWebProjectBenchmark(previous, summary) : null;
   const checks = [
     { id: "auto-onboarding-rate", pass: summary.autoOnboardingRate >= corpus.gate.minAutoOnboardingRate, observed: summary.autoOnboardingRate, required: corpus.gate.minAutoOnboardingRate, comparator: ">=" },
@@ -155,6 +167,9 @@ export function evaluateWebProjectBenchmarkGate(summary, corpus, previous = null
     { id: "deterministic-replay-rate", pass: replayRate >= corpus.gate.minDeterministicReplayRate, observed: replayRate, required: corpus.gate.minDeterministicReplayRate, comparator: ">=" },
     { id: "project-specific-adapter-loc", pass: adapterLoc <= corpus.gate.maxAdapterLoc, observed: adapterLoc, required: corpus.gate.maxAdapterLoc, comparator: "<=" },
   ];
+  if (corpus.gate.minTargetCount != null) checks.push({ id: "target-count", pass: projectCount >= corpus.gate.minTargetCount, observed: projectCount, required: corpus.gate.minTargetCount, comparator: ">=" });
+  if (corpus.gate.minRepositoryCount != null) checks.push({ id: "repository-count", pass: repositoryCount >= corpus.gate.minRepositoryCount, observed: repositoryCount, required: corpus.gate.minRepositoryCount, comparator: ">=" });
+  if (requiredTags.length > 0) checks.push({ id: "required-tag-coverage", pass: missingRequiredTags.length === 0, observed: [...observedTags].sort(), required: requiredTags, comparator: "contains-all" });
   if (diff) checks.push({ id: "onboarding-regressions", pass: diff.regressionCount <= corpus.gate.maxRegressions, observed: diff.regressionCount, required: corpus.gate.maxRegressions, comparator: "<=" });
   return {
     ok: checks.every((check) => check.pass),
@@ -162,6 +177,9 @@ export function evaluateWebProjectBenchmarkGate(summary, corpus, previous = null
     interventionProjectRate,
     deterministicReplayRate: replayRate,
     projectSpecificAdapterLoc: adapterLoc,
+    repositoryCount,
+    requiredTags,
+    missingRequiredTags,
     checks,
     diff,
   };

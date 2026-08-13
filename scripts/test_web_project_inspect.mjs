@@ -327,6 +327,29 @@ ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
   assert.equal(manifest.server.mutationPolicy, "deny");
 }
 
+{
+  const root = fixture({
+    "calculator.html": "<!doctype html><main><button>Calculate</button></main>\n",
+    "calculator.js": "document.querySelector('button')?.addEventListener('click', () => {});\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "static");
+  assert.equal(report.project.mode, "static");
+  assert.equal(report.project.outputDir, ".");
+  assert.ok(report.evidence.includes("framework:root:single-html=calculator.html"));
+}
+
+{
+  const root = fixture({
+    "one.html": "<!doctype html><main>One</main>\n",
+    "two.html": "<!doctype html><main>Two</main>\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "unknown");
+  const manifest = createWebProjectManifestV2FromInspection(report, { projectRoot: ".", id: "ambiguous-static-html" });
+  assert.equal(manifest.server.mode, "review-required");
+}
+
 const committed = [
   ["web/next-ssr-hydration", "next"],
   ["web/nuxt-ssr-hydration", "nuxt"],

@@ -18,12 +18,12 @@ try {
     {
       id: "finding-project", status: "completed", autoOnboarded: true, qualityPassed: false,
       humanInterventions: 0, interventionReasons: [], failureClasses: ["stale-state"],
-      deterministicReplay: true, metrics: { states: 3, transitions: 5, actions: 2 },
+      deterministicReplay: true, runtimeProfile: { framework: "react-vite", projectMode: "spa", serverMode: "static-output", packageManager: "npm", stateSources: ["dom", "indexedDB"] }, metrics: { states: 3, transitions: 5, actions: 2 },
     },
     {
       id: "blocked-project", status: "intervention-required", autoOnboarded: false, qualityPassed: null,
       humanInterventions: 1, interventionReasons: [{ code: "server_review_required" }], failureClasses: [],
-      deterministicReplay: null, metrics: { states: 0, transitions: 0, actions: 0 },
+      deterministicReplay: null, runtimeProfile: { framework: "unknown", projectMode: "unknown", serverMode: "review-required", packageManager: null, stateSources: ["dom"] }, metrics: { states: 0, transitions: 0, actions: 0 },
     },
   ]);
   assert.equal(aggregate.ok, false);
@@ -38,6 +38,9 @@ try {
   assert.equal(aggregate.deterministicReplayProjectCount, 1);
   assert.equal(aggregate.replayObservedProjectCount, 1);
   assert.deepEqual(aggregate.metrics, { states: 3, transitions: 5, actions: 2 });
+  assert.deepEqual(aggregate.runtimeDistribution.frameworks, { "react-vite": 1, unknown: 1 });
+  assert.deepEqual(aggregate.runtimeDistribution.packageManagers, { none: 1, npm: 1 });
+  assert.deepEqual(aggregate.runtimeDistribution.stateSources, { dom: 2, indexedDB: 1 });
   assert.equal(aggregate.projects[0].autoOnboarded, true);
   assert.equal(aggregate.projects[0].qualityPassed, false, "quality findings must not erase successful onboarding");
 

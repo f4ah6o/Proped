@@ -1,13 +1,20 @@
 {
   "schemaVersion": 1,
   "id": "external-production",
-  "description": "Pinned real OSS Web projects for unknown-project onboarding measurement after explicit Git materialization.",
+  "description": "Pinned real OSS Web projects across multiple repositories and runtime shapes for unknown-project onboarding measurement after explicit Git materialization.",
   "gate": {
     "minAutoOnboardingRate": 1,
     "maxInterventionProjectRate": 0,
     "minDeterministicReplayRate": 1,
     "maxAdapterLoc": 0,
-    "maxRegressions": 0
+    "maxRegressions": 0,
+    "minTargetCount": 10,
+    "minRepositoryCount": 5,
+    "requiredTags": [
+      "framework-backed",
+      "stateful",
+      "static"
+    ]
   },
   "targets": [
     {
@@ -16,7 +23,13 @@
       "repository": "tastejs/todomvc",
       "revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
       "adapterLoc": 0,
-      "tags": ["external", "react", "todomvc", "webpack"],
+      "tags": [
+        "external",
+        "framework-backed",
+        "react",
+        "todomvc",
+        "webpack"
+      ],
       "source": {
         "kind": "git",
         "url": "https://github.com/tastejs/todomvc.git",
@@ -29,7 +42,13 @@
       "repository": "tastejs/todomvc",
       "revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
       "adapterLoc": 0,
-      "tags": ["external", "todomvc", "vite", "vue"],
+      "tags": [
+        "external",
+        "framework-backed",
+        "todomvc",
+        "vite",
+        "vue"
+      ],
       "source": {
         "kind": "git",
         "url": "https://github.com/tastejs/todomvc.git",
@@ -42,11 +61,144 @@
       "repository": "drawdb-io/drawdb",
       "revision": "f15453be0b9a0a8ca99d040256c2d2edf7155510",
       "adapterLoc": 0,
-      "tags": ["drawdb", "external", "indexeddb", "react", "vite"],
+      "tags": [
+        "drawdb",
+        "external",
+        "framework-backed",
+        "indexeddb",
+        "react",
+        "stateful",
+        "vite"
+      ],
       "source": {
         "kind": "git",
         "url": "https://github.com/drawdb-io/drawdb.git",
         "checkout": "drawdb"
+      }
+    },
+    {
+      "id": "isomorphic-todoapp",
+      "project": "todoapp/public",
+      "repository": "moonbit-community/isomorphic",
+      "revision": "590ac1c4de71050419cc6643942e0d1f181301aa",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "moonbit",
+        "static",
+        "todo"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/moonbit-community/isomorphic.git",
+        "checkout": "external-isomorphic"
+      }
+    },
+    {
+      "id": "isomorphic-spreadsheet",
+      "project": "spreadsheet/public",
+      "repository": "moonbit-community/isomorphic",
+      "revision": "590ac1c4de71050419cc6643942e0d1f181301aa",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "moonbit",
+        "spreadsheet",
+        "static"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/moonbit-community/isomorphic.git",
+        "checkout": "external-isomorphic"
+      }
+    },
+    {
+      "id": "isomorphic-nodegraph",
+      "project": "nodegraph/public",
+      "repository": "moonbit-community/isomorphic",
+      "revision": "590ac1c4de71050419cc6643942e0d1f181301aa",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "graph",
+        "moonbit",
+        "static"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/moonbit-community/isomorphic.git",
+        "checkout": "external-isomorphic"
+      }
+    },
+    {
+      "id": "isomorphic-gallery",
+      "project": "gallery/public",
+      "repository": "moonbit-community/isomorphic",
+      "revision": "590ac1c4de71050419cc6643942e0d1f181301aa",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "gallery",
+        "moonbit",
+        "static"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/moonbit-community/isomorphic.git",
+        "checkout": "external-isomorphic"
+      }
+    },
+    {
+      "id": "isomorphic-compose",
+      "project": "compose/public",
+      "repository": "moonbit-community/isomorphic",
+      "revision": "590ac1c4de71050419cc6643942e0d1f181301aa",
+      "adapterLoc": 0,
+      "tags": [
+        "compose",
+        "external",
+        "moonbit",
+        "static"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/moonbit-community/isomorphic.git",
+        "checkout": "external-isomorphic"
+      }
+    },
+    {
+      "id": "rabbita-xterm-web",
+      "project": "examples/web",
+      "repository": "moonbit-community/rabbita_xterm",
+      "revision": "9734f6a39ce3899dbf6738fa3a100c2cebaefc23",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "moonbit",
+        "static",
+        "terminal"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/moonbit-community/rabbita_xterm.git",
+        "checkout": "external-rabbita-xterm"
+      }
+    },
+    {
+      "id": "proton-calculator",
+      "project": "demos/calculator",
+      "repository": "justjavac/proton-demo",
+      "revision": "5de5f2a3ec9ff0dba8d0aade6778b448a3c07a0d",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "single-html",
+        "static"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/justjavac/proton-demo.git",
+        "checkout": "external-proton-demo"
       }
     }
   ]

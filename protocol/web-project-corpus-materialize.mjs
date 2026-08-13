@@ -74,6 +74,7 @@ function gitGroups(corpus) {
         fail(`checkout ${key} is assigned conflicting git identities`, { code: "checkout_identity_conflict" });
       }
       existing.targetIds.push(target.id);
+      existing.targetProjects.push({ id: target.id, project: target.project });
       continue;
     }
     groups.set(key, {
@@ -82,6 +83,7 @@ function gitGroups(corpus) {
       repository: target.repository,
       revision: target.revision,
       targetIds: [target.id],
+      targetProjects: [{ id: target.id, project: target.project }],
     });
   }
   return [...groups.values()].sort((a, b) => a.checkoutKey.localeCompare(b.checkoutKey));
@@ -97,7 +99,7 @@ function checkoutState(group, checkoutRoot) {
   }
   const originResult = git(["remote", "get-url", "origin"], { cwd: checkout, allowFailure: true });
   const headResult = git(["rev-parse", "HEAD"], { cwd: checkout, allowFailure: true });
-  const statusResult = git(["status", "--porcelain"], { cwd: checkout, allowFailure: true });
+  const statusResult = git(["status", "--porcelain", "--ignore-submodules=all"], { cwd: checkout, allowFailure: true });
   return {
     root,
     checkout,
@@ -107,6 +109,21 @@ function checkoutState(group, checkoutRoot) {
     head: headResult.status === 0 ? headResult.stdout.trim() : null,
     dirty: statusResult.status === 0 ? statusResult.stdout.trim().length > 0 : null,
   };
+}
+
+function assertTargetsOutsideGitlinks(checkout, group) {
+  const result = git(["ls-files", "--stage"], { cwd: checkout, allowFailure: true });
+  if (result.status !== 0) fail(`${group.checkoutKey} gitlink inventory failed`, { code: "gitlink_inventory_failed" });
+  const gitlinks = result.stdout.split(/\r?\n/)
+    .filter((line) => line.startsWith("160000 "))
+    .map((line) => line.split("\t", 2)[1])
+    .filter(Boolean);
+  for (const target of group.targetProjects) {
+    const normalized = target.project.replace(/\\/g, "/").replace(/^\.\/?$/, ".");
+    if (normalized === ".") continue;
+    const gitlink = gitlinks.find((candidate) => normalized === candidate || normalized.startsWith(`${candidate}/`));
+    if (gitlink) fail(`${target.id} is inside Git submodule path ${gitlink}`, { code: "target_inside_gitlink" });
+  }
 }
 
 function verifyGroup(group, checkoutRoot) {
@@ -122,8 +139,12 @@ function verifyGroup(group, checkoutRoot) {
     if (state.head === group.revision) {
       try {
         assertNoCheckoutFilters(state.checkout, group.revision, group.checkoutKey);
+        assertTargetsOutsideGitlinks(state.checkout, group);
       } catch (error) {
-        errors.push(error.code === "checkout_filter_unsupported" ? "checkout-filter-unsupported" : "checkout-filter-check-failed");
+        if (error.code === "checkout_filter_unsupported") errors.push("checkout-filter-unsupported");
+        else if (error.code === "target_inside_gitlink") errors.push("target-inside-gitlink");
+        else if (error.code === "gitlink_inventory_failed") errors.push("gitlink-inventory-failed");
+        else errors.push("checkout-filter-check-failed");
       }
     }
   }
@@ -163,8 +184,21 @@ export function verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot } = {}
   const projectPaths = corpusProjectPaths(corpus, { checkoutRoot });
   const projects = corpus.targets.map((target, index) => {
     const projectPath = projectPaths[index];
-    const exists = fs.existsSync(projectPath) && fs.statSync(projectPath).isDirectory();
-    return { id: target.id, checkoutKey: target.source?.checkout ?? null, path: projectPath, exists };
+    let exists = fs.existsSync(projectPath) && fs.statSync(projectPath).isDirectory();
+    let contained = true;
+    if (exists && target.source?.kind === "git") {
+      const checkoutPath = safeCheckoutPath(checkoutRoot, target.source.checkout).checkout;
+      try {
+        const realCheckout = fs.realpathSync(checkoutPath);
+        const realProject = fs.realpathSync(projectPath);
+        const relative = path.relative(realCheckout, realProject);
+        contained = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+      } catch {
+        contained = false;
+      }
+      if (!contained) exists = false;
+    }
+    return { id: target.id, checkoutKey: target.source?.checkout ?? null, path: projectPath, exists, contained };
   });
   const ok = checkouts.every((entry) => entry.ok) && projects.every((entry) => entry.exists);
   return {

@@ -29,12 +29,22 @@ function stableProjectResult(result, index) {
     interventionReasonCodes: unique((result.interventionReasons ?? []).map((reason) => reason?.code)),
     failureClasses: unique(result.failureClasses ?? []),
     deterministicReplay: result.deterministicReplay,
+    runtimeProfile: result.runtimeProfile ?? null,
     metrics: {
       states: result.metrics?.states ?? 0,
       transitions: result.metrics?.transitions ?? 0,
       actions: result.metrics?.actions ?? 0,
     },
   };
+}
+
+function distribution(values) {
+  const counts = {};
+  for (const value of values) {
+    const key = value == null || value === "" ? "none" : String(value);
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
 }
 
 export function summarizeWebProjectBenchmark(campaignResults) {
@@ -54,6 +64,13 @@ export function summarizeWebProjectBenchmark(campaignResults) {
     transitions: total.transitions + project.metrics.transitions,
     actions: total.actions + project.metrics.actions,
   }), { states: 0, transitions: 0, actions: 0 });
+  const runtimeDistribution = {
+    frameworks: distribution(projects.map((project) => project.runtimeProfile?.framework ?? null)),
+    projectModes: distribution(projects.map((project) => project.runtimeProfile?.projectMode ?? null)),
+    serverModes: distribution(projects.map((project) => project.runtimeProfile?.serverMode ?? null)),
+    packageManagers: distribution(projects.map((project) => project.runtimeProfile?.packageManager ?? null)),
+    stateSources: distribution(projects.flatMap((project) => project.runtimeProfile?.stateSources ?? [])),
+  };
   const stable = {
     schemaVersion: WEB_PROJECT_BENCHMARK_VERSION,
     runtime: "unknown-web-project-benchmark",
@@ -68,6 +85,7 @@ export function summarizeWebProjectBenchmark(campaignResults) {
     deterministicReplayProjectCount,
     replayObservedProjectCount,
     metrics,
+    runtimeDistribution,
     projects,
   };
   return {

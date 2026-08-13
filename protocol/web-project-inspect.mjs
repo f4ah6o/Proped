@@ -296,7 +296,15 @@ function detectFramework(root, pkg, evidence, ambiguities) {
     candidates.push({ name: variant, confidence: variant === "vue" ? 0.9 : 0.99, evidence: `dependencies:vue${variant.includes("vite") ? "+vite" : ""}` });
   }
   if (candidates.length === 0 && pkg && has("vite")) candidates.push({ name: "vite", confidence: 0.85, evidence: "dependency:vite" });
-  if (candidates.length === 0 && fs.existsSync(path.join(root, "index.html"))) candidates.push({ name: "static", confidence: 0.75, evidence: "root:index.html" });
+  if (candidates.length === 0 && fs.existsSync(path.join(root, "index.html"))) {
+    candidates.push({ name: "static", confidence: 0.75, evidence: "root:index.html" });
+  } else if (candidates.length === 0) {
+    const htmlEntries = fs.readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".html"))
+      .map((entry) => entry.name)
+      .sort();
+    if (htmlEntries.length === 1) candidates.push({ name: "static", confidence: 0.72, evidence: `root:single-html=${htmlEntries[0]}` });
+  }
   if (candidates.length === 0) candidates.push({ name: "unknown", confidence: 0, evidence: "no-known-framework-signal" });
 
   const ranked = candidates.sort((a, b) => {

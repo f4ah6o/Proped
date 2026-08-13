@@ -20,6 +20,14 @@ export function blockingNodeRequirementAmbiguities(value) {
   return ambiguities.filter((item) => item && blocking.has(item.code));
 }
 
+export function nodeRequirementFromPackageManagerFailure(output) {
+  const text = String(output ?? "").replace(/\r/g, "");
+  const expected = text.match(/^Expected version:\s*(.+)$/m)?.[1]?.trim() ?? null;
+  const got = text.match(/^Got:\s*v?\d+(?:\.\d+){0,2}\s*$/m);
+  if (!expected || !got || expected.length > 256) return null;
+  return expected;
+}
+
 
 function versionTuple(value) {
   const match = String(value ?? "").trim().replace(/^v/, "").match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);

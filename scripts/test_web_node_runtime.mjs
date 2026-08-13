@@ -6,6 +6,7 @@ import path from "node:path";
 import {
   applyNodeRuntimeToEnvironment,
   inventoryNodeRuntimes,
+  nodeRequirementFromPackageManagerFailure,
   resolveNodeRuntime,
   summarizeNodeRuntimeResolution,
 } from "../protocol/web-node-runtime.mjs";
@@ -27,6 +28,9 @@ try {
   fakeNode(node22, "v22.22.3");
   fakeNode(node25, "v25.7.0");
   const environment = { HOME: root, PATH: "/usr/bin:/bin" };
+
+  assert.equal(nodeRequirementFromPackageManagerFailure("Expected version: ^22.18.0 || >=24.11.0\nGot: v22.14.0\n"), "^22.18.0 || >=24.11.0");
+  assert.equal(nodeRequirementFromPackageManagerFailure("Expected version: >=22\n"), null, "a retry requirement requires both expected and observed versions");
 
   const inventory = inventoryNodeRuntimes("^24.0.0 || ^22.15.0", { environment, currentExecutable: current });
   assert.equal(inventory.length, 4);

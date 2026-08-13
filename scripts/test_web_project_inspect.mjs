@@ -462,6 +462,34 @@ ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
 {
   const root = fixture({
     "package.json": json({
+      name: "react-router-custom-server",
+      scripts: { build: "react-router build", start: "node server.js" },
+      dependencies: {
+        "@react-router/dev": "8.0.0",
+        "@react-router/express": "8.0.0",
+        "@react-router/node": "8.0.0",
+        express: "5.2.1",
+        react: "19.2.0",
+        "react-router": "8.0.0",
+        vite: "8.0.0",
+      },
+    }),
+    "package-lock.json": "{}\n",
+    "react-router.config.ts": "export default {};\n",
+    "server.js": "import express from 'express'; const app = express(); app.listen(3000);\n",
+  });
+  const report = inspectWebProject(root);
+  assert.equal(report.framework.name, "react-router-framework");
+  assert.equal(report.project.mode, "server-rendered");
+  assert.equal(report.project.outputDir, "build");
+  assert.equal(report.runtime.routing.model, "react-router");
+  assert.equal(report.commands.serve.source, "scripts.start");
+  assert.ok(report.runtime.server.frameworks.includes("express"));
+}
+
+{
+  const root = fixture({
+    "package.json": json({
       name: "lit-widget",
       scripts: { build: "vite build", preview: "vite preview" },
       devDependencies: { lit: "3.0.0", vite: "6.0.0" },

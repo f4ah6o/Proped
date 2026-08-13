@@ -10,6 +10,7 @@ import { prepareWebProject, webProjectDependencyReadiness } from "./web-project-
 import {
   applyNodeRuntimeToEnvironment,
   blockingNodeRequirementAmbiguities,
+  nodeRequirementFromPackageManagerFailure,
   resolveNodeRuntime,
   summarizeNodeRuntimeResolution,
 } from "./web-node-runtime.mjs";
@@ -79,6 +80,13 @@ export function classifyCampaignTargetViability({ autoOnboarded = false, interve
     return { status: "qualified", stage: "campaign", reason: "full_campaign_completed" };
   }
   const code = interventionReasons?.[0]?.code ?? null;
+  const buildStage = stages.find((stage) => stage?.id === "project-build");
+  if (buildStage && Number.isInteger(buildStage.exitCode) && buildStage.exitCode !== 0) {
+    const source = inspection?.commands?.build?.source ?? null;
+    return typeof source === "string" && source.startsWith("scripts.")
+      ? { status: "failed", stage: "project-build", reason: "declared_project_build_failed" }
+      : { status: "unknown", stage: "project-build", reason: "inferred_project_build_failed" };
+  }
   if (code === "prepare_failed") {
     return { status: "failed", stage: "dependency-install", reason: "declared_dependency_install_failed" };
   }
@@ -104,10 +112,16 @@ export function classifyCampaignTargetViability({ autoOnboarded = false, interve
       : { status: "unknown", stage: "managed-start", reason: "inferred_server_unhealthy" };
   }
   if (code === "browser_stage_failed") {
-    return { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" };
+    const browserStage = stages.find((stage) => stage?.id === "generic-browser");
+    return browserStage && browserStage.status !== "blocked"
+      ? { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" }
+      : { status: "unknown", stage: "browser", reason: "browser_lifecycle_not_reached" };
   }
   if (code === "campaign_stage_timeout") {
-    return { status: "unknown", stage: "campaign", reason: "campaign_stage_timeout" };
+    const browserStage = stages.find((stage) => stage?.id === "generic-browser");
+    return browserStage && browserStage.status === "timeout"
+      ? { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" }
+      : { status: "unknown", stage: "campaign", reason: "campaign_stage_timeout" };
   }
   if (stages.some((stage) => stage?.id === "generic-browser" && stage?.status !== "blocked")) {
     return { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" };
@@ -294,10 +308,11 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     );
   }
 
-  const nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null, {
+  let nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null, {
     preferredVersion: manifest.project.nodePreferredVersion ?? null,
+    environment: options.sourceEnvironment ?? process.env,
   });
-  const nodeRuntimeSummary = summarizeNodeRuntimeResolution(nodeRuntime);
+  let nodeRuntimeSummary = summarizeNodeRuntimeResolution(nodeRuntime);
   if (nodeRuntime.status === "unavailable") {
     return interventionResult(
       projectRoot,
@@ -356,6 +371,52 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
       sourceEnvironment: prepareEnvironment,
       timeoutMs: options.prepareTimeoutMs,
     });
+    if (!preparation.ok && !preparation.timedOut) {
+      const discoveredRequirement = nodeRequirementFromPackageManagerFailure(`${preparation.stdoutTail ?? ""}\n${preparation.stderrTail ?? ""}`);
+      if (discoveredRequirement) {
+        const combinedRequirement = manifest.project.nodeRequirement
+          ? `${manifest.project.nodeRequirement} ${discoveredRequirement}`
+          : discoveredRequirement;
+        const negotiatedRuntime = resolveNodeRuntime(combinedRequirement, {
+          preferredVersion: manifest.project.nodePreferredVersion ?? null,
+          environment: options.sourceEnvironment ?? process.env,
+        });
+        const previousPath = nodeRuntime.selected?.path ?? null;
+        if (negotiatedRuntime.status === "selected" && negotiatedRuntime.selected?.path && negotiatedRuntime.selected.path !== previousPath) {
+          const previousVersion = nodeRuntime.selected?.version ?? null;
+          nodeRuntime = negotiatedRuntime;
+          nodeRuntimeSummary = {
+            ...summarizeNodeRuntimeResolution(nodeRuntime),
+            negotiatedFromPrepare: {
+              requirement: discoveredRequirement,
+              previousVersion,
+              selectedVersion: nodeRuntime.selected.version,
+            },
+          };
+          prepareEnvironment = applyNodeRuntimeToEnvironment(options.sourceEnvironment ?? process.env, nodeRuntime);
+          prepareEnvironment = applyPackageManagerRuntimeEnvironment(manifest, prepareEnvironment, { allowNetwork: !offline });
+          preparation = prepareWebProject(projectRoot, manifest, {
+            offline,
+            sourceEnvironment: prepareEnvironment,
+            timeoutMs: options.prepareTimeoutMs,
+          });
+        } else if (negotiatedRuntime.status === "unavailable") {
+          nodeRuntime = negotiatedRuntime;
+          nodeRuntimeSummary = {
+            ...summarizeNodeRuntimeResolution(nodeRuntime),
+            negotiatedFromPrepare: { requirement: discoveredRequirement, previousVersion: nodeRuntime.current?.version ?? null, selectedVersion: null },
+          };
+          return interventionResult(
+            projectRoot,
+            manifest,
+            inspection,
+            intervention("node_runtime_required", `no installed Node runtime satisfies discovered dependency requirement ${discoveredRequirement}`),
+            { writeArtifacts },
+            { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation },
+          );
+        }
+      }
+    }
     if (!preparation.ok) {
       return interventionResult(
         projectRoot,

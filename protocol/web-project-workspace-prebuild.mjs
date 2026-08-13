@@ -94,20 +94,34 @@ function javaScriptWorkspacePrebuild(project, workspace) {
   const order = [];
   const visiting = new Set();
   const visited = new Set();
+  const stack = [];
+  const hasBuildScript = (name) => {
+    const entry = packages.get(name);
+    return typeof entry?.pkg?.scripts?.build === "string" && entry.pkg.scripts.build.length > 0;
+  };
   const visit = (name) => {
     if (visited.has(name)) return;
     if (visiting.has(name)) {
-      const error = new Error(`JavaScript workspace dependency cycle requires review: ${name}`);
-      error.code = "workspace_dependency_cycle";
-      throw error;
+      const cycleStart = stack.indexOf(name);
+      const cycle = cycleStart >= 0 ? stack.slice(cycleStart) : [name];
+      const buildParticipants = cycle.filter(hasBuildScript);
+      if (buildParticipants.length > 1) {
+        const error = new Error(`JavaScript workspace build dependency cycle requires review: ${buildParticipants.join(" -> ")}`);
+        error.code = "workspace_dependency_cycle";
+        error.packages = buildParticipants;
+        throw error;
+      }
+      return;
     }
     const entry = packages.get(name);
     if (!entry) return;
     visiting.add(name);
+    stack.push(name);
     for (const dependency of localWorkspaceDependencies(entry.pkg, packages)) visit(dependency);
+    stack.pop();
     visiting.delete(name);
     visited.add(name);
-    if (name !== projectPackage.name && typeof entry.pkg?.scripts?.build === "string" && entry.pkg.scripts.build.length > 0) {
+    if (name !== projectPackage.name && hasBuildScript(name)) {
       order.push({
         packageName: name,
         cwd: entry.root,

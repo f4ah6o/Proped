@@ -353,6 +353,9 @@ function detectFramework(root, pkg, evidence, ambiguities) {
   if (has("@sveltejs/kit")) candidates.push({ name: "sveltekit", confidence: 1, evidence: "dependency:@sveltejs/kit" });
   if (has("astro")) candidates.push({ name: "astro", confidence: 1, evidence: "dependency:astro" });
   if (has("@remix-run/react") || has("@remix-run/node")) candidates.push({ name: "remix", confidence: 1, evidence: has("@remix-run/react") ? "dependency:@remix-run/react" : "dependency:@remix-run/node" });
+  if (has("react-router") && (has("@react-router/dev") || has("@react-router/node") || has("@react-router/express") || has("@react-router/serve"))) {
+    candidates.push({ name: "react-router-framework", confidence: 1, evidence: has("@react-router/dev") ? "dependency:@react-router/dev" : "dependency:react-router-framework-runtime" });
+  }
   if (has("lit") || has("@lit/reactive-element")) {
     const variant = has("vite") || fs.existsSync(path.join(root, "vite.config.js")) || fs.existsSync(path.join(root, "vite.config.mjs")) || fs.existsSync(path.join(root, "vite.config.ts"))
       ? "web-components-vite"
@@ -384,7 +387,7 @@ function detectFramework(root, pkg, evidence, ambiguities) {
   if (candidates.length === 0) candidates.push({ name: "unknown", confidence: 0, evidence: "no-known-framework-signal" });
 
   const ranked = candidates.sort((a, b) => {
-    const priority = (name) => ["next", "nuxt", "docusaurus", "waku", "sveltekit", "astro", "remix", "python-http-server"].includes(name) ? 3 : name.startsWith("react") || name.startsWith("vue") || name.startsWith("web-components") ? 2 : 1;
+    const priority = (name) => ["next", "nuxt", "docusaurus", "waku", "sveltekit", "astro", "remix", "react-router-framework", "python-http-server"].includes(name) ? 3 : name.startsWith("react") || name.startsWith("vue") || name.startsWith("web-components") ? 2 : 1;
     return priority(b.name) - priority(a.name) || b.confidence - a.confidence;
   });
   const primary = ranked[0];
@@ -394,6 +397,7 @@ function detectFramework(root, pkg, evidence, ambiguities) {
     (primary.name === "docusaurus" && candidate.name.startsWith("react")) ||
     (primary.name === "waku" && candidate.name.startsWith("react")) ||
     (primary.name === "remix" && candidate.name.startsWith("react")) ||
+    (primary.name === "react-router-framework" && candidate.name.startsWith("react")) ||
     (primary.name === "astro" && candidate.name === "vite") ||
     (primary.name === "sveltekit" && candidate.name === "vite") ||
     (primary.name.startsWith("web-components") && candidate.name === "vite")
@@ -493,6 +497,14 @@ function inferModeAndOutput(root, framework, pkg, evidence, ambiguities) {
     outputDir = "build";
     outputConfidence = 0.85;
     evidence.push("remix:server-rendered");
+  } else if (framework.name === "react-router-framework") {
+    const config = configText(root, ["react-router.config"]);
+    const spa = config && /\bssr\s*:\s*false\b/.test(config.text);
+    mode = spa ? "spa" : "server-rendered";
+    modeConfidence = spa ? 0.99 : 0.98;
+    outputDir = spa ? "build/client" : "build";
+    outputConfidence = 0.95;
+    evidence.push(spa ? "react-router-framework:ssr=false" : "react-router-framework:ssr-default");
   } else if (["react-vite", "vue-vite", "vite", "web-components-vite"].includes(framework.name)) {
     mode = "spa";
     modeConfidence = 0.92;

@@ -16,7 +16,7 @@
       "legacy-webpack",
       "monorepo",
       "pnp",
-      "remix",
+      "react-router",
       "ssr-db",
       "sveltekit",
       "web-components"
@@ -24,24 +24,27 @@
   },
   "targets": [
     {
-      "id": "sveltekit-realworld",
-      "project": ".",
-      "repository": "sveltejs/realworld",
-      "revision": "df796708040f5200ec572b28ab7f88ecee5794dd",
+      "id": "shadcn-svelte-docs",
+      "project": "docs",
+      "repository": "huntabyte/shadcn-svelte",
+      "revision": "dabbd4c00fbca1feef29a2a155b2eecf6bb4ea7a",
       "adapterLoc": 0,
       "tags": [
+        "docs",
         "external",
         "framework-backed",
         "frontier",
+        "monorepo",
         "pnpm",
         "server-rendered",
         "sveltekit"
       ],
       "source": {
         "kind": "git",
-        "url": "https://github.com/sveltejs/realworld.git",
-        "checkout": "frontier-sveltekit-realworld"
-      }
+        "url": "https://github.com/huntabyte/shadcn-svelte.git",
+        "checkout": "frontier-shadcn-svelte"
+      },
+      "name": "shadcn-svelte docs"
     },
     {
       "id": "astroship",
@@ -63,10 +66,10 @@
       }
     },
     {
-      "id": "remix-vite-node",
-      "project": ".",
-      "repository": "xHomu/remix-vite-node",
-      "revision": "c2497ecee4132e9d847fe14a48b001f0f0759e9c",
+      "id": "react-router-node-custom-server",
+      "project": "node-custom-server",
+      "repository": "remix-run/react-router-templates",
+      "revision": "b68be71489a22315c7a734a86a18347745b393d2",
       "adapterLoc": 0,
       "tags": [
         "custom-server",
@@ -74,36 +77,39 @@
         "external",
         "framework-backed",
         "frontier",
-        "remix",
+        "react-router",
         "server-rendered"
       ],
       "source": {
         "kind": "git",
-        "url": "https://github.com/xHomu/remix-vite-node.git",
-        "checkout": "frontier-remix-vite-node"
-      }
+        "url": "https://github.com/remix-run/react-router-templates.git",
+        "checkout": "frontier-react-router-templates"
+      },
+      "name": "React Router Node custom server"
     },
     {
-      "id": "remix-prisma-blog",
+      "id": "agent-friendly-code",
       "project": ".",
-      "repository": "prateekvarma/Remix-indie-stack-blog",
-      "revision": "adea789449512033a9536b1ca7aba311deb2b666",
+      "repository": "hsnice16/agent-friendly-code",
+      "revision": "70ca3d5f379c3ad8f8e9b4cc57f131ef8de3abc6",
       "adapterLoc": 0,
       "tags": [
+        "bun",
         "database",
         "external",
         "framework-backed",
         "frontier",
-        "prisma",
-        "remix",
+        "next",
         "server-rendered",
+        "sqlite",
         "ssr-db"
       ],
       "source": {
         "kind": "git",
-        "url": "https://github.com/prateekvarma/Remix-indie-stack-blog.git",
-        "checkout": "frontier-remix-prisma-blog"
-      }
+        "url": "https://github.com/hsnice16/agent-friendly-code.git",
+        "checkout": "frontier-agent-friendly-code"
+      },
+      "name": "Agent Friendly Code Next.js + SQLite"
     },
     {
       "id": "lit-web-components",
@@ -125,24 +131,28 @@
       }
     },
     {
-      "id": "yarn-pnp-monorepo-web",
-      "project": "packages/web",
-      "repository": "atjsh/yarn-berry-pnp-monorepo",
-      "revision": "cecf7dd4078141ed6a76faaa9b87807d24bae4f5",
+      "id": "yarn-berry-docusaurus",
+      "project": "packages/docusaurus",
+      "repository": "yarnpkg/berry",
+      "revision": "57081c05a398f25c92df1dc78752f2053576cec0",
       "adapterLoc": 0,
       "tags": [
+        "docusaurus",
         "external",
+        "framework-backed",
         "frontier",
         "monorepo",
         "pnp",
+        "static-export",
         "workspace-dependency",
         "yarn-berry"
       ],
       "source": {
         "kind": "git",
-        "url": "https://github.com/atjsh/yarn-berry-pnp-monorepo.git",
-        "checkout": "frontier-yarn-pnp-monorepo"
-      }
+        "url": "https://github.com/yarnpkg/berry.git",
+        "checkout": "frontier-yarn-berry"
+      },
+      "name": "Yarn Berry Docusaurus PnP workspace"
     },
     {
       "id": "todomvc-react-legacy-webpack",

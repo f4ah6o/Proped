@@ -52,7 +52,10 @@ assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code:
 assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "workspace_prepare_failed" }], details: { workspacePreparation: { descriptor: "package.json#workspaces" } } }), { status: "failed", stage: "workspace-build", reason: "declared_workspace_build_failed" });
 assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "project_build_failed" }], inspection: { commands: { build: { source: "scripts.build" } } } }), { status: "failed", stage: "project-build", reason: "declared_project_build_failed" });
 assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "server_readiness_failed" }], inspection: { commands: { serve: { source: "scripts.start" } } } }), { status: "failed", stage: "managed-start", reason: "declared_server_unhealthy" });
-assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "browser_stage_failed" }] }), { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "browser_stage_failed" }], stages: [{ id: "generic-browser", status: "usage_error", exitCode: 2 }] }), { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "browser_stage_failed" }], stages: [{ id: "project-build", status: "quality_gate_failed", exitCode: 1 }, { id: "generic-browser", status: "blocked", exitCode: null }], inspection: { commands: { build: { source: "scripts.build" } } } }), { status: "failed", stage: "project-build", reason: "declared_project_build_failed" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "browser_stage_failed" }], stages: [{ id: "generic-browser", status: "blocked", exitCode: null }] }), { status: "unknown", stage: "browser", reason: "browser_lifecycle_not_reached" });
+assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "campaign_stage_timeout" }], stages: [{ id: "generic-browser", status: "timeout", exitCode: 2 }] }), { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" });
 try {
   writeProject();
 

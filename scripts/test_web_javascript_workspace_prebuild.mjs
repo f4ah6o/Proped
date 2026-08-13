@@ -12,6 +12,8 @@ const TMP = path.join(ROOT, ".tmp/web-javascript-workspace-prebuild-test");
 const WORKSPACE = path.join(TMP, "workspace");
 const PROJECT = path.join(WORKSPACE, "packages/web");
 const SHARED = path.join(WORKSPACE, "packages/shared");
+const HELPER_A = path.join(WORKSPACE, "packages/helper-a");
+const HELPER_B = path.join(WORKSPACE, "packages/helper-b");
 const BIN = path.join(TMP, "bin");
 const MARKER = path.join(SHARED, ".workspace-prebuild.json");
 
@@ -19,6 +21,8 @@ fs.rmSync(TMP, { recursive: true, force: true });
 try {
   fs.mkdirSync(PROJECT, { recursive: true });
   fs.mkdirSync(SHARED, { recursive: true });
+  fs.mkdirSync(HELPER_A, { recursive: true });
+  fs.mkdirSync(HELPER_B, { recursive: true });
   fs.mkdirSync(BIN, { recursive: true });
   fs.writeFileSync(path.join(WORKSPACE, "package.json"), `${JSON.stringify({
     name: "workspace-root",
@@ -31,6 +35,15 @@ try {
   fs.writeFileSync(path.join(SHARED, "package.json"), `${JSON.stringify({
     name: "@workspace/shared",
     scripts: { build: "node build.js" },
+    devDependencies: { "@workspace/helper-a": "workspace:*" },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(HELPER_A, "package.json"), `${JSON.stringify({
+    name: "@workspace/helper-a",
+    devDependencies: { "@workspace/helper-b": "workspace:*" },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(HELPER_B, "package.json"), `${JSON.stringify({
+    name: "@workspace/helper-b",
+    dependencies: { "@workspace/helper-a": "workspace:*" },
   }, null, 2)}\n`);
   fs.writeFileSync(path.join(PROJECT, "package.json"), `${JSON.stringify({
     name: "@workspace/web",
@@ -82,6 +95,24 @@ if (process.argv.includes("install")) {
   assert.equal(prebuild.commands[0].packageName, "@workspace/shared");
   assert.equal(prebuild.commands[0].cwd, fs.realpathSync(SHARED));
   assert.deepEqual(prebuild.commands[0].command, ["corepack", "yarn", "run", "build"]);
+  assert.deepEqual(prebuild.commands.map((entry) => entry.packageName), ["@workspace/shared"], "cycles among non-build workspace packages must not become build-order cycles");
+
+  fs.writeFileSync(path.join(HELPER_A, "package.json"), `${JSON.stringify({
+    name: "@workspace/helper-a", scripts: { build: "node build.js" }, devDependencies: { "@workspace/helper-b": "workspace:*" },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(HELPER_B, "package.json"), `${JSON.stringify({
+    name: "@workspace/helper-b", scripts: { build: "node build.js" }, dependencies: { "@workspace/helper-a": "workspace:*" },
+  }, null, 2)}\n`);
+  assert.throws(
+    () => discoverWebProjectWorkspacePrebuild(PROJECT, WORKSPACE, { allowMoonBit: false }),
+    (error) => error?.code === "workspace_dependency_cycle" && /helper-a|helper-b/.test(error.message),
+  );
+  fs.writeFileSync(path.join(HELPER_A, "package.json"), `${JSON.stringify({
+    name: "@workspace/helper-a", devDependencies: { "@workspace/helper-b": "workspace:*" },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(HELPER_B, "package.json"), `${JSON.stringify({
+    name: "@workspace/helper-b", dependencies: { "@workspace/helper-a": "workspace:*" },
+  }, null, 2)}\n`);
 
   const prepared = prepareWebProjectWorkspace(prebuild, { sourceEnvironment });
   assert.equal(prepared.ok, true, JSON.stringify(prepared));

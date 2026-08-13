@@ -16,6 +16,7 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CLI = path.join(ROOT, "scripts/proped.mjs");
 const CORPUS_ROOT = path.join(ROOT, "protocol/fixtures/production-campaign-targets");
+const BASELINE = path.join(ROOT, "protocol/fixtures/production-campaign-baseline.json");
 
 function cleanup() {
   for (const name of ["static-basic", "static-form", "static-storage", "static-navigation", "local-build"]) {
@@ -44,7 +45,7 @@ try {
 
   const cli = spawnSync(process.execPath, [
     CLI, "web", "benchmark", "--corpus", "production",
-    "--offline", "--no-artifacts", "--sandbox-mode", "caller-enforced",
+    "--offline", "--no-artifacts", "--sandbox-mode", "caller-enforced", "--baseline", BASELINE,
   ], {
     cwd: ROOT,
     encoding: "utf8",
@@ -61,6 +62,9 @@ try {
   assert.equal(result.qualityGate.ok, true);
   assert.equal(result.qualityGate.projectSpecificAdapterLoc, 0);
   assert.equal(result.qualityGate.deterministicReplayRate, 1);
+  assert.equal(result.baselineGate.ok, true);
+  assert.deepEqual(result.baselineGate.diff.regressionTargets, []);
+  assert.deepEqual(result.baselineGate.diff.findingDeltas, []);
   assert.equal(result.projects.every((project) => project.corpusEntryId), true);
   assert.equal(result.projects.every((project) => project.adapterLoc === 0), true);
   assert.ok(result.metrics.states > 0);

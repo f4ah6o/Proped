@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "runtime": "web-project-benchmark-baseline",
+  "corpus": {
+    "id": "production",
+    "semanticHash": "934c879697ed9740091ff7dd40c8e87bd5c9d278fa856e22e352b9b735d8151d"
+  },
+  "projects": [
+    {
+      "corpusEntryId": "static-basic",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    },
+    {
+      "corpusEntryId": "static-form",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    },
+    {
+      "corpusEntryId": "static-storage",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    },
+    {
+      "corpusEntryId": "static-navigation",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    },
+    {
+      "corpusEntryId": "local-build",
+      "repository": "f4ah6o/Proped",
+      "revision": "workspace:production-corpus-v1",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    }
+  ],
+  "semanticHash": "e1c22176372f104081a04ba12c343bba6422a64d6cfe1d00c2bdc22afbf738e8"
+}

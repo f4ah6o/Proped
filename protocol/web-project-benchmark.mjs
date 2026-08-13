@@ -3,6 +3,7 @@ import path from "node:path";
 import { semanticHash } from "./ui-driver-v1.mjs";
 import { runUnknownWebProjectCampaign } from "./web-project-campaign.mjs";
 import { corpusProjectPaths, evaluateWebProjectBenchmarkGate } from "./web-project-corpus.mjs";
+import { evaluateWebProjectBenchmarkBaselineGate, loadWebProjectBenchmarkBaseline } from "./web-project-baseline.mjs";
 
 export const WEB_PROJECT_BENCHMARK_VERSION = 2;
 
@@ -116,6 +117,8 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
   });
   const previous = readPreviousSummary(options.previous);
   const qualityGate = evaluateWebProjectBenchmarkGate(base, corpus, previous);
+  const baseline = options.baseline ? loadWebProjectBenchmarkBaseline(options.baseline) : null;
+  const baselineGate = baseline ? evaluateWebProjectBenchmarkBaselineGate(baseline, { ...base, corpus: { id: corpus.id, semanticHash: corpus.semanticHash } }, { maxRegressions: corpus.gate.maxRegressions }) : null;
   const corpusIdentity = {
     id: corpus.id,
     schemaVersion: corpus.schemaVersion,
@@ -124,9 +127,10 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
   };
   const stable = {
     ...base,
-    ok: qualityGate.ok,
+    ok: qualityGate.ok && (baselineGate?.ok ?? true),
     corpus: corpusIdentity,
     qualityGate,
+    baselineGate,
   };
   const result = {
     ...stable,
@@ -134,6 +138,7 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
       benchmarkSemanticHash: base.semanticHash,
       corpus: corpusIdentity,
       qualityGate,
+      baselineGate,
     }),
   };
   if (options.writeArtifacts !== false) {

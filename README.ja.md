@@ -99,7 +99,7 @@ Web onboardingのcanonical入口を`proped web`へまとめました。repositor
 ./target/debug/proped web benchmark ./targets/app-a ./targets/app-b
 ```
 
-exit 0は全targetがhuman interventionなしでcampaign executionへ到達、exit 1は1件以上がintervention-required、exit 2はbenchmark/CLI自体のerrorです。aggregate artifactは既定で`.proped/benchmark/summary.json`へ保存します。`--no-prepare`、`--offline`、`--no-artifacts`、campaignと同じsandbox modeを利用できます。
+exit 0は全targetがhuman interventionなしでcampaign executionへ到達、exit 1は1件以上がintervention-required、exit 2はbenchmark/CLI自体のerrorです。aggregate artifactは既定で`.proped/benchmark/summary.json`へ保存します。`--no-prepare`、`--offline`、`--no-artifacts`、campaignと同じsandbox modeを利用できます。 production回帰を安定して止めるには`--baseline <file>`でmachine-independentなcompact baselineとlive corpusを比較できます。auto-onboarding低下、replay determinism低下、human intervention増加、target削除、corpus metadata変更はbaseline gateを失敗させ、finding classの追加/削除は別deltaとして報告してonboarding regression数には含めません。repository CIではhost-safeな既定sandboxでproduction corpusを`protocol/fixtures/production-campaign-baseline.json`と比較します。
 
 継続的なproduction能力測定には`--corpus production`を使います。`protocol/fixtures/production-campaign-corpus.json`のversioned offline corpusがtarget identity、repository/revision metadata、tags、project-specific executable adapter LOCを固定し、auto-onboarding >= 80%、intervention project rate <= 20%、replay evidenceがあるprojectのdeterministic replay = 100%、adapter LOC = 0をgateします。`--previous <summary.json>`を指定した場合はonboarding regressionも0件を要求します。quality findingはこのonboarding gateとは独立です。
 

@@ -83,9 +83,9 @@ def fingerprint(root: Path) -> str:
             digest.update(b"D")
         elif path.is_file():
             digest.update(b"F")
-            info = path.stat()
-            digest.update(str(info.st_size).encode())
-            digest.update(str(info.st_mtime_ns).encode())
+            with path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
     return digest.hexdigest()
 
 

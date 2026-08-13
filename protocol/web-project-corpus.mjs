@@ -34,6 +34,25 @@ function validateGitSourceUrl(value, label) {
   return value;
 }
 
+function validateNestedGitSources(value, label) {
+  if (value == null) return [];
+  if (!Array.isArray(value)) fail(`${label} must be an array`);
+  const paths = new Set();
+  return value.map((nested, index) => {
+    const nestedLabel = `${label}[${index}]`;
+    if (!nested || typeof nested !== "object" || Array.isArray(nested)) fail(`${nestedLabel} must be an object`);
+    if (typeof nested.path !== "string" || nested.path.length === 0 || path.isAbsolute(nested.path)) fail(`${nestedLabel}.path must be a relative path`);
+    const parts = nested.path.split(/[\\/]+/);
+    if (parts.some((part) => !part || part === "." || part === ".." || part === ".git")) fail(`${nestedLabel}.path is unsafe`);
+    const normalizedPath = parts.join("/");
+    if (paths.has(normalizedPath)) fail(`${label} contains duplicate path: ${normalizedPath}`);
+    paths.add(normalizedPath);
+    validateGitSourceUrl(nested.url, `${nestedLabel}.url`);
+    if (typeof nested.revision !== "string" || !/^[0-9a-f]{40}$/.test(nested.revision)) fail(`${nestedLabel}.revision must be a full commit SHA`);
+    return { path: normalizedPath, url: nested.url, revision: nested.revision };
+  }).sort((a, b) => a.path.localeCompare(b.path));
+}
+
 export function validateWebProjectCorpus(value, { file = null } = {}) {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("corpus must be an object");
   if (value.schemaVersion !== WEB_PROJECT_CORPUS_VERSION) fail(`unsupported schemaVersion: ${value.schemaVersion}`);
@@ -58,7 +77,13 @@ export function validateWebProjectCorpus(value, { file = null } = {}) {
       if (typeof target.source.checkout !== "string" || !/^[a-z0-9][a-z0-9._-]*$/.test(target.source.checkout)) fail(`${target.id}.source.checkout is invalid`);
       if (!/^[0-9a-f]{40}$/.test(target.revision)) fail(`${target.id}.revision must be a full commit SHA for git materialization`);
       if (path.isAbsolute(target.project) || target.project.split(/[\\/]+/).includes("..")) fail(`${target.id}.project must stay within the checkout`);
-      source = { kind: "git", url: target.source.url, checkout: target.source.checkout };
+      const nestedSources = validateNestedGitSources(target.source.nestedSources, `${target.id}.source.nestedSources`);
+      source = {
+        kind: "git",
+        url: target.source.url,
+        checkout: target.source.checkout,
+        ...(nestedSources.length > 0 ? { nestedSources } : {}),
+      };
     }
     return { ...target, adapterLoc, tags, ...(source ? { source } : {}) };
   });

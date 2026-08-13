@@ -52,13 +52,23 @@ Parent: `dowdiness/canopy@cb41945b04801084e8abe1d8edc27eb0cdce4a1c`
 
 ## 受け入れ条件
 
-- [ ] local Git fixtureでexplicit nested source materializationを再現できる。
-- [ ] gitlink SHA / path / origin mismatchをfail closedできる。
-- [ ] nested checkoutのhook/filter/recursive acquisitionを禁止できる。
-- [ ] authorized workspace root外へのread/write/command cwdを拒否できる。
-- [ ] known-tool workspace prebuildをstructured argvで表現できる。
-- [ ] Canopyの7 pinned nested sourcesを明示materializeできる。
+- [x] local Git fixtureでexplicit nested source materializationを再現できる。
+- [x] gitlink SHA / path / origin mismatchをfail closedできる。
+- [x] nested checkoutのhook/filter/recursive acquisitionを禁止できる。
+- [x] authorized workspace root外へのcommand cwdを拒否し、nested checkout pathのcontainment/symlink境界をfail closedできる。
+- [x] known-tool workspace prebuildをstructured argvで表現できる。
+- [x] Canopyの7 pinned nested source path / URL / gitlink SHAをchecked-in dogfood corpusへ固定する。
+- [ ] Canopyの7 nested sourcesを実checkoutへ明示materializeする。
 - [ ] Canopy root MoonBit prebuildからWaku build/serverへ接続できる。
 - [ ] Canopyが0 adapter LOC / 0 human interventionでcampaign executionへ到達する。
-- [ ] benchmark後にparent+nested checkoutをpin状態へrestoreできる。
-- [ ] regression tests / docs / CHANGESを更新する。
+- [x] local integrationでbenchmark後にparent+nested checkoutをpin状態へrestoreできる。
+- [x] regression tests / docs / CHANGESを更新する。
+
+
+## Implementation progress
+
+- `source.nestedSources[]`をcorpus schemaへ追加。各entryはrelative path / Git URL / full SHAで正規化し、共有checkoutでnested identityが食い違う場合は拒否する。
+- materializerは親revisionのgitlink mode+SHAと`.gitmodules` path/URLを照合してからnested sourceを独立cloneする。nested checkout自身もhook/filter/global Git config/recursive submodule取得を無効化する。
+- state capture/restoreはparentとnestedを別々に扱い、run中に生成したuntracked/new ignored stateだけを戻す。
+- `moon.work`をauthorized workspace rootで検出した場合に限り、`moon build --target js --release`をstructured argv / `shell=false` / credential-safe envでprebuildする。`--no-prepare`では`workspace_prepare_required`。
+- Canopy dogfood corpusは親`cb41945b...`と7 gitlinkを固定済み。現hostではnested checkoutが未materializeのためverifyは意図どおり`nested-source-invalid`でfail closedしている。

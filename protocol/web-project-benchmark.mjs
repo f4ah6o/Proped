@@ -105,6 +105,7 @@ export function runUnknownWebProjectBenchmark(projectPaths, options = {}) {
       offline: options.offline,
       sandboxMode: options.sandboxMode,
       sourceEnvironment: options.sourceEnvironment,
+      workspaceRoot: options.workspaceRoots?.[index] ?? null,
       writeArtifacts: options.projectArtifacts === true,
     });
     if (options.entries?.[index]) result.benchmarkEntry = options.entries[index];
@@ -144,6 +145,7 @@ function stableMaterializationEvidence(result) {
       dirty: entry.dirty,
       ok: entry.ok,
       errors: entry.errors ?? [],
+      nestedSources: (entry.nestedSources ?? []).map((nested) => ({ path: nested.path, revision: nested.revision, origin: nested.origin, head: nested.head, dirty: nested.dirty, ok: nested.ok, errors: nested.errors ?? [] })),
     })),
     projects: (result.projects ?? []).map((entry) => ({
       id: entry.id,
@@ -167,6 +169,7 @@ function stableCheckoutCleanupEvidence(result) {
       errors: entry.errors ?? [],
       head: entry.head,
       dirty: entry.dirty,
+      nestedSources: (entry.nestedSources ?? []).map((nested) => ({ path: nested.path, revision: nested.revision, head: nested.head, dirty: nested.dirty, ok: nested.ok, errors: nested.errors ?? [] })),
     })),
   };
 }
@@ -185,6 +188,9 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
     ? captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot: options.checkoutRoot })
     : null;
   const projectPaths = corpusProjectPaths(corpus, { checkoutRoot: options.checkoutRoot });
+  const workspaceRoots = corpus.targets.map((target) => target.source?.nestedSources?.length > 0
+    ? path.resolve(options.checkoutRoot, target.source.checkout)
+    : null);
   let base;
   let executionError = null;
   let checkoutCleanup = null;
@@ -192,6 +198,7 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
     base = runUnknownWebProjectBenchmark(projectPaths, {
       ...options,
       entries: corpus.targets,
+      workspaceRoots,
       writeArtifacts: false,
     });
   } catch (error) {

@@ -68,9 +68,11 @@ function gitGroups(corpus) {
   for (const target of corpus.targets) {
     if (target.source?.kind !== "git") continue;
     const key = target.source.checkout;
+    const nestedSources = target.source.nestedSources ?? [];
+    const nestedKey = JSON.stringify(nestedSources);
     const existing = groups.get(key);
     if (existing) {
-      if (existing.url !== target.source.url || existing.revision !== target.revision) {
+      if (existing.url !== target.source.url || existing.revision !== target.revision || existing.nestedKey !== nestedKey) {
         fail(`checkout ${key} is assigned conflicting git identities`, { code: "checkout_identity_conflict" });
       }
       existing.targetIds.push(target.id);
@@ -84,6 +86,8 @@ function gitGroups(corpus) {
       revision: target.revision,
       targetIds: [target.id],
       targetProjects: [{ id: target.id, project: target.project }],
+      nestedSources,
+      nestedKey,
     });
   }
   return [...groups.values()].sort((a, b) => a.checkoutKey.localeCompare(b.checkoutKey));
@@ -135,6 +139,135 @@ function safeGeneratedPath(checkout, relative) {
   return absolute;
 }
 
+function safeNestedCheckoutPath(checkout, relative) {
+  if (path.isAbsolute(relative) || relative.split(/[\\/]+/).some((part) => !part || part === "." || part === ".." || part === ".git")) {
+    fail(`unsafe nested source path: ${relative}`, { code: "unsafe_nested_source_path" });
+  }
+  const absolute = path.resolve(checkout, relative);
+  const containment = path.relative(checkout, absolute);
+  if (!containment || containment.startsWith("..") || path.isAbsolute(containment)) {
+    fail(`nested source path escapes checkout: ${relative}`, { code: "unsafe_nested_source_path" });
+  }
+  let cursor = checkout;
+  for (const part of relative.split(/[\\/]+/)) {
+    cursor = path.join(cursor, part);
+    if (fs.existsSync(cursor) && fs.lstatSync(cursor).isSymbolicLink()) {
+      fail(`nested source path crosses a symlink: ${relative}`, { code: "unsafe_nested_source_symlink" });
+    }
+  }
+  return absolute;
+}
+
+function parseGitmodules(text) {
+  const entries = [];
+  let current = null;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const section = rawLine.match(/^\s*\[submodule\s+"([^"]+)"\]\s*$/);
+    if (section) {
+      current = { name: section[1], path: null, url: null };
+      entries.push(current);
+      continue;
+    }
+    if (!current) continue;
+    const setting = rawLine.match(/^\s*([A-Za-z0-9._-]+)\s*=\s*(.*?)\s*$/);
+    if (!setting) continue;
+    if (setting[1] === "path") current.path = setting[2];
+    if (setting[1] === "url") current.url = setting[2];
+  }
+  return entries;
+}
+
+function assertNestedSourceDeclarations(checkout, group) {
+  if ((group.nestedSources ?? []).length === 0) return [];
+  const modules = git(["show", `${group.revision}:.gitmodules`], { cwd: checkout, allowFailure: true });
+  if (modules.status !== 0) fail(`${group.checkoutKey} declares nested sources but has no readable .gitmodules`, { code: "nested_gitmodules_missing" });
+  const declarations = parseGitmodules(modules.stdout);
+  return group.nestedSources.map((nested) => {
+    const tree = git(["ls-tree", group.revision, "--", nested.path], { cwd: checkout, allowFailure: true });
+    const match = tree.status === 0 ? tree.stdout.trim().match(/^160000\s+commit\s+([0-9a-f]{40})\t(.+)$/) : null;
+    if (!match || match[2] !== nested.path) {
+      fail(`${group.checkoutKey} nested source ${nested.path} is not a gitlink at the parent revision`, { code: "nested_gitlink_missing" });
+    }
+    if (match[1] !== nested.revision) {
+      fail(`${group.checkoutKey} nested source ${nested.path} revision mismatch`, {
+        code: "nested_gitlink_revision_mismatch",
+        expected: nested.revision,
+        observed: match[1],
+      });
+    }
+    const declared = declarations.find((entry) => entry.path === nested.path);
+    if (!declared) fail(`${group.checkoutKey} nested source ${nested.path} is absent from .gitmodules`, { code: "nested_gitmodules_path_missing" });
+    if (declared.url !== nested.url) {
+      fail(`${group.checkoutKey} nested source ${nested.path} URL mismatch`, {
+        code: "nested_gitmodules_url_mismatch",
+        expected: nested.url,
+        observed: declared.url,
+      });
+    }
+    return { path: nested.path, url: nested.url, revision: nested.revision };
+  });
+}
+
+function nestedCheckoutState(parentCheckout, nested) {
+  const checkout = safeNestedCheckoutPath(parentCheckout, nested.path);
+  if (!fs.existsSync(checkout) || !fs.statSync(checkout).isDirectory()) {
+    return { checkout, exists: false, git: false, origin: null, head: null, dirty: null };
+  }
+  const top = git(["rev-parse", "--show-toplevel"], { cwd: checkout, allowFailure: true });
+  if (top.status !== 0) return { checkout, exists: true, git: false, origin: null, head: null, dirty: null };
+  let realTop;
+  let realCheckout;
+  try {
+    realTop = fs.realpathSync(top.stdout.trim());
+    realCheckout = fs.realpathSync(checkout);
+  } catch {
+    return { checkout, exists: true, git: false, origin: null, head: null, dirty: null };
+  }
+  if (realTop !== realCheckout) return { checkout, exists: true, git: false, origin: null, head: null, dirty: null };
+  const origin = git(["remote", "get-url", "origin"], { cwd: checkout, allowFailure: true });
+  const head = git(["rev-parse", "HEAD"], { cwd: checkout, allowFailure: true });
+  const status = git(["status", "--porcelain", "--ignore-submodules=all"], { cwd: checkout, allowFailure: true });
+  return {
+    checkout,
+    exists: true,
+    git: true,
+    origin: origin.status === 0 ? origin.stdout.trim() : null,
+    head: head.status === 0 ? head.stdout.trim() : null,
+    dirty: status.status === 0 ? status.stdout.trim().length > 0 : null,
+  };
+}
+
+function verifyNestedSource(parentCheckout, nested, checkoutKey) {
+  const state = nestedCheckoutState(parentCheckout, nested);
+  const errors = [];
+  if (!state.exists) errors.push("nested-checkout-missing");
+  else if (!state.git) errors.push("nested-checkout-not-git");
+  else {
+    if (state.origin !== nested.url) errors.push("nested-origin-mismatch");
+    if (state.head !== nested.revision) errors.push("nested-revision-mismatch");
+    if (state.dirty === null) errors.push("nested-cleanliness-unavailable");
+    else if (state.dirty) errors.push("nested-dirty-checkout");
+    if (state.head === nested.revision) {
+      try {
+        assertNoCheckoutFilters(state.checkout, nested.revision, `${checkoutKey}:${nested.path}`);
+      } catch (error) {
+        errors.push(error.code === "checkout_filter_unsupported" ? "nested-checkout-filter-unsupported" : "nested-filter-check-failed");
+      }
+    }
+  }
+  return {
+    path: nested.path,
+    url: nested.url,
+    revision: nested.revision,
+    checkout: state.checkout,
+    origin: state.origin,
+    head: state.head,
+    dirty: state.dirty,
+    ok: errors.length === 0,
+    errors,
+  };
+}
+
 export function captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot } = {}) {
   if (!corpusHasExternalTargets(corpus)) {
     return { runtime: "web-project-corpus-state", corpus: corpus.id, checkoutCount: 0, checkouts: [] };
@@ -146,9 +279,20 @@ export function captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot 
     if (!state.exists || !state.git || state.origin !== group.url || state.head !== group.revision || state.dirty !== false) {
       fail(`${group.checkoutKey} is not in a verified state for capture`, { code: "state_capture_requires_verified_checkout" });
     }
+    const nestedSources = (group.nestedSources ?? []).map((nested) => {
+      const nestedState = nestedCheckoutState(state.checkout, nested);
+      if (!nestedState.exists || !nestedState.git || nestedState.origin !== nested.url || nestedState.head !== nested.revision || nestedState.dirty !== false) {
+        fail(`${group.checkoutKey}:${nested.path} is not in a verified state for capture`, { code: "nested_state_capture_requires_verified_checkout" });
+      }
+      return {
+        path: nested.path,
+        ignoredPaths: ignoredWorkingTreePaths(nestedState.checkout),
+      };
+    });
     return {
       checkoutKey: group.checkoutKey,
       ignoredPaths: ignoredWorkingTreePaths(state.checkout),
+      nestedSources,
     };
   });
   return { runtime: "web-project-corpus-state", corpus: corpus.id, checkoutCount: checkouts.length, checkouts };
@@ -180,6 +324,7 @@ function assertTargetsOutsideGitlinks(checkout, group) {
 function verifyGroup(group, checkoutRoot) {
   const state = checkoutState(group, checkoutRoot);
   const errors = [];
+  let nestedSources = [];
   if (!state.exists) errors.push("checkout-missing");
   else if (!state.git) errors.push("checkout-not-git");
   else {
@@ -191,12 +336,16 @@ function verifyGroup(group, checkoutRoot) {
       try {
         assertNoCheckoutFilters(state.checkout, group.revision, group.checkoutKey);
         assertTargetsOutsideGitlinks(state.checkout, group);
+        assertNestedSourceDeclarations(state.checkout, group);
       } catch (error) {
         if (error.code === "checkout_filter_unsupported") errors.push("checkout-filter-unsupported");
         else if (error.code === "target_inside_gitlink") errors.push("target-inside-gitlink");
         else if (error.code === "gitlink_inventory_failed") errors.push("gitlink-inventory-failed");
+        else if (error.code?.startsWith("nested_")) errors.push(error.code.replaceAll("_", "-"));
         else errors.push("checkout-filter-check-failed");
       }
+      nestedSources = (group.nestedSources ?? []).map((nested) => verifyNestedSource(state.checkout, nested, group.checkoutKey));
+      if (nestedSources.some((nested) => !nested.ok)) errors.push("nested-source-invalid");
     }
   }
   return {
@@ -208,6 +357,7 @@ function verifyGroup(group, checkoutRoot) {
     origin: state.origin,
     head: state.head,
     dirty: state.dirty,
+    nestedSources,
     ok: errors.length === 0,
     errors,
   };
@@ -293,13 +443,55 @@ function assertNoCheckoutFilters(checkout, revision, checkoutKey) {
   }
 }
 
+function materializeNestedSource(parentCheckout, nested, checkoutKey, { fetch = true } = {}) {
+  const checkout = safeNestedCheckoutPath(parentCheckout, nested.path);
+  let state = nestedCheckoutState(parentCheckout, nested);
+  if (state.exists && !state.git) {
+    const emptyDirectory = fs.statSync(checkout).isDirectory() && fs.readdirSync(checkout).length === 0;
+    if (!emptyDirectory) fail(`${checkoutKey}:${nested.path} exists but is not an independent Git checkout`, { code: "nested_checkout_not_git" });
+  }
+  if (state.git) {
+    if (state.origin !== nested.url) fail(`${checkoutKey}:${nested.path} origin mismatch`, { code: "nested_origin_mismatch", expected: nested.url, observed: state.origin });
+    if (state.dirty === null) fail(`${checkoutKey}:${nested.path} cleanliness could not be verified`, { code: "nested_cleanliness_unavailable" });
+    if (state.dirty) fail(`${checkoutKey}:${nested.path} has local changes`, { code: "nested_dirty_checkout" });
+  } else {
+    git(["clone", "--no-checkout", "--no-recurse-submodules", nested.url, checkout]);
+    state = nestedCheckoutState(parentCheckout, nested);
+    if (!state.git || state.origin !== nested.url) fail(`${checkoutKey}:${nested.path} clone identity could not be verified`, { code: "nested_origin_mismatch" });
+  }
+  const hasRevision = git(["cat-file", "-e", `${nested.revision}^{commit}`], { cwd: checkout, allowFailure: true }).status === 0;
+  if (fetch || !hasRevision) git(["fetch", "--depth=1", nested.url, nested.revision], { cwd: checkout });
+  assertNoCheckoutFilters(checkout, nested.revision, `${checkoutKey}:${nested.path}`);
+  git(["checkout", "--detach", nested.revision], { cwd: checkout });
+  const verified = verifyNestedSource(parentCheckout, nested, checkoutKey);
+  if (!verified.ok) fail(`${checkoutKey}:${nested.path} failed post-materialization verification: ${verified.errors.join(",")}`, { code: "nested_materialization_verification_failed" });
+  return verified;
+}
+
+function restoreNestedSource(parentCheckout, nested, checkoutKey, baseline = null) {
+  const state = nestedCheckoutState(parentCheckout, nested);
+  if (!state.exists || !state.git) return { path: nested.path, ok: false, errors: [state.exists ? "nested-checkout-not-git" : "nested-checkout-missing"] };
+  if (state.origin !== nested.url) return { path: nested.path, ok: false, errors: ["nested-origin-mismatch"] };
+  try {
+    assertNoCheckoutFilters(state.checkout, nested.revision, `${checkoutKey}:${nested.path}`);
+    git(["checkout", "--detach", nested.revision], { cwd: state.checkout });
+    git(["reset", "--hard", nested.revision], { cwd: state.checkout });
+    git(["clean", "-fd"], { cwd: state.checkout });
+    const removedIgnoredPaths = baseline ? removeNewIgnoredPaths(state.checkout, baseline.ignoredPaths ?? []) : [];
+    const verified = verifyNestedSource(parentCheckout, nested, checkoutKey);
+    return { ...verified, removedIgnoredPaths };
+  } catch (error) {
+    return { path: nested.path, ok: false, errors: [error.code ?? "nested-restore-failed"] };
+  }
+}
+
 export function restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot, baselineState = null } = {}) {
   if (!corpusHasExternalTargets(corpus)) {
     return { ok: true, runtime: "web-project-corpus-restore", corpus: corpus.id, checkoutCount: 0, checkouts: [] };
   }
   if (!checkoutRoot) fail("external corpus restore requires --checkout-root", { code: "checkout_root_required" });
   const root = path.resolve(checkoutRoot);
-  const baselineByCheckout = new Map((baselineState?.checkouts ?? []).map((entry) => [entry.checkoutKey, entry.ignoredPaths ?? []]));
+  const baselineByCheckout = new Map((baselineState?.checkouts ?? []).map((entry) => [entry.checkoutKey, entry]));
   const restored = [];
   for (const group of gitGroups(corpus)) {
     const state = checkoutState(group, root);
@@ -313,19 +505,27 @@ export function restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot, base
     }
     try {
       assertNoCheckoutFilters(state.checkout, group.revision, group.checkoutKey);
+      assertNestedSourceDeclarations(state.checkout, group);
+      const baseline = baselineByCheckout.get(group.checkoutKey) ?? null;
+      const nestedBaseline = new Map((baseline?.nestedSources ?? []).map((entry) => [entry.path, entry]));
+      const nestedSources = (group.nestedSources ?? []).map((nested) => restoreNestedSource(
+        state.checkout, nested, group.checkoutKey, nestedBaseline.get(nested.path) ?? null,
+      ));
       git(["checkout", "--detach", group.revision], { cwd: state.checkout });
       git(["reset", "--hard", group.revision], { cwd: state.checkout });
       git(["clean", "-fd"], { cwd: state.checkout });
-      const removedIgnoredPaths = baselineState ? removeNewIgnoredPaths(state.checkout, baselineByCheckout.get(group.checkoutKey) ?? []) : [];
+      const removedIgnoredPaths = baselineState ? removeNewIgnoredPaths(state.checkout, baseline?.ignoredPaths ?? []) : [];
       const verified = verifyGroup(group, root);
+      const nestedOk = nestedSources.every((nested) => nested.ok);
       restored.push({
         checkoutKey: group.checkoutKey,
         repository: group.repository,
         revision: group.revision,
-        ok: verified.ok,
-        errors: verified.errors,
+        ok: verified.ok && nestedOk,
+        errors: [...verified.errors, ...nestedSources.flatMap((nested) => nested.ok ? [] : nested.errors.map((error) => `${nested.path}:${error}`))],
         head: verified.head,
         dirty: verified.dirty,
+        nestedSources,
         removedIgnoredPaths,
       });
     } catch (error) {
@@ -350,6 +550,7 @@ export function materializeWebProjectCorpus(corpus, { checkoutRoot, fetch = true
   fs.mkdirSync(root, { recursive: true });
 
   const materialized = [];
+  const materializedNestedSources = [];
   for (const group of gitGroups(corpus)) {
     let state = checkoutState(group, root);
     if (state.exists && !state.git) fail(`${group.checkoutKey} exists but is not a Git checkout`, { code: "checkout_not_git" });
@@ -369,7 +570,12 @@ export function materializeWebProjectCorpus(corpus, { checkoutRoot, fetch = true
       git(["fetch", "--depth=1", group.url, group.revision], { cwd: state.checkout });
     }
     assertNoCheckoutFilters(state.checkout, group.revision, group.checkoutKey);
+    assertNestedSourceDeclarations(state.checkout, group);
     git(["checkout", "--detach", group.revision], { cwd: state.checkout });
+    for (const nested of group.nestedSources ?? []) {
+      const nestedVerified = materializeNestedSource(state.checkout, nested, group.checkoutKey, { fetch });
+      materializedNestedSources.push({ checkoutKey: group.checkoutKey, ...nestedVerified });
+    }
     const verified = verifyGroup(group, root);
     if (!verified.ok) fail(`${group.checkoutKey} failed post-materialization verification: ${verified.errors.join(",")}`, { code: "materialization_verification_failed" });
     materialized.push(verified);
@@ -380,6 +586,11 @@ export function materializeWebProjectCorpus(corpus, { checkoutRoot, fetch = true
     ...verification,
     runtime: "web-project-corpus-materialize",
     materializedCheckouts: materialized.map((entry) => entry.checkoutKey),
+    materializedNestedSources: materializedNestedSources.map((entry) => ({
+      checkoutKey: entry.checkoutKey,
+      path: entry.path,
+      revision: entry.revision,
+    })),
     targetCodeExecuted: false,
     upstreamWritesPerformed: false,
   };

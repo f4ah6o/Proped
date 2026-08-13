@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "id": "canopy-nested-dogfood",
+  "description": "Pinned Canopy Waku target with explicitly authorized nested Git sources for workspace prebuild dogfood.",
+  "gate": {
+    "minAutoOnboardingRate": 1,
+    "maxInterventionProjectRate": 0,
+    "minDeterministicReplayRate": 1,
+    "maxAdapterLoc": 0,
+    "maxRegressions": 0,
+    "minTargetCount": 1,
+    "minRepositoryCount": 1,
+    "requiredTags": [
+      "server-rendered",
+      "stateful",
+      "waku"
+    ]
+  },
+  "targets": [
+    {
+      "id": "canopy-waku",
+      "project": "apps/web",
+      "repository": "dowdiness/canopy",
+      "revision": "cb41945b04801084e8abe1d8edc27eb0cdce4a1c",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "framework-backed",
+        "server-rendered",
+        "stateful",
+        "waku"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/dowdiness/canopy.git",
+        "checkout": "external-canopy",
+        "nestedSources": [
+          {
+            "path": "deps/alga",
+            "url": "https://github.com/dowdiness/alga.git",
+            "revision": "203c89023b56f5b0b079198f22e528c8b136e3b3"
+          },
+          {
+            "path": "deps/event-graph-walker",
+            "url": "https://github.com/dowdiness/event-graph-walker.git",
+            "revision": "15446cae536e8d4fcfe0b044f5800351a097e1db"
+          },
+          {
+            "path": "deps/graphviz",
+            "url": "https://github.com/dowdiness/graphviz.git",
+            "revision": "546c0e689cd7fa4883e212e6a9b7495f9be46946"
+          },
+          {
+            "path": "deps/loom",
+            "url": "https://github.com/dowdiness/loom.git",
+            "revision": "9f630d67a781b1ff7da741c745de50702daa3984"
+          },
+          {
+            "path": "deps/order-tree",
+            "url": "https://github.com/dowdiness/order-tree.git",
+            "revision": "99edee1a3b13d06e5dfd44c6ad822845d0614a6c"
+          },
+          {
+            "path": "deps/rabbita",
+            "url": "https://github.com/moonbit-community/rabbita.git",
+            "revision": "67e8169efa1bb2e8bd17018b62b41211cbc4c357"
+          },
+          {
+            "path": "deps/svg-dsl",
+            "url": "https://github.com/dowdiness/svg-dsl.git",
+            "revision": "5e643ae674fc6e6d76f991be3eccdd62f7e62f77"
+          }
+        ]
+      }
+    }
+  ]
+}

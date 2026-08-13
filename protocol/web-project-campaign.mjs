@@ -18,6 +18,7 @@ import {
   probePackageManagerRuntime,
 } from "./web-package-manager-runtime.mjs";
 import { runWebProject } from "./web-project-runner.mjs";
+import { discoverWebProjectWorkspacePrebuild, prepareWebProjectWorkspace } from "./web-project-workspace-prebuild.mjs";
 
 export const WEB_PROJECT_CAMPAIGN_VERSION = 1;
 
@@ -114,6 +115,7 @@ function baseResult(projectRoot, manifest, inspection) {
     runtimeProfile: campaignRuntimeProfile(manifest, inspection),
     stages: [],
     preparation: null,
+    workspacePreparation: null,
     nodeRuntime: null,
     packageManagerRuntime: null,
     runOutput: null,
@@ -333,6 +335,50 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     );
   }
 
+  let workspacePrebuild = null;
+  let workspacePreparation = null;
+  try {
+    workspacePrebuild = discoverWebProjectWorkspacePrebuild(projectRoot, options.workspaceRoot ?? null);
+  } catch (error) {
+    return interventionResult(
+      projectRoot,
+      manifest,
+      inspection,
+      intervention("workspace_review_required", error.message, { code: error.code ?? "workspace_review_required" }),
+      { writeArtifacts },
+      { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation },
+    );
+  }
+  if (workspacePrebuild && !autoPrepare) {
+    return interventionResult(
+      projectRoot,
+      manifest,
+      inspection,
+      intervention("workspace_prepare_required", "a known workspace prebuild is required and automatic preparation is disabled", {
+        workspace: { kind: workspacePrebuild.kind, descriptor: workspacePrebuild.descriptor, command: workspacePrebuild.command },
+      }),
+      { writeArtifacts },
+      { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation },
+    );
+  }
+  if (workspacePrebuild) {
+    workspacePreparation = prepareWebProjectWorkspace(workspacePrebuild, { sourceEnvironment: runEnvironment });
+    if (!workspacePreparation?.ok) {
+      return interventionResult(
+        projectRoot,
+        manifest,
+        inspection,
+        intervention("workspace_prepare_failed", "known workspace prebuild did not complete", {
+          status: workspacePreparation?.status ?? "failed",
+          exitCode: workspacePreparation?.exitCode ?? null,
+          stderrTail: workspacePreparation?.stderrTail ?? "",
+        }),
+        { writeArtifacts },
+        { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation, workspacePreparation },
+      );
+    }
+  }
+
   let compiled;
   try {
     compiled = compileWebProjectManifestV2(manifest, projectRoot);
@@ -343,7 +389,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
       inspection,
       intervention("compile_review_required", error.message),
       { writeArtifacts },
-      { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation },
+      { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation, workspacePreparation },
     );
   }
 
@@ -368,7 +414,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
         backend: error.backend ?? null,
       }),
       { writeArtifacts },
-      { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation },
+      { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation, workspacePreparation },
     );
   }
 
@@ -402,6 +448,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     runtimeProfile: campaignRuntimeProfile(manifest, inspection),
     stages: stableStages(report),
     preparation,
+    workspacePreparation,
     nodeRuntime: nodeRuntimeSummary,
     packageManagerRuntime,
     runOutput: report.output,

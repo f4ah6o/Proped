@@ -5,11 +5,18 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadWebProjectCorpus, resolveWebProjectCorpus, validateWebProjectCorpus } from "../protocol/web-project-corpus.mjs";
-import { materializeWebProjectCorpus, verifyMaterializedWebProjectCorpus } from "../protocol/web-project-corpus-materialize.mjs";
+import {
+  captureMaterializedWebProjectCorpusState,
+  materializeWebProjectCorpus,
+  restoreMaterializedWebProjectCorpus,
+  verifyMaterializedWebProjectCorpus,
+} from "../protocol/web-project-corpus-materialize.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, ".tmp/web-project-corpus-materialize-test");
 const UPSTREAM = path.join(TMP, "upstream");
+const NESTED_UPSTREAM = path.join(TMP, "nested-upstream");
+const DEEP_UPSTREAM = path.join(TMP, "deep-upstream");
 const CHECKOUTS = path.join(TMP, "checkouts");
 const CORPUS_FILE = path.join(TMP, "corpus.json");
 const CLI = path.join(ROOT, "scripts/proped.mjs");
@@ -22,7 +29,32 @@ function git(cwd, ...args) {
 
 fs.rmSync(TMP, { recursive: true, force: true });
 fs.mkdirSync(UPSTREAM, { recursive: true });
+fs.mkdirSync(NESTED_UPSTREAM, { recursive: true });
+fs.mkdirSync(DEEP_UPSTREAM, { recursive: true });
 try {
+  git(DEEP_UPSTREAM, "init", "-b", "main");
+  git(DEEP_UPSTREAM, "config", "user.email", "proped-test@example.invalid");
+  git(DEEP_UPSTREAM, "config", "user.name", "Proped Test");
+  fs.writeFileSync(path.join(DEEP_UPSTREAM, "deep.txt"), "deep\n");
+  git(DEEP_UPSTREAM, "add", ".");
+  git(DEEP_UPSTREAM, "commit", "-m", "deep");
+  const deepRevision = git(DEEP_UPSTREAM, "rev-parse", "HEAD");
+
+  git(NESTED_UPSTREAM, "init", "-b", "main");
+  git(NESTED_UPSTREAM, "config", "user.email", "proped-test@example.invalid");
+  git(NESTED_UPSTREAM, "config", "user.name", "Proped Test");
+  fs.writeFileSync(path.join(NESTED_UPSTREAM, "nested.txt"), "nested-one\n");
+  git(NESTED_UPSTREAM, "add", ".");
+  git(NESTED_UPSTREAM, "commit", "-m", "nested first");
+  const nestedFirst = git(NESTED_UPSTREAM, "rev-parse", "HEAD");
+  fs.writeFileSync(path.join(NESTED_UPSTREAM, "nested.txt"), "nested-two\n");
+  fs.writeFileSync(path.join(NESTED_UPSTREAM, ".gitignore"), ".generated-nested/\n.preexisting-nested/\n");
+  fs.writeFileSync(path.join(NESTED_UPSTREAM, ".gitmodules"), `[submodule "deep"]\n\tpath = deps/deep\n\turl = ${DEEP_UPSTREAM}\n`);
+  git(NESTED_UPSTREAM, "add", ".");
+  git(NESTED_UPSTREAM, "update-index", "--add", "--cacheinfo", `160000,${deepRevision},deps/deep`);
+  git(NESTED_UPSTREAM, "commit", "-m", "nested second with deep gitlink");
+  const nestedRevision = git(NESTED_UPSTREAM, "rev-parse", "HEAD");
+
   git(UPSTREAM, "init", "-b", "main");
   git(UPSTREAM, "config", "user.email", "proped-test@example.invalid");
   git(UPSTREAM, "config", "user.name", "Proped Test");
@@ -41,11 +73,13 @@ try {
   assert.equal(lock.status, 0, lock.stderr || lock.stdout);
   fs.rmSync(path.join(UPSTREAM, "site/node_modules"), { recursive: true, force: true });
   fs.writeFileSync(path.join(UPSTREAM, "site/build.mjs"), `import fs from "node:fs";\nfs.writeFileSync("index.html", "<!doctype html><main><button>Built</button></main>\\n");\nfs.writeFileSync("generated.txt", "generated\\n");\nfs.mkdirSync(".generated-cache", { recursive: true });\nfs.writeFileSync(".generated-cache/cache.txt", "generated-cache\\n");\n`);
+  fs.writeFileSync(path.join(UPSTREAM, ".gitmodules"), `[submodule "nested"]\n\tpath = deps/nested\n\turl = ${NESTED_UPSTREAM}\n`);
   git(UPSTREAM, "add", ".");
+  git(UPSTREAM, "update-index", "--add", "--cacheinfo", `160000,${nestedRevision},deps/nested`);
   git(UPSTREAM, "commit", "-m", "first");
   const first = git(UPSTREAM, "rev-parse", "HEAD");
   fs.writeFileSync(path.join(UPSTREAM, "site/about.html"), "<!doctype html><main>About</main>\n");
-  git(UPSTREAM, "add", ".");
+  git(UPSTREAM, "add", "site/about.html");
   git(UPSTREAM, "commit", "-m", "second");
   const revision = git(UPSTREAM, "rev-parse", "HEAD");
   assert.match(revision, /^[0-9a-f]{40}$/);
@@ -72,7 +106,12 @@ try {
       revision,
       adapterLoc: 0,
       tags: ["static"],
-      source: { kind: "git", url: UPSTREAM, checkout: "sample" },
+      source: {
+        kind: "git",
+        url: UPSTREAM,
+        checkout: "sample",
+        nestedSources: [{ path: "deps/nested", url: NESTED_UPSTREAM, revision: nestedRevision }],
+      },
     }],
   };
   fs.writeFileSync(CORPUS_FILE, `${JSON.stringify(rawCorpus, null, 2)}\n`);
@@ -90,6 +129,31 @@ try {
     ...rawCorpus,
     targets: [{ ...rawCorpus.targets[0], source: { ...rawCorpus.targets[0].source, checkout: "../escape" } }],
   }), /source.checkout is invalid/);
+
+  assert.throws(() => validateWebProjectCorpus({
+    ...rawCorpus,
+    targets: [{ ...rawCorpus.targets[0], source: {
+      ...rawCorpus.targets[0].source,
+      nestedSources: [{ path: "../escape", url: NESTED_UPSTREAM, revision: nestedRevision }],
+    } }],
+  }), /nestedSources\[0\]\.path is unsafe/);
+  assert.throws(() => validateWebProjectCorpus({
+    ...rawCorpus,
+    targets: [{ ...rawCorpus.targets[0], source: {
+      ...rawCorpus.targets[0].source,
+      nestedSources: [{ path: "deps/nested", url: NESTED_UPSTREAM, revision: "deadbeef" }],
+    } }],
+  }), /nestedSources\[0\]\.revision must be a full commit SHA/);
+  assert.throws(() => validateWebProjectCorpus({
+    ...rawCorpus,
+    targets: [{ ...rawCorpus.targets[0], source: {
+      ...rawCorpus.targets[0].source,
+      nestedSources: [
+        { path: "deps/nested", url: NESTED_UPSTREAM, revision: nestedRevision },
+        { path: "deps/nested", url: NESTED_UPSTREAM, revision: nestedRevision },
+      ],
+    } }],
+  }), /duplicate path/);
 
   assert.throws(() => validateWebProjectCorpus({
     ...rawCorpus,
@@ -124,6 +188,20 @@ try {
   const checkout = path.join(CHECKOUTS, "sample");
   assert.equal(git(checkout, "rev-parse", "HEAD"), revision);
   assert.equal(git(checkout, "remote", "get-url", "origin"), UPSTREAM);
+  const nestedCheckout = path.join(checkout, "deps/nested");
+  assert.deepEqual(materialized.materializedNestedSources, [{ checkoutKey: "sample", path: "deps/nested", revision: nestedRevision }]);
+  assert.equal(git(nestedCheckout, "rev-parse", "HEAD"), nestedRevision);
+  assert.equal(git(nestedCheckout, "remote", "get-url", "origin"), NESTED_UPSTREAM);
+  assert.equal(fs.existsSync(path.join(nestedCheckout, "deps/deep/.git")), false, "nested materialization must not recurse into second-level gitlinks");
+  assert.equal(materialized.checkouts[0].nestedSources[0].ok, true);
+  const nestedSymlinkOutside = path.join(TMP, "nested-symlink-outside");
+  fs.mkdirSync(nestedSymlinkOutside, { recursive: true });
+  fs.rmSync(path.join(checkout, "deps"), { recursive: true, force: true });
+  fs.symlinkSync(nestedSymlinkOutside, path.join(checkout, "deps"), "dir");
+  assert.throws(() => materializeWebProjectCorpus(corpus, { checkoutRoot: CHECKOUTS, fetch: false }), /(?:has local changes|crosses a symlink)/);
+  fs.rmSync(path.join(checkout, "deps"), { force: true });
+  const rematerializedAfterSymlink = materializeWebProjectCorpus(corpus, { checkoutRoot: CHECKOUTS, fetch: false });
+  assert.equal(rematerializedAfterSymlink.ok, true);
 
   const verifyCli = spawnSync(process.execPath, [
     CLI, "web", "corpus", "verify", CORPUS_FILE, "--checkout-root", CHECKOUTS,
@@ -133,6 +211,74 @@ try {
   assert.equal(verifiedCli.ok, true);
   assert.equal(verifiedCli.runtime, "web-project-corpus-verify");
   assert.equal(verifiedCli.checkouts[0].head, revision);
+  assert.equal(verifiedCli.checkouts[0].nestedSources[0].head, nestedRevision);
+  assert.equal(verifiedCli.checkouts[0].nestedSources[0].ok, true);
+
+  const wrongNestedRevisionCorpus = validateWebProjectCorpus({
+    ...rawCorpus,
+    targets: [{ ...rawCorpus.targets[0], source: {
+      ...rawCorpus.targets[0].source,
+      nestedSources: [{ path: "deps/nested", url: NESTED_UPSTREAM, revision: nestedFirst }],
+    } }],
+  });
+  const wrongNestedRevisionVerify = verifyMaterializedWebProjectCorpus(wrongNestedRevisionCorpus, { checkoutRoot: CHECKOUTS });
+  assert.equal(wrongNestedRevisionVerify.ok, false);
+  assert.ok(wrongNestedRevisionVerify.checkouts[0].errors.includes("nested-gitlink-revision-mismatch"));
+  assert.throws(
+    () => materializeWebProjectCorpus(wrongNestedRevisionCorpus, { checkoutRoot: CHECKOUTS, fetch: false }),
+    /nested source deps\/nested revision mismatch/,
+  );
+
+  const wrongNestedUrlCorpus = validateWebProjectCorpus({
+    ...rawCorpus,
+    targets: [{ ...rawCorpus.targets[0], source: {
+      ...rawCorpus.targets[0].source,
+      nestedSources: [{ path: "deps/nested", url: DEEP_UPSTREAM, revision: nestedRevision }],
+    } }],
+  });
+  const wrongNestedUrlVerify = verifyMaterializedWebProjectCorpus(wrongNestedUrlCorpus, { checkoutRoot: CHECKOUTS });
+  assert.equal(wrongNestedUrlVerify.ok, false);
+  assert.ok(wrongNestedUrlVerify.checkouts[0].errors.includes("nested-gitmodules-url-mismatch"));
+  assert.throws(
+    () => materializeWebProjectCorpus(wrongNestedUrlCorpus, { checkoutRoot: CHECKOUTS, fetch: false }),
+    /nested source deps\/nested URL mismatch/,
+  );
+
+  git(nestedCheckout, "checkout", "--detach", nestedFirst);
+  const nestedHookMarker = path.join(TMP, "nested-post-checkout-ran");
+  const nestedHook = path.join(nestedCheckout, ".git/hooks/post-checkout");
+  fs.writeFileSync(nestedHook, `#!/bin/sh\nprintf ran > '${nestedHookMarker}'\n`);
+  fs.chmodSync(nestedHook, 0o755);
+  const nestedRematerialized = materializeWebProjectCorpus(corpus, { checkoutRoot: CHECKOUTS, fetch: false });
+  assert.equal(nestedRematerialized.ok, true);
+  assert.equal(fs.existsSync(nestedHookMarker), false, "nested materialization must disable checkout hooks");
+  assert.equal(git(nestedCheckout, "rev-parse", "HEAD"), nestedRevision);
+  fs.rmSync(nestedHook, { force: true });
+
+  const nestedInfoAttributes = path.join(nestedCheckout, ".git/info/attributes");
+  fs.mkdirSync(path.dirname(nestedInfoAttributes), { recursive: true });
+  fs.writeFileSync(nestedInfoAttributes, "*.txt filter=evil\n");
+  const nestedFilterVerify = verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot: CHECKOUTS });
+  assert.equal(nestedFilterVerify.ok, false);
+  assert.ok(nestedFilterVerify.checkouts[0].nestedSources[0].errors.includes("nested-checkout-filter-unsupported"));
+  fs.rmSync(nestedInfoAttributes);
+
+  const nestedPreexisting = path.join(nestedCheckout, ".preexisting-nested/keep.txt");
+  fs.mkdirSync(path.dirname(nestedPreexisting), { recursive: true });
+  fs.writeFileSync(nestedPreexisting, "keep\n");
+  const nestedBaselineState = captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot: CHECKOUTS });
+  fs.writeFileSync(path.join(nestedCheckout, "generated-untracked.txt"), "generated\n");
+  fs.mkdirSync(path.join(nestedCheckout, ".generated-nested"), { recursive: true });
+  fs.writeFileSync(path.join(nestedCheckout, ".generated-nested/cache.txt"), "cache\n");
+  const nestedRestored = restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot: CHECKOUTS, baselineState: nestedBaselineState });
+  assert.equal(nestedRestored.ok, true, JSON.stringify(nestedRestored));
+  const nestedRestore = nestedRestored.checkouts[0].nestedSources[0];
+  assert.equal(nestedRestore.ok, true);
+  assert.ok(nestedRestore.removedIgnoredPaths.includes(".generated-nested"));
+  assert.equal(fs.existsSync(path.join(nestedCheckout, ".generated-nested")), false);
+  assert.equal(fs.existsSync(path.join(nestedCheckout, "generated-untracked.txt")), false);
+  assert.equal(fs.readFileSync(nestedPreexisting, "utf8"), "keep\n");
+  assert.equal(git(nestedCheckout, "rev-parse", "HEAD"), nestedRevision);
 
   const infoAttributes = path.join(checkout, ".git", "info", "attributes");
   fs.mkdirSync(path.dirname(infoAttributes), { recursive: true });
@@ -250,6 +396,12 @@ try {
   assert.ok(summary.checkoutCleanup.checkouts[0].removedIgnoredPaths.includes("site/node_modules"), "auto-prepare dependency tree must be restored away when absent before the benchmark");
   assert.equal(fs.existsSync(path.join(checkout, "site/node_modules")), false);
   assert.match(fs.readFileSync(path.join(checkout, "site/index.html"), "utf8"), /button>One<\/button>/, "tracked build output must be restored to the pinned revision");
+
+  const canopyNested = loadWebProjectCorpus(path.join(ROOT, "protocol/fixtures/canopy-nested-source-corpus.json"));
+  assert.equal(canopyNested.targets.length, 1);
+  assert.equal(canopyNested.targets[0].source.nestedSources.length, 7);
+  assert.equal(canopyNested.targets[0].adapterLoc, 0);
+  assert.deepEqual(canopyNested.targets[0].source.nestedSources.map((nested) => nested.path), ["deps/alga", "deps/event-graph-walker", "deps/graphviz", "deps/loom", "deps/order-tree", "deps/rabbita", "deps/svg-dsl"]);
 
   const external = resolveWebProjectCorpus("external");
   assert.equal(external.id, "external-production");

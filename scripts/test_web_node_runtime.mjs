@@ -23,17 +23,20 @@ try {
   const node20 = path.join(root, ".nvm", "versions", "node", "v20.20.0", "bin", "node");
   const node22 = path.join(root, ".nvm", "versions", "node", "v22.22.3", "bin", "node");
   const node25 = path.join(root, ".nvm", "versions", "node", "v25.7.0", "bin", "node");
+  const explicitNode21 = path.join(root, "explicit", "v21.7.3", "bin", "node");
   fakeNode(current, "v25.7.0");
   fakeNode(node20, "v20.20.0");
   fakeNode(node22, "v22.22.3");
   fakeNode(node25, "v25.7.0");
-  const environment = { HOME: root, PATH: "/usr/bin:/bin" };
+  fakeNode(explicitNode21, "v21.7.3");
+  const environment = { HOME: root, PATH: "/usr/bin:/bin", PROPED_NODE_RUNTIME_PATHS: explicitNode21 };
 
   assert.equal(nodeRequirementFromPackageManagerFailure("Expected version: ^22.18.0 || >=24.11.0\nGot: v22.14.0\n"), "^22.18.0 || >=24.11.0");
   assert.equal(nodeRequirementFromPackageManagerFailure("Expected version: >=22\n"), null, "a retry requirement requires both expected and observed versions");
 
   const inventory = inventoryNodeRuntimes("^24.0.0 || ^22.15.0", { environment, currentExecutable: current });
-  assert.equal(inventory.length, 4);
+  assert.equal(inventory.length, 5);
+  assert.equal(inventory.find((item) => item.path === fs.realpathSync(explicitNode21))?.source, "explicit");
   assert.equal(inventory.find((item) => item.path === fs.realpathSync(node22))?.engine.compatible, true);
   assert.equal(inventory.find((item) => item.path === fs.realpathSync(node25))?.engine.compatible, false);
 
@@ -42,6 +45,11 @@ try {
   assert.equal(selected.selected.version, "v22.22.3");
   assert.equal(selected.selected.source, "nvm");
   assert.equal(selected.automaticDownload, false);
+
+  const explicitSelected = resolveNodeRuntime("^21.0.0", { environment, currentExecutable: current });
+  assert.equal(explicitSelected.status, "selected");
+  assert.equal(explicitSelected.selected.version, "v21.7.3");
+  assert.equal(explicitSelected.selected.source, "explicit");
 
   const openEnded = resolveNodeRuntime(">=18.12.0", { environment, currentExecutable: current });
   assert.equal(openEnded.status, "selected");

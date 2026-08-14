@@ -124,6 +124,14 @@ export function inventoryNodeRuntimes(requirement = null, { environment = proces
     "asdf",
     requirement,
   ));
+  const explicitRuntimePaths = String(environment.PROPED_NODE_RUNTIME_PATHS ?? "")
+    .split(path.delimiter)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  for (const executable of explicitRuntimePaths) {
+    const item = candidate(executable, "explicit", requirement);
+    if (item) discovered.push(item);
+  }
 
   const unique = new Map();
   for (const item of discovered) {

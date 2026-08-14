@@ -948,10 +948,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache Node 20 frontier runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.0
+
+      - name: Register Node 20 frontier runtime
+        run: echo "PROPED_NODE_RUNTIME_PATHS=$(command -v node)" >> "$GITHUB_ENV"
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Set up pnpm frontier runtime
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.29.3
+          run_install: false
+
+      - name: Set up Bun frontier runtime
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.6
 
       - name: Set up MoonBit
         uses: hustcer/setup-moonbit@v1
@@ -977,6 +996,7 @@ jobs:
         run: |
           sudo env \
             "PATH=$PATH" \
+            "PROPED_NODE_RUNTIME_PATHS=$PROPED_NODE_RUNTIME_PATHS" \
             "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
             "MOON_HOME=$HOME/.moon" \
             "$(command -v node)" scripts/web_project_benchmark.mjs \
@@ -996,6 +1016,7 @@ jobs:
         run: |
           sudo env \
             "PATH=$PATH" \
+            "PROPED_NODE_RUNTIME_PATHS=$PROPED_NODE_RUNTIME_PATHS" \
             "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
             "MOON_HOME=$HOME/.moon" \
             "$(command -v node)" scripts/web_project_benchmark.mjs \

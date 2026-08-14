@@ -19,6 +19,8 @@ import {
   probePackageManagerRuntime,
 } from "./web-package-manager-runtime.mjs";
 import { runWebProject } from "./web-project-runner.mjs";
+import { safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
+import { spawnSyncIsolated } from "./web-process-tree.mjs";
 import { discoverWebProjectWorkspacePrebuild, prepareWebProjectWorkspace } from "./web-project-workspace-prebuild.mjs";
 
 export const WEB_PROJECT_CAMPAIGN_VERSION = 2;
@@ -28,6 +30,74 @@ const SANDBOX_MODES = new Set(["auto", "manifest", "strict", "constrained", "cal
 
 function unique(values) {
   return [...new Set(values.filter((value) => typeof value === "string" && value.length > 0))].sort();
+}
+
+function pathInside(parent, child) {
+  const relative = path.relative(parent, child);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function moonWorkspaceRoot(projectRoot, repositoryRoot) {
+  let current = projectRoot;
+  while (pathInside(repositoryRoot, current)) {
+    if (fs.existsSync(path.join(current, "moon.work")) || fs.existsSync(path.join(current, "moon.work.json"))) return current;
+    if (current === repositoryRoot) break;
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  if (fs.existsSync(path.join(projectRoot, "moon.mod")) || fs.existsSync(path.join(projectRoot, "moon.mod.json"))) return projectRoot;
+  return null;
+}
+
+export function campaignSandboxExecutionScope(projectRoot, inspection, manifest, compiled) {
+  let repositoryRoot = projectRoot;
+  const inspectedGitRoot = inspection?.target?.gitRoot;
+  if (typeof inspectedGitRoot === "string" && fs.existsSync(inspectedGitRoot)) {
+    const realGitRoot = fs.realpathSync(inspectedGitRoot);
+    if (pathInside(realGitRoot, projectRoot)) repositoryRoot = realGitRoot;
+  }
+  const writablePaths = [...(compiled.execution.writablePaths ?? [])];
+  if (manifest.bootstrap.build) {
+    const workspaceRoot = moonWorkspaceRoot(projectRoot, repositoryRoot);
+    if (workspaceRoot) {
+      for (const directory of ["_build", ".mooncakes"]) {
+        writablePaths.push(path.relative(projectRoot, path.join(workspaceRoot, directory)));
+      }
+    }
+  }
+  return { repositoryRoot, writablePaths: unique(writablePaths), moonWorkspaceRoot: moonWorkspaceRoot(projectRoot, repositoryRoot) };
+}
+
+export function prepareMoonWorkspaceForSandbox(workspaceRoot, { sourceEnvironment = process.env, timeoutMs = 300_000 } = {}) {
+  const environment = safeExecutionEnvironment(sourceEnvironment, { osEnforced: false });
+  environment.PROPED_NETWORK_POLICY = "explicit-bootstrap-network-allowed";
+  const child = spawnSyncIsolated("moon", ["build", "--target", "js"], {
+    cwd: workspaceRoot,
+    encoding: "utf8",
+    shell: false,
+    env: environment,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: timeoutMs,
+    killSignal: "SIGKILL",
+  });
+  const timedOut = child?.error?.code === "ETIMEDOUT";
+  return {
+    ok: child.status === 0 && !timedOut,
+    runtime: "moon-workspace-prepare",
+    status: timedOut ? "timed-out" : child.status === 0 ? "prepared" : "failed",
+    command: ["moon", "build", "--target", "js"],
+    workspaceRoot,
+    exitCode: child.status,
+    signal: child.signal ?? null,
+    timedOut,
+    timeoutMs,
+    networkPolicy: "explicit-network-allowed",
+    credentials: "environment-allowlist-deny",
+    stdoutTail: (child.stdout ?? "").slice(-8192),
+    stderrTail: (child.stderr ?? "").slice(-8192),
+    ...(child.error ? { error: child.error.message } : {}),
+  };
 }
 
 function intervention(code, message, details = {}) {
@@ -534,13 +604,51 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
   }
 
   const requestedSandboxMode = resolveCampaignSandboxMode(sandboxMode, compiled.execution.sandboxMode);
+  const sandboxExecution = campaignSandboxExecutionScope(projectRoot, inspection, manifest, compiled);
+  let sandboxWorkspacePreparation = null;
+  if (requestedSandboxMode !== "caller-enforced" && sandboxExecution.moonWorkspaceRoot) {
+    if (!autoPrepare) {
+      return interventionResult(
+        projectRoot,
+        manifest,
+        inspection,
+        intervention("workspace_prepare_required", "MoonBit workspace dependencies must be prepared before OS-enforced sandbox execution", {
+          workspace: { kind: "moon-workspace", root: sandboxExecution.moonWorkspaceRoot, command: ["moon", "build", "--target", "js"] },
+        }),
+        { writeArtifacts },
+        { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation, workspacePreparation },
+      );
+    }
+    sandboxWorkspacePreparation = prepareMoonWorkspaceForSandbox(sandboxExecution.moonWorkspaceRoot, {
+      sourceEnvironment: runEnvironment,
+      timeoutMs: options.prepareTimeoutMs ?? 300_000,
+    });
+    if (!sandboxWorkspacePreparation.ok) {
+      return interventionResult(
+        projectRoot,
+        manifest,
+        inspection,
+        intervention("workspace_prepare_failed", "MoonBit workspace dependency preparation did not complete", {
+          status: sandboxWorkspacePreparation.status,
+          exitCode: sandboxWorkspacePreparation.exitCode,
+          stderrTail: sandboxWorkspacePreparation.stderrTail,
+        }),
+        { writeArtifacts },
+        { nodeRuntime: nodeRuntimeSummary, packageManagerRuntime, preparation, workspacePreparation: sandboxWorkspacePreparation },
+      );
+    }
+  }
   let report;
   try {
     report = runWebProject(projectRoot, compiled.manifest, {
       writeArtifacts,
       sandbox: requestedSandboxMode === "caller-enforced"
         ? null
-        : { mode: requestedSandboxMode, writablePaths: compiled.execution.writablePaths },
+        : {
+            mode: requestedSandboxMode,
+            repositoryRoot: sandboxExecution.repositoryRoot,
+            writablePaths: sandboxExecution.writablePaths,
+          },
       sourceEnvironment: runEnvironment,
     });
   } catch (error) {
@@ -593,11 +701,11 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
       interventionReasons: executionInterventions,
       stages: stableStages(report),
       inspection,
-      details: { preparation, workspacePreparation },
+      details: { preparation, workspacePreparation: sandboxWorkspacePreparation ?? workspacePreparation },
     }),
     stages: stableStages(report),
     preparation,
-    workspacePreparation,
+    workspacePreparation: sandboxWorkspacePreparation ?? workspacePreparation,
     nodeRuntime: nodeRuntimeSummary,
     packageManagerRuntime,
     runOutput: report.output,

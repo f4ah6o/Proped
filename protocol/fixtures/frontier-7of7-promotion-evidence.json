@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "runtime": "frontier-promotion-evidence",
+  "observedAt": "2026-08-14",
+  "sourceCorpus": {
+    "id": "external-frontier",
+    "schemaVersion": 1,
+    "semanticHash": "328e3e5e1b96590b05ac51728eee29b4e9c378b33864d75a42a7a19404f644c7",
+    "targetCount": 7
+  },
+  "frontierScore": {
+    "autoOnboarded": {
+      "count": 7,
+      "total": 7,
+      "rate": 1
+    },
+    "interventions": {
+      "projectCount": 0,
+      "total": 0,
+      "reasons": {}
+    },
+    "viability": {
+      "qualified": 7,
+      "failed": 0,
+      "unknown": 0,
+      "failures": {}
+    },
+    "genericCapability": {
+      "autoOnboarded": 7,
+      "observed": 7,
+      "rate": 1
+    },
+    "deterministicReplay": {
+      "count": 7,
+      "observed": 7,
+      "rate": 1
+    },
+    "adapterLoc": 0,
+    "delta": {
+      "absorbed": [
+        "agent-friendly-code",
+        "yarn-berry-docusaurus"
+      ],
+      "regressed": [],
+      "added": [],
+      "removed": []
+    },
+    "promotionEligible": true
+  },
+  "metrics": {
+    "states": 117,
+    "transitions": 219,
+    "actions": 238
+  },
+  "projects": [
+    {
+      "id": "shadcn-svelte-docs",
+      "repository": "huntabyte/shadcn-svelte",
+      "revision": "dabbd4c00fbca1feef29a2a155b2eecf6bb4ea7a",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "adapterLoc": 0,
+      "viability": "qualified"
+    },
+    {
+      "id": "astroship",
+      "repository": "surjithctly/astroship",
+      "revision": "1a844c57df3a40d3264b68add519626f1d8f0bff",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "adapterLoc": 0,
+      "viability": "qualified"
+    },
+    {
+      "id": "react-router-node-custom-server",
+      "repository": "remix-run/react-router-templates",
+      "revision": "b68be71489a22315c7a734a86a18347745b393d2",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "adapterLoc": 0,
+      "viability": "qualified"
+    },
+    {
+      "id": "agent-friendly-code",
+      "repository": "hsnice16/agent-friendly-code",
+      "revision": "70ca3d5f379c3ad8f8e9b4cc57f131ef8de3abc6",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "adapterLoc": 0,
+      "viability": "qualified"
+    },
+    {
+      "id": "lit-web-components",
+      "repository": "butopen/web-components-tailwind-starter-kit",
+      "revision": "c1f5d07699934e36bbce9a1f3f121bfe8f7aafdf",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "adapterLoc": 0,
+      "viability": "qualified"
+    },
+    {
+      "id": "yarn-berry-docusaurus",
+      "repository": "yarnpkg/berry",
+      "revision": "57081c05a398f25c92df1dc78752f2053576cec0",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "adapterLoc": 0,
+      "viability": "qualified"
+    },
+    {
+      "id": "todomvc-react-legacy-webpack",
+      "repository": "tastejs/todomvc",
+      "revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "adapterLoc": 0,
+      "viability": "qualified"
+    }
+  ],
+  "checkoutCleanup": {
+    "ok": true,
+    "dirtyCheckouts": []
+  }
+}

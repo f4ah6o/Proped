@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "external-next-frontier",
+  "description": "Machine-readable discovery plan for topology novelty after promotion of the first seven frontier shapes. Candidate qualification may replace concrete projects without changing these topology axes.",
+  "policy": {
+    "projectSpecificAdapterLoc": 0,
+    "promotionOverlapAllowed": false,
+    "qualification": "exact-revision-clean-checkout-before-generic-capability-scoring"
+  },
+  "topologies": [
+    {
+      "id": "multi-runtime-node-non-node-build",
+      "axis": "multi-runtime repository",
+      "requirements": [
+        "node-runtime",
+        "non-node-build-tool"
+      ]
+    },
+    {
+      "id": "credentialless-auth-redirect-callback",
+      "axis": "auth redirect/callback lifecycle",
+      "requirements": [
+        "local-callback",
+        "no-credentials"
+      ]
+    },
+    {
+      "id": "offline-first-service-worker-indexeddb",
+      "axis": "offline-first browser lifecycle",
+      "requirements": [
+        "service-worker",
+        "indexeddb-heavy",
+        "offline-reload"
+      ]
+    },
+    {
+      "id": "long-lived-websocket-sse",
+      "axis": "long-lived server lifecycle",
+      "requirements": [
+        "websocket-or-sse",
+        "bounded-cleanup"
+      ]
+    },
+    {
+      "id": "generated-code-prerequisite-workspace",
+      "axis": "generated-code prerequisite",
+      "requirements": [
+        "workspace",
+        "generated-code-before-build"
+      ]
+    },
+    {
+      "id": "nonstandard-build-output-discovery",
+      "axis": "nonstandard build output",
+      "requirements": [
+        "build-output-discovery",
+        "no-project-adapter"
+      ]
+    },
+    {
+      "id": "multiple-package-manager-boundaries",
+      "axis": "multiple package-manager boundaries",
+      "requirements": [
+        "monorepo",
+        "multiple-package-managers"
+      ]
+    },
+    {
+      "id": "custom-static-preview-wrapper",
+      "axis": "custom preview/server wrapper",
+      "requirements": [
+        "static-generator",
+        "custom-preview-wrapper"
+      ]
+    }
+  ],
+  "promotedTopologyIds": [
+    "astro-static-export",
+    "legacy-webpack",
+    "lit-web-components",
+    "react-router-custom-server",
+    "ssr-sqlite-bun",
+    "sveltekit-monorepo-runtime-renegotiation",
+    "yarn-berry-pnp-workspace-prebuild"
+  ]
+}

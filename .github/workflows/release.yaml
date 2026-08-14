@@ -72,8 +72,14 @@ jobs:
           cargo clippy --workspace --all-targets -- -D warnings
           cargo test --workspace
           cargo build --workspace
+          cargo build --release -p proped-cli
           node scripts/test_native_cli.mjs
           node scripts/test_version_consistency.mjs
+
+      - name: Release acceptance contract
+        run: |
+          node scripts/release_gate.mjs
+          python3 scripts/test_native_package.py
 
       - name: Create immutable release tag
         env:

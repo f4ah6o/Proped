@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "runtime": "web-project-benchmark-baseline",
+  "corpus": {
+    "id": "promoted-production",
+    "semanticHash": "d0ce4d10aa008f018a7d9bc49fed9e801fff0ae7305e2cac24f3891c75037a50"
+  },
+  "projects": [
+    {
+      "corpusEntryId": "shadcn-svelte-docs",
+      "repository": "huntabyte/shadcn-svelte",
+      "revision": "dabbd4c00fbca1feef29a2a155b2eecf6bb4ea7a",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    },
+    {
+      "corpusEntryId": "astroship",
+      "repository": "surjithctly/astroship",
+      "revision": "1a844c57df3a40d3264b68add519626f1d8f0bff",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    },
+    {
+      "corpusEntryId": "react-router-node-custom-server",
+      "repository": "remix-run/react-router-templates",
+      "revision": "b68be71489a22315c7a734a86a18347745b393d2",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    },
+    {
+      "corpusEntryId": "agent-friendly-code",
+      "repository": "hsnice16/agent-friendly-code",
+      "revision": "70ca3d5f379c3ad8f8e9b4cc57f131ef8de3abc6",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    },
+    {
+      "corpusEntryId": "lit-web-components",
+      "repository": "butopen/web-components-tailwind-starter-kit",
+      "revision": "c1f5d07699934e36bbce9a1f3f121bfe8f7aafdf",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    },
+    {
+      "corpusEntryId": "yarn-berry-docusaurus",
+      "repository": "yarnpkg/berry",
+      "revision": "57081c05a398f25c92df1dc78752f2053576cec0",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": [
+        "browser_uncaught_exception@19e3b48d5cdc",
+        "browser_uncaught_exception@26fc19307ac2",
+        "browser_uncaught_exception@2db22ced04c9",
+        "browser_uncaught_exception@349d3331044c",
+        "browser_uncaught_exception@350bfa11179f",
+        "browser_uncaught_exception@4580cbbd4836",
+        "browser_uncaught_exception@6a5740fa218c",
+        "browser_uncaught_exception@7279373c53f7",
+        "browser_uncaught_exception@845d9b2fee09",
+        "browser_uncaught_exception@9c2f7fbcd5da",
+        "browser_uncaught_exception@f97c778eddbf",
+        "unhandled_exception@0534f2bd2433",
+        "unhandled_exception@196772cd13e7",
+        "unhandled_exception@1ff991660b76",
+        "unhandled_exception@434e88d35b8f",
+        "unhandled_exception@56e94300c651",
+        "unhandled_exception@662ef3257eda",
+        "unhandled_exception@709cbad213eb",
+        "unhandled_exception@7302768c3e77",
+        "unhandled_exception@854206553e89",
+        "unhandled_exception@85511b05ad7d",
+        "unhandled_exception@89af382414a2",
+        "unhandled_exception@a99008f34e38",
+        "unhandled_exception@bda32de11070",
+        "unhandled_exception@d007cc3e7daa",
+        "unhandled_exception@da7146267cc3",
+        "unhandled_exception@e00b144df185"
+      ]
+    },
+    {
+      "corpusEntryId": "todomvc-react-legacy-webpack",
+      "repository": "tastejs/todomvc",
+      "revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "autoOnboarded": true,
+      "deterministicReplay": true,
+      "humanInterventions": 0,
+      "failureClasses": []
+    }
+  ],
+  "semanticHash": "6073b9b8d97c93f633a902d670d3ee18fc8fc5becfb6c301d319ba20c5906d5e"
+}

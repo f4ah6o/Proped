@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "id": "promoted-production",
+  "description": "Strict production regression corpus promoted from the 2026-08-14 frontier 7/7 evidence. Every topology is pinned to the exact proven revision and must retain zero project-specific executable adapter LOC.",
+  "gate": {
+    "minAutoOnboardingRate": 1,
+    "maxInterventionProjectRate": 0,
+    "minDeterministicReplayRate": 1,
+    "maxAdapterLoc": 0,
+    "maxRegressions": 0,
+    "minTargetCount": 7,
+    "minRepositoryCount": 7,
+    "requiredTags": [
+      "astro",
+      "custom-server",
+      "legacy-webpack",
+      "monorepo",
+      "pnp",
+      "react-router",
+      "ssr-db",
+      "sveltekit",
+      "web-components"
+    ],
+    "requiredTopologies": [
+      "astro-static-export",
+      "legacy-webpack",
+      "lit-web-components",
+      "react-router-custom-server",
+      "ssr-sqlite-bun",
+      "sveltekit-monorepo-runtime-renegotiation",
+      "yarn-berry-pnp-workspace-prebuild"
+    ]
+  },
+  "targets": [
+    {
+      "id": "shadcn-svelte-docs",
+      "project": "docs",
+      "repository": "huntabyte/shadcn-svelte",
+      "revision": "dabbd4c00fbca1feef29a2a155b2eecf6bb4ea7a",
+      "adapterLoc": 0,
+      "tags": [
+        "docs",
+        "external",
+        "framework-backed",
+        "monorepo",
+        "pnpm",
+        "production-promoted",
+        "server-rendered",
+        "sveltekit"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/huntabyte/shadcn-svelte.git",
+        "checkout": "frontier-shadcn-svelte"
+      },
+      "name": "shadcn-svelte docs",
+      "topology": {
+        "id": "sveltekit-monorepo-runtime-renegotiation",
+        "capabilities": [
+          "monorepo",
+          "runtime-renegotiation",
+          "server-rendered",
+          "sveltekit"
+        ]
+      }
+    },
+    {
+      "id": "astroship",
+      "project": ".",
+      "repository": "surjithctly/astroship",
+      "revision": "1a844c57df3a40d3264b68add519626f1d8f0bff",
+      "adapterLoc": 0,
+      "tags": [
+        "astro",
+        "external",
+        "framework-backed",
+        "production-promoted",
+        "static-export"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/surjithctly/astroship.git",
+        "checkout": "frontier-astroship"
+      },
+      "topology": {
+        "id": "astro-static-export",
+        "capabilities": [
+          "astro",
+          "static-export"
+        ]
+      }
+    },
+    {
+      "id": "react-router-node-custom-server",
+      "project": "node-custom-server",
+      "repository": "remix-run/react-router-templates",
+      "revision": "b68be71489a22315c7a734a86a18347745b393d2",
+      "adapterLoc": 0,
+      "tags": [
+        "custom-server",
+        "express",
+        "external",
+        "framework-backed",
+        "production-promoted",
+        "react-router",
+        "server-rendered"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/remix-run/react-router-templates.git",
+        "checkout": "frontier-react-router-templates"
+      },
+      "name": "React Router Node custom server",
+      "topology": {
+        "id": "react-router-custom-server",
+        "capabilities": [
+          "custom-server",
+          "express",
+          "react-router",
+          "server-rendered"
+        ]
+      }
+    },
+    {
+      "id": "agent-friendly-code",
+      "project": ".",
+      "repository": "hsnice16/agent-friendly-code",
+      "revision": "70ca3d5f379c3ad8f8e9b4cc57f131ef8de3abc6",
+      "adapterLoc": 0,
+      "tags": [
+        "bun",
+        "database",
+        "external",
+        "framework-backed",
+        "next",
+        "production-promoted",
+        "server-rendered",
+        "sqlite",
+        "ssr-db"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/hsnice16/agent-friendly-code.git",
+        "checkout": "frontier-agent-friendly-code"
+      },
+      "name": "Agent Friendly Code Next.js + SQLite",
+      "topology": {
+        "id": "ssr-sqlite-bun",
+        "capabilities": [
+          "bun",
+          "embedded-sqlite",
+          "server-rendered",
+          "ssr"
+        ]
+      }
+    },
+    {
+      "id": "lit-web-components",
+      "project": ".",
+      "repository": "butopen/web-components-tailwind-starter-kit",
+      "revision": "c1f5d07699934e36bbce9a1f3f121bfe8f7aafdf",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "framework-backed",
+        "lit",
+        "production-promoted",
+        "web-components"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/butopen/web-components-tailwind-starter-kit.git",
+        "checkout": "frontier-lit-web-components"
+      },
+      "topology": {
+        "id": "lit-web-components",
+        "capabilities": [
+          "lit",
+          "web-components"
+        ]
+      }
+    },
+    {
+      "id": "yarn-berry-docusaurus",
+      "project": "packages/docusaurus",
+      "repository": "yarnpkg/berry",
+      "revision": "57081c05a398f25c92df1dc78752f2053576cec0",
+      "adapterLoc": 0,
+      "tags": [
+        "docusaurus",
+        "external",
+        "framework-backed",
+        "monorepo",
+        "pnp",
+        "production-promoted",
+        "static-export",
+        "workspace-dependency",
+        "yarn-berry"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/yarnpkg/berry.git",
+        "checkout": "frontier-yarn-berry"
+      },
+      "name": "Yarn Berry Docusaurus PnP workspace",
+      "topology": {
+        "id": "yarn-berry-pnp-workspace-prebuild",
+        "capabilities": [
+          "monorepo",
+          "pnp",
+          "workspace-prebuild",
+          "yarn-berry"
+        ]
+      }
+    },
+    {
+      "id": "todomvc-react-legacy-webpack",
+      "project": "examples/react",
+      "repository": "tastejs/todomvc",
+      "revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "adapterLoc": 0,
+      "tags": [
+        "external",
+        "framework-backed",
+        "legacy-webpack",
+        "production-promoted",
+        "react",
+        "webpack"
+      ],
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/tastejs/todomvc.git",
+        "checkout": "frontier-todomvc"
+      },
+      "topology": {
+        "id": "legacy-webpack",
+        "capabilities": [
+          "legacy-webpack",
+          "webpack"
+        ]
+      }
+    }
+  ]
+}

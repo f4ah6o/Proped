@@ -132,6 +132,7 @@ jobs:
           node scripts/test_web_project_baseline.mjs
           node scripts/test_web_project_corpus.mjs
           node scripts/test_web_project_corpus_materialize.mjs
+          node scripts/test_release_gate.mjs
           node scripts/test_web_project_workspace_prebuild.mjs
           node scripts/test_web_project_prepare.mjs
           node scripts/test_web_node_engine.mjs
@@ -155,6 +156,9 @@ jobs:
               --offline \
               --no-artifacts \
               --sandbox-mode strict
+
+      - name: Release acceptance contract
+        run: node scripts/release_gate.mjs
 
       - name: Web project quality manifest
         env:
@@ -936,6 +940,71 @@ jobs:
               'f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b'
           )
           PY
+  production-external-contracts:
+    name: Production external contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up MoonBit
+        uses: hustcer/setup-moonbit@v1
+
+      - name: Prepare managed browser runtime
+        run: |
+          npm ci --prefix web/playwright-browser --ignore-scripts
+          npx --prefix web/playwright-browser playwright install --with-deps --only-shell chromium
+
+      - name: Install strict sandbox backend
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes bubblewrap
+
+      - name: Materialize external production corpus
+        run: |
+          sudo env \
+            "PATH=$PATH" \
+            "$(command -v node)" scripts/web_project_corpus.mjs materialize external-production \
+              --checkout-root .tmp/ci-external-production
+
+      - name: External production regression gate
+        run: |
+          sudo env \
+            "PATH=$PATH" \
+            "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
+            "MOON_HOME=$HOME/.moon" \
+            "$(command -v node)" scripts/web_project_benchmark.mjs \
+              --corpus external-production \
+              --checkout-root .tmp/ci-external-production \
+              --no-artifacts \
+              --sandbox-mode strict
+
+      - name: Materialize promoted frontier corpus
+        run: |
+          sudo env \
+            "PATH=$PATH" \
+            "$(command -v node)" scripts/web_project_corpus.mjs materialize promoted-production \
+              --checkout-root .tmp/ci-promoted-production
+
+      - name: Promoted frontier production regression gate
+        run: |
+          sudo env \
+            "PATH=$PATH" \
+            "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
+            "MOON_HOME=$HOME/.moon" \
+            "$(command -v node)" scripts/web_project_benchmark.mjs \
+              --corpus promoted-production \
+              --baseline protocol/fixtures/promoted-production-baseline.json \
+              --checkout-root .tmp/ci-promoted-production \
+              --no-artifacts \
+              --sandbox-mode strict
+
   external-matrix:
     runs-on: ubuntu-latest
     strategy:

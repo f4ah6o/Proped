@@ -46,7 +46,9 @@ def sha256(path: Path) -> str:
 
 def runtime_filter(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
     parts = Path(info.name).parts
-    if any(part in {"node_modules", "out", "__pycache__", ".DS_Store"} for part in parts):
+    if any(part in {"node_modules", "out", "__pycache__", ".DS_Store", ".local-browsers", "ms-playwright"} for part in parts):
+        return None
+    if any(part.startswith("chromium-") or part.startswith("chrome-headless-shell-") for part in parts):
         return None
     return info
 

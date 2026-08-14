@@ -7,7 +7,7 @@ import {
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
-  else console.log("Usage:\n  node scripts/web_project_corpus.mjs materialize <external|file> --checkout-root <dir> [--no-fetch]\n  node scripts/web_project_corpus.mjs verify <external|file> --checkout-root <dir>\n\nMaterialization is an explicit Git-only source acquisition phase. It never executes target project code or pushes/writes upstream. Benchmarking remains a separate command.");
+  else console.log("Usage:\n  node scripts/web_project_corpus.mjs materialize <external|frontier|promoted-production|file> --checkout-root <dir> [--no-fetch]\n  node scripts/web_project_corpus.mjs verify <external|frontier|promoted-production|file> --checkout-root <dir>\n\nMaterialization is an explicit Git-only source acquisition phase. It never executes target project code or pushes/writes upstream. Benchmarking remains a separate command.");
   process.exit(message ? 2 : 0);
 }
 

@@ -21,6 +21,7 @@ const ENV_ALLOWLIST = Object.freeze([
   "COREPACK_ENABLE_NETWORK",
   "COREPACK_ENABLE_AUTO_PIN",
   "COREPACK_HOME",
+  "MOON_HOME",
 ]);
 
 const MACOS_CREDENTIAL_RELATIVE_PATHS = Object.freeze([
@@ -31,6 +32,7 @@ const MACOS_CREDENTIAL_RELATIVE_PATHS = Object.freeze([
   ".config/gh",
   ".git-credentials",
   ".netrc",
+  ".moon/credentials.json",
   "Library/Keychains",
 ]);
 
@@ -55,6 +57,13 @@ export function safeExecutionEnvironment(
   const environment = {};
   for (const key of ENV_ALLOWLIST) {
     if (sourceEnvironment[key] !== undefined) environment[key] = sourceEnvironment[key];
+  }
+  if (environment.MOON_HOME === undefined) {
+    const sourceHome = sourceEnvironment.HOME;
+    if (sourceHome && path.isAbsolute(sourceHome)) {
+      const defaultMoonHome = path.join(sourceHome, ".moon");
+      if (fs.existsSync(defaultMoonHome)) environment.MOON_HOME = fs.realpathSync(defaultMoonHome);
+    }
   }
   if (osEnforced) {
     const isolatedTemporaryDirectory = temporaryDirectory ?? "/tmp";
@@ -282,6 +291,7 @@ export function buildStrictSandboxInvocation({
   cwd,
   repositoryRoot,
   writablePaths = [],
+  credentialReadDenyPaths = [],
   platform = process.platform,
   backendPath = null,
 } = {}) {
@@ -291,6 +301,9 @@ export function buildStrictSandboxInvocation({
   }
 
   const capabilities = assertStrictSandboxCapabilities({ platform, backendPath });
+  const deniedCredentialPaths = [...new Set(credentialReadDenyPaths
+    .filter((candidate) => typeof candidate === "string" && path.isAbsolute(candidate) && fs.existsSync(candidate))
+    .map((candidate) => path.resolve(candidate)))].sort();
   const args = [
     "--die-with-parent",
     "--unshare-net",
@@ -303,6 +316,11 @@ export function buildStrictSandboxInvocation({
     "--proc", "/proc",
     "--tmpfs", "/tmp",
   ];
+  for (const denied of deniedCredentialPaths) {
+    const stat = fs.lstatSync(denied);
+    if (stat.isDirectory()) args.push("--tmpfs", denied, "--remount-ro", denied);
+    else args.push("--ro-bind", "/dev/null", denied);
+  }
   for (const directory of writable) args.push("--bind", directory, directory);
   args.push(
     "--setenv", "HOME", "/tmp",
@@ -334,7 +352,8 @@ export function buildStrictSandboxInvocation({
       process: "pid-namespace-new-session",
       sourceTree: "read-only",
       temporaryDirectory: "private-tmpfs",
-      credentials: "environment-allowlist-deny",
+      credentials: "environment-allowlist-and-host-path-mask",
+      deniedCredentialPaths,
       upstreamGitWrites: "os-enforced-deny",
       writablePaths: writable.map((directory) => path.relative(root, directory)),
     },

@@ -10,6 +10,7 @@ import {
   cleanupSandboxInvocation,
   macosConstrainedSandboxCapabilities,
   macosConstrainedSourceEnvironment,
+  macosCredentialReadDenyPaths,
   safeExecutionEnvironment,
   strictSandboxCapabilities,
 } from "../protocol/web-execution-sandbox.mjs";
@@ -21,6 +22,8 @@ const MAC_HOME = path.join(TMP, "mac-home");
 const MAC_CREDENTIAL = path.join(TMP, "credential.txt");
 fs.rmSync(TMP, { recursive: true, force: true });
 fs.mkdirSync(WRITABLE, { recursive: true });
+fs.mkdirSync(MAC_HOME, { recursive: true });
+fs.writeFileSync(MAC_CREDENTIAL, "credential-sentinel\n");
 try {
   const environment = safeExecutionEnvironment({
     ...process.env,
@@ -34,10 +37,17 @@ try {
 
   const fakeMacHome = path.join(TMP, "host-home");
   const fakeBrowserCache = path.join(fakeMacHome, "Library/Caches/ms-playwright");
+  const fakeMoonHome = path.join(fakeMacHome, ".moon");
   fs.mkdirSync(fakeBrowserCache, { recursive: true });
+  fs.mkdirSync(fakeMoonHome, { recursive: true });
+  fs.writeFileSync(path.join(fakeMoonHome, "credentials.json"), "token-sentinel\n");
   const constrainedSourceEnvironment = macosConstrainedSourceEnvironment({ HOME: fakeMacHome, PATH: process.env.PATH });
   assert.equal(constrainedSourceEnvironment.PLAYWRIGHT_BROWSERS_PATH, fs.realpathSync(fakeBrowserCache));
   assert.equal(constrainedSourceEnvironment.HOME, fakeMacHome);
+  const constrainedEnvironment = safeExecutionEnvironment(constrainedSourceEnvironment, { osEnforced: true });
+  assert.equal(constrainedEnvironment.MOON_HOME, fs.realpathSync(fakeMoonHome));
+  assert.equal(constrainedEnvironment.HOME, "/tmp");
+  assert.ok(macosCredentialReadDenyPaths({ HOME: fakeMacHome }).includes(path.join(fakeMoonHome, "credentials.json")));
 
   const planned = buildStrictSandboxInvocation({
     command: [process.execPath, "-e", "process.exit(0)"],
@@ -63,6 +73,19 @@ try {
   assert.throws(() => buildStrictSandboxInvocation({
     command: ["true"], cwd: ROOT, repositoryRoot: ROOT, writablePaths: [".git/proped"], platform: "linux", backendPath: "/usr/bin/bwrap",
   }), /never permits writes inside \.git/);
+
+  const plannedCredentialMask = buildStrictSandboxInvocation({
+    command: ["true"],
+    cwd: ROOT,
+    repositoryRoot: ROOT,
+    credentialReadDenyPaths: [MAC_CREDENTIAL, MAC_HOME],
+    platform: "linux",
+    backendPath: "/usr/bin/bwrap",
+  });
+  assert.ok(plannedCredentialMask.args.some((value, index, values) => value === "--ro-bind" && values[index + 1] === "/dev/null" && values[index + 2] === MAC_CREDENTIAL));
+  assert.ok(plannedCredentialMask.args.some((value, index, values) => value === "--tmpfs" && values[index + 1] === MAC_HOME));
+  assert.ok(plannedCredentialMask.args.some((value, index, values) => value === "--remount-ro" && values[index + 1] === MAC_HOME));
+  assert.deepEqual(plannedCredentialMask.metadata.deniedCredentialPaths, [MAC_HOME, MAC_CREDENTIAL].sort());
 
   const plannedMac = buildMacosConstrainedSandboxInvocation({
     command: [process.execPath, "-e", "process.exit(0)"],

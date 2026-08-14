@@ -58,6 +58,7 @@ const optional = [
   [".tmp/todomvc/examples/react", "static-output", "react-webpack"],
   [".tmp/todomvc/examples/vue", "static-output", "vue-vite"],
   [".tmp/drawdb", "static-output", "react-vite"],
+  [".tmp/external-ensenzu/app", "static-output", "vite"],
 ];
 const dogfood = [];
 for (const [relative, expectedServer, expectedFramework] of optional) {
@@ -69,6 +70,12 @@ for (const [relative, expectedServer, expectedFramework] of optional) {
     assert.equal(manifest.server.mode, expectedServer);
     assert.equal(manifest.project.framework, expectedFramework);
     assert.equal(result.manifest.stages.at(-1).id, "generic-browser");
+    if (["vue-vite", "react-vite", "vite"].includes(expectedFramework)) {
+      assert.ok(result.execution.writablePaths.includes(path.join(relative, "node_modules", ".vite-temp")));
+    }
+    if (relative === ".tmp/external-ensenzu/app") {
+      assert.ok(result.execution.writablePaths.includes(path.join(relative, ".wrangler")));
+    }
     if (relative === ".tmp/drawdb") {
       assert.equal(manifest.state.indexedDB.adapter.kind, "dexie");
       assert.equal(manifest.state.indexedDB.adapter.declaredVersion, "^3.2.4");

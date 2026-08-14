@@ -36,6 +36,33 @@ try {
   assert.equal(corpus.gate.minAutoOnboardingRate, 0.8);
   assert.equal(corpus.gate.minDeterministicReplayRate, 1);
 
+  const promoted = resolveWebProjectCorpus("promoted-production");
+  assert.equal(promoted.id, "promoted-production");
+  assert.equal(promoted.targets.length, 7);
+  assert.equal(promoted.gate.minAutoOnboardingRate, 1);
+  assert.equal(promoted.gate.maxInterventionProjectRate, 0);
+  assert.equal(promoted.gate.minDeterministicReplayRate, 1);
+  assert.equal(promoted.gate.maxRegressions, 0);
+  assert.equal(promoted.gate.requiredTopologies.length, 7);
+  assert.equal(new Set(promoted.targets.map((target) => target.topology.id)).size, 7);
+  assert.throws(() => validateWebProjectCorpus({ ...promoted, targets: [{ ...promoted.targets[0], topology: { id: "UPPER", capabilities: [] } }] }), /topology.id is invalid/);
+
+  const promotedSummary = {
+    projectCount: 7,
+    autoOnboardingRate: 1,
+    interventionProjectCount: 0,
+    replayObservedProjectCount: 7,
+    deterministicReplayProjectCount: 7,
+  };
+  const promotedGate = evaluateWebProjectBenchmarkGate(promotedSummary, promoted);
+  assert.equal(promotedGate.ok, true);
+  assert.equal(promotedGate.checks.find((entry) => entry.id === "required-topology-coverage").pass, true);
+  const missingTopology = structuredClone(promoted);
+  missingTopology.targets[0].topology.id = "different-topology";
+  const missingTopologyGate = evaluateWebProjectBenchmarkGate(promotedSummary, missingTopology);
+  assert.equal(missingTopologyGate.ok, false);
+  assert.equal(missingTopologyGate.checks.find((entry) => entry.id === "required-topology-coverage").pass, false);
+
   const staticInspection = inspectWebProject(path.join(CORPUS_ROOT, "static-basic"));
   const staticManifest = createWebProjectManifestV2FromInspection(staticInspection, { projectRoot: ".", id: "static-basic" });
   const staticCompiled = compileWebProjectManifestV2(staticManifest, path.join(CORPUS_ROOT, "static-basic"));

@@ -4,7 +4,7 @@ import { resolveWebProjectCorpus } from "../protocol/web-project-corpus.mjs";
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
-  else console.log("Usage: node scripts/web_project_benchmark.mjs <project> [project ...] [--corpus <production|external|file>] [--previous <summary.json>] [--baseline <baseline.json>] [--checkout-root <dir>] [--prepare-timeout-ms <ms>] [--no-prepare] [--offline] [--no-artifacts] [--project-artifacts] [--output <dir>] [--sandbox-mode <auto|manifest|strict|constrained|caller-enforced>]\n\nDirect paths require all targets to auto-onboard. Corpus mode evaluates its versioned production quality gate, keeps findings separate, and can compare either a prior full summary (--previous) or a committed stable baseline (--baseline).");
+  else console.log("Usage: node scripts/web_project_benchmark.mjs <project> [project ...] [--corpus <production|external|frontier|promoted-production|file>] [--previous <summary.json>] [--baseline <baseline.json>] [--checkout-root <dir>] [--prepare-timeout-ms <ms>] [--no-prepare] [--offline] [--no-artifacts] [--project-artifacts] [--output <dir>] [--sandbox-mode <auto|manifest|strict|constrained|caller-enforced>]\n\nDirect paths require all targets to auto-onboard. Corpus mode evaluates its versioned production quality gate, keeps findings separate, and can compare either a prior full summary (--previous) or a committed stable baseline (--baseline).");
   process.exit(message ? 2 : 0);
 }
 

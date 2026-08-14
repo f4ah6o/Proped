@@ -109,8 +109,23 @@ def main() -> None:
         if inspection_report["framework"]["name"] != "vite":
             raise SystemExit(f"unexpected packaged inspection: {inspection_report['framework']}")
 
-        if any("node_modules" in Path(member.name).parts for member in members):
+        nodeModulesEmbedded = any("node_modules" in Path(member.name).parts for member in members)
+        nodeBinaryEmbedded = any(Path(member.name).name.lower() in {"node", "node.exe"} for member in members)
+        chromiumEmbedded = any(
+            any(
+                part in {".local-browsers", "ms-playwright"}
+                or part.startswith("chromium-")
+                or part.startswith("chrome-headless-shell-")
+                for part in Path(member.name).parts
+            )
+            for member in members
+        )
+        if nodeModulesEmbedded:
             raise SystemExit("release archive unexpectedly embeds node_modules")
+        if nodeBinaryEmbedded:
+            raise SystemExit("release archive unexpectedly embeds a Node runtime binary")
+        if chromiumEmbedded:
+            raise SystemExit("release archive unexpectedly embeds Chromium runtime payloads")
 
         doctor = run([str(packaged_binary), "doctor", "--json"], cwd=tmp)
         if doctor.returncode not in {0, 2}:
@@ -134,7 +149,9 @@ def main() -> None:
                     "installedLayoutDiscovery": True,
                     "webInspect": "vite",
                     "doctorControlled": True,
-                    "nodeModulesEmbedded": False,
+                    "nodeModulesEmbedded": nodeModulesEmbedded,
+                    "nodeBinaryEmbedded": nodeBinaryEmbedded,
+                    "chromiumEmbedded": chromiumEmbedded,
                 },
                 separators=(",", ":"),
             )

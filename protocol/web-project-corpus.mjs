@@ -7,6 +7,7 @@ export const WEB_PROJECT_CORPUS_VERSION = 1;
 export const DEFAULT_PRODUCTION_CORPUS = new URL("./fixtures/production-campaign-corpus.json", import.meta.url);
 export const DEFAULT_EXTERNAL_PRODUCTION_CORPUS = new URL("./fixtures/external-production-corpus.json", import.meta.url);
 export const DEFAULT_EXTERNAL_FRONTIER_CORPUS = new URL("./fixtures/external-frontier-corpus.json", import.meta.url);
+export const DEFAULT_PROMOTED_PRODUCTION_CORPUS = new URL("./fixtures/promoted-production-corpus.json", import.meta.url);
 
 function fail(message) {
   const error = new Error(`Web project corpus: ${message}`);
@@ -33,6 +34,14 @@ function validateGitSourceUrl(value, label) {
   if (url.username || url.password) fail(`${label} must not embed credentials`);
   if (url.protocol === "https:" && !url.hostname) fail(`${label} must include a host`);
   return value;
+}
+
+function validateTopology(value, label) {
+  if (value == null) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail(`${label} must be an object`);
+  if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9._-]*$/.test(value.id)) fail(`${label}.id is invalid`);
+  if (!Array.isArray(value.capabilities) || value.capabilities.some((item) => typeof item !== "string" || !/^[a-z0-9][a-z0-9._-]*$/.test(item))) fail(`${label}.capabilities must contain stable lowercase identifiers`);
+  return { id: value.id, capabilities: [...new Set(value.capabilities)].sort() };
 }
 
 function validateNestedGitSources(value, label) {
@@ -70,6 +79,7 @@ export function validateWebProjectCorpus(value, { file = null } = {}) {
     if (typeof target.revision !== "string" || !(/^[0-9a-f]{40}$/.test(target.revision) || /^workspace:[a-z0-9][a-z0-9._-]*$/.test(target.revision))) fail(`${target.id}.revision must be a full commit SHA or workspace:<version>`);
     const adapterLoc = nonNegativeInteger(target.adapterLoc ?? 0, `${target.id}.adapterLoc`);
     const tags = Array.isArray(target.tags) ? [...new Set(target.tags.map(String))].sort() : [];
+    const topology = validateTopology(target.topology, `${target.id}.topology`);
     let source = null;
     if (target.source != null) {
       if (!target.source || typeof target.source !== "object" || Array.isArray(target.source)) fail(`${target.id}.source must be an object`);
@@ -86,7 +96,7 @@ export function validateWebProjectCorpus(value, { file = null } = {}) {
         ...(nestedSources.length > 0 ? { nestedSources } : {}),
       };
     }
-    return { ...target, adapterLoc, tags, ...(source ? { source } : {}) };
+    return { ...target, adapterLoc, tags, ...(topology ? { topology } : {}), ...(source ? { source } : {}) };
   });
   const gate = value.gate ?? {};
   const optionalGate = {};
@@ -95,6 +105,10 @@ export function validateWebProjectCorpus(value, { file = null } = {}) {
   if (gate.requiredTags != null) {
     if (!Array.isArray(gate.requiredTags) || gate.requiredTags.some((tag) => typeof tag !== "string" || tag.length === 0)) fail("gate.requiredTags must be a string array");
     optionalGate.requiredTags = [...new Set(gate.requiredTags)].sort();
+  }
+  if (gate.requiredTopologies != null) {
+    if (!Array.isArray(gate.requiredTopologies) || gate.requiredTopologies.some((id) => typeof id !== "string" || !/^[a-z0-9][a-z0-9._-]*$/.test(id))) fail("gate.requiredTopologies must contain stable lowercase identifiers");
+    optionalGate.requiredTopologies = [...new Set(gate.requiredTopologies)].sort();
   }
   const normalized = {
     schemaVersion: WEB_PROJECT_CORPUS_VERSION,
@@ -132,6 +146,7 @@ export function resolveWebProjectCorpus(value) {
   if (value === "production") return loadWebProjectCorpus(fileURLToPath(DEFAULT_PRODUCTION_CORPUS));
   if (value === "external" || value === "external-production") return loadWebProjectCorpus(fileURLToPath(DEFAULT_EXTERNAL_PRODUCTION_CORPUS));
   if (value === "frontier" || value === "external-frontier" || value === "novelty") return loadWebProjectCorpus(fileURLToPath(DEFAULT_EXTERNAL_FRONTIER_CORPUS));
+  if (value === "promoted" || value === "promoted-production") return loadWebProjectCorpus(fileURLToPath(DEFAULT_PROMOTED_PRODUCTION_CORPUS));
   return loadWebProjectCorpus(value);
 }
 
@@ -187,6 +202,9 @@ export function evaluateWebProjectBenchmarkGate(summary, corpus, previous = null
   const observedTags = new Set(corpus.targets.flatMap((target) => target.tags ?? []));
   const requiredTags = corpus.gate.requiredTags ?? [];
   const missingRequiredTags = requiredTags.filter((tag) => !observedTags.has(tag));
+  const observedTopologies = new Set(corpus.targets.map((target) => target.topology?.id).filter(Boolean));
+  const requiredTopologies = corpus.gate.requiredTopologies ?? [];
+  const missingRequiredTopologies = requiredTopologies.filter((id) => !observedTopologies.has(id));
   const diff = previous ? diffWebProjectBenchmark(previous, summary) : null;
   const checks = [
     { id: "auto-onboarding-rate", pass: summary.autoOnboardingRate >= corpus.gate.minAutoOnboardingRate, observed: summary.autoOnboardingRate, required: corpus.gate.minAutoOnboardingRate, comparator: ">=" },
@@ -197,6 +215,7 @@ export function evaluateWebProjectBenchmarkGate(summary, corpus, previous = null
   if (corpus.gate.minTargetCount != null) checks.push({ id: "target-count", pass: projectCount >= corpus.gate.minTargetCount, observed: projectCount, required: corpus.gate.minTargetCount, comparator: ">=" });
   if (corpus.gate.minRepositoryCount != null) checks.push({ id: "repository-count", pass: repositoryCount >= corpus.gate.minRepositoryCount, observed: repositoryCount, required: corpus.gate.minRepositoryCount, comparator: ">=" });
   if (requiredTags.length > 0) checks.push({ id: "required-tag-coverage", pass: missingRequiredTags.length === 0, observed: [...observedTags].sort(), required: requiredTags, comparator: "contains-all" });
+  if (requiredTopologies.length > 0) checks.push({ id: "required-topology-coverage", pass: missingRequiredTopologies.length === 0, observed: [...observedTopologies].sort(), required: requiredTopologies, comparator: "contains-all" });
   if (diff) checks.push({ id: "onboarding-regressions", pass: diff.regressionCount <= corpus.gate.maxRegressions, observed: diff.regressionCount, required: corpus.gate.maxRegressions, comparator: "<=" });
   return {
     ok: checks.every((check) => check.pass),
@@ -207,6 +226,8 @@ export function evaluateWebProjectBenchmarkGate(summary, corpus, previous = null
     repositoryCount,
     requiredTags,
     missingRequiredTags,
+    requiredTopologies,
+    missingRequiredTopologies,
     checks,
     diff,
   };

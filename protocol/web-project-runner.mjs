@@ -269,11 +269,18 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
   const projectRoot = resolveExistingInside(repositoryRoot, manifest.projectRoot, "projectRoot");
   const sandboxMode = options.sandbox?.mode ?? "caller-enforced";
   const osSandbox = sandboxMode !== "caller-enforced";
+  const realRepositoryRoot = fs.realpathSync(repositoryRoot);
+  const sandboxRoot = options.sandbox?.repositoryRoot
+    ? fs.realpathSync(options.sandbox.repositoryRoot)
+    : realRepositoryRoot;
+  if (!isInside(sandboxRoot, realRepositoryRoot)) {
+    throw new Error("sandbox repository root must contain the project repository root");
+  }
   const sandboxWritablePaths = osSandbox
     ? [
         ...(options.writeArtifacts === false ? [] : [options.output ?? manifest.artifacts.output]),
         ...(options.sandbox?.writablePaths ?? []),
-      ]
+      ].map((candidate) => path.isAbsolute(candidate) ? candidate : path.resolve(realRepositoryRoot, candidate))
     : [];
   const sandboxPlatform = options.sandbox?.platform ?? process.platform;
   const sandboxBackendPath = options.sandbox?.backendPath ?? null;
@@ -327,8 +334,9 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
       invocation = buildStrictSandboxInvocation({
         command: stage.command,
         cwd,
-        repositoryRoot,
+        repositoryRoot: sandboxRoot,
         writablePaths: sandboxWritablePaths,
+        credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
         platform: sandboxPlatform,
         backendPath: sandboxBackendPath,
       });
@@ -336,7 +344,7 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
       invocation = buildMacosConstrainedSandboxInvocation({
         command: stage.command,
         cwd,
-        repositoryRoot,
+        repositoryRoot: sandboxRoot,
         writablePaths: sandboxWritablePaths,
         backendPath: sandboxBackendPath,
         credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),

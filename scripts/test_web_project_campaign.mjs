@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { classifyCampaignStageIntervention, classifyCampaignTargetViability, resolveCampaignSandboxMode, runUnknownWebProjectCampaign } from "../protocol/web-project-campaign.mjs";
+import { campaignSandboxExecutionScope, classifyCampaignStageIntervention, classifyCampaignTargetViability, resolveCampaignSandboxMode, runUnknownWebProjectCampaign } from "../protocol/web-project-campaign.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, ".tmp/web-project-campaign-test");
@@ -57,6 +57,21 @@ assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code:
 assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "browser_stage_failed" }], stages: [{ id: "generic-browser", status: "blocked", exitCode: null }] }), { status: "unknown", stage: "browser", reason: "browser_lifecycle_not_reached" });
 assert.deepEqual(classifyCampaignTargetViability({ interventionReasons: [{ code: "campaign_stage_timeout" }], stages: [{ id: "generic-browser", status: "timeout", exitCode: 2 }] }), { status: "qualified", stage: "browser", reason: "lifecycle_reached_browser" });
 try {
+  const moonWorkspace = path.join(TMP, "moon-workspace");
+  const moonApp = path.join(moonWorkspace, "app");
+  fs.mkdirSync(path.join(moonWorkspace, ".git"), { recursive: true });
+  fs.mkdirSync(moonApp, { recursive: true });
+  fs.writeFileSync(path.join(moonWorkspace, "moon.work"), "members = [\"app\"]\n");
+  fs.writeFileSync(path.join(moonApp, "moon.mod"), "name = \"example/app\"\n");
+  const moonScope = campaignSandboxExecutionScope(
+    fs.realpathSync(moonApp),
+    { target: { gitRoot: fs.realpathSync(moonWorkspace) } },
+    { bootstrap: { build: ["moon", "build"] } },
+    { execution: { writablePaths: ["dist"] } },
+  );
+  assert.equal(moonScope.repositoryRoot, fs.realpathSync(moonWorkspace));
+  assert.deepEqual(moonScope.writablePaths, ["../.mooncakes", "../_build", "dist"]);
+
   writeProject();
 
   const blocked = runUnknownWebProjectCampaign(PROJECT, {

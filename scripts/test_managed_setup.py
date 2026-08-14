@@ -174,6 +174,27 @@ def main() -> None:
         if not paths.get("runtimeRoot") or not paths.get("browserRoot"):
             raise SystemExit(f"doctor did not expose managed paths: {doctor_report}")
 
+        campaign_fixture = tmp / "clean-environment-campaign"
+        campaign_fixture.mkdir()
+        (campaign_fixture / "index.html").write_text(
+            "<!doctype html><html><body><main><h1>Ready</h1><button id='toggle'>Toggle</button></main>"
+            "<script>document.querySelector('#toggle').addEventListener('click',()=>document.body.dataset.ready='yes')</script>"
+            "</body></html>\n"
+        )
+        campaign = run(
+            [
+                str(proped),
+                "web", "campaign", str(campaign_fixture),
+                "--no-artifacts",
+                "--sandbox-mode", "caller-enforced",
+            ],
+            cwd=tmp,
+            env=env,
+        )
+        campaign_report = json.loads(campaign.stdout)
+        if not campaign_report.get("autoOnboarded") or campaign_report.get("humanInterventions") != 0:
+            raise SystemExit(f"clean-environment campaign did not auto-onboard: {campaign_report}")
+
         fixture = tmp / "unknown-web"
         (fixture / "src").mkdir(parents=True)
         (fixture / "package.json").write_text(
@@ -240,6 +261,10 @@ def main() -> None:
                     "secondSetup": "reused",
                     "readOnlyPrefix": os.name != "nt",
                     "doctorReadOnly": True,
+                    "cleanEnvironmentCampaign": {
+                        "autoOnboarded": campaign_report["autoOnboarded"],
+                        "humanInterventions": campaign_report["humanInterventions"],
+                    },
                     "inspectReadOnly": True,
                     "runRuntimeDownloadFree": True,
                 },

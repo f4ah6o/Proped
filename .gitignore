@@ -30,3 +30,5 @@ web/next-ssr-hydration/out/
 web/nuxt-ssr-hydration/.nuxt/
 web/nuxt-ssr-hydration/.output/
 web/nuxt-ssr-hydration/out/
+
+protocol/fixtures/production-campaign-targets/local-build/dist/

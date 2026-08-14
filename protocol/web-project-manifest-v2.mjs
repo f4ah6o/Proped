@@ -295,6 +295,18 @@ function genericBrowserStageTimeoutMs(manifest) {
   return Math.min(900_000, Math.max(60_000, readinessBudget + 30_000 + explorationOperationBudget + replayBudget + volatilityBudget));
 }
 
+function projectDeclaresDependency(repositoryRoot, projectRoot, dependencyName) {
+  const packageFile = path.join(repositoryRoot, projectRoot, "package.json");
+  if (!fs.existsSync(packageFile)) return false;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(packageFile, "utf8"));
+    return ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]
+      .some((field) => Object.prototype.hasOwnProperty.call(pkg?.[field] ?? {}, dependencyName));
+  } catch {
+    return false;
+  }
+}
+
 export function compileWebProjectManifestV2(manifest, repositoryRoot) {
   validateWebProjectManifestV2(manifest);
   const criticalAmbiguities = criticalWebProjectInferenceAmbiguities(manifest);
@@ -373,7 +385,24 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
   if (manifest.bootstrap.build && manifest.server.outputDir) {
     writablePaths.push(path.join(manifest.project.root, manifest.server.outputDir));
   }
-  if (manifest.bootstrap.build && manifest.project.framework === "waku") {
+  const viteBuildFrameworks = new Set([
+    "astro",
+    "nuxt",
+    "react-router-framework",
+    "react-vite",
+    "remix",
+    "sveltekit",
+    "vite",
+    "vue-vite",
+    "web-components-vite",
+  ]);
+  if (manifest.bootstrap.build && viteBuildFrameworks.has(manifest.project.framework)) {
+    writablePaths.push(path.join(manifest.project.root, "node_modules", ".vite-temp"));
+  }
+  if (manifest.bootstrap.build && (
+    manifest.project.framework === "waku"
+    || projectDeclaresDependency(repositoryRoot, manifest.project.root, "@cloudflare/vite-plugin")
+  )) {
     writablePaths.push(path.join(manifest.project.root, ".wrangler"));
   }
   return {

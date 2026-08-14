@@ -6,6 +6,8 @@ import {
   buildMacosConstrainedSandboxInvocation,
   buildStrictSandboxInvocation,
   cleanupSandboxInvocation,
+  cleanupStrictSandboxWorkspaceOverlay,
+  createStrictSandboxWorkspaceOverlay,
   macosConstrainedSourceEnvironment,
   macosCredentialReadDenyPaths,
   safeExecutionEnvironment,
@@ -188,6 +190,11 @@ function childEnvironment({ osEnforced = false, sourceEnvironment = process.env 
   return safeExecutionEnvironment(sourceEnvironment, { osEnforced });
 }
 
+function buildNetworkBootstrapRequired(stdout, stderr) {
+  const text = `${stdout ?? ""}\n${stderr ?? ""}`;
+  return /(?:fetch failed|getaddrinfo|EAI_AGAIN|ENETUNREACH|network is unreachable|network access disabled)/i.test(text);
+}
+
 function stageStatus(child) {
   if (child.error?.code === "ETIMEDOUT" || (child.status === null && child.signal === "SIGTERM")) return "timeout";
   if (child.status === 0) return "pass";
@@ -261,6 +268,13 @@ function stableStage(stageResult) {
       const failures = qualityFailures(stageResult.payload);
       return failures.length ? clusterWebFailures(failures).clusters.map((cluster) => cluster.id) : [];
     })(),
+    ...(stageResult.bootstrapNetworkRetry ? {
+      bootstrapNetworkRetry: {
+        attempted: stageResult.bootstrapNetworkRetry.attempted === true,
+        succeeded: stageResult.bootstrapNetworkRetry.succeeded === true,
+        reason: stageResult.bootstrapNetworkRetry.reason,
+      },
+    } : {}),
   };
 }
 
@@ -302,7 +316,16 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
   };
   const results = [];
   const byId = new Map();
+  const workspaceOverlay = sandboxMode === "strict"
+    ? createStrictSandboxWorkspaceOverlay({
+        repositoryRoot: sandboxRoot,
+        platform: sandboxPlatform,
+        backendPath: sandboxBackendPath,
+        sourceEnvironment,
+      })
+    : null;
 
+  try {
   for (const stage of manifest.stages) {
     const blockedBy = stage.dependsOn.filter((dependency) => byId.get(dependency)?.status !== "pass");
     if (blockedBy.length > 0) {
@@ -339,6 +362,7 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
         credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
         platform: sandboxPlatform,
         backendPath: sandboxBackendPath,
+        workspaceOverlay,
       });
     } else if (sandboxMode === "constrained") {
       invocation = buildMacosConstrainedSandboxInvocation({
@@ -371,6 +395,51 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
     } finally {
       cleanupSandboxInvocation(invocation);
     }
+    let bootstrapNetworkRetry = null;
+    const initialExitCode = child.status;
+    const initialStdout = child.stdout ?? "";
+    const initialStderr = child.stderr ?? "";
+    if (
+      sandboxMode === "strict"
+      && stage.id === "project-build"
+      && options.sandbox?.allowBuildNetworkBootstrap === true
+      && child.status !== 0
+      && buildNetworkBootstrapRequired(initialStdout, initialStderr)
+    ) {
+      const retryInvocation = buildStrictSandboxInvocation({
+        command: stage.command,
+        cwd,
+        repositoryRoot: sandboxRoot,
+        writablePaths: sandboxWritablePaths,
+        credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
+        platform: sandboxPlatform,
+        backendPath: sandboxBackendPath,
+        workspaceOverlay,
+        networkAccess: "bootstrap-allow",
+      });
+      sandboxMetadata = retryInvocation.metadata;
+      try {
+        child = spawnSyncIsolated(retryInvocation.executable, retryInvocation.args, {
+          cwd,
+          encoding: "utf8",
+          timeout: stage.timeoutMs,
+          maxBuffer: 8 * 1024 * 1024,
+          shell: false,
+          env: {
+            ...childEnvironment({ osEnforced: osSandbox, sourceEnvironment }),
+            ...retryInvocation.environment,
+          },
+        });
+      } finally {
+        cleanupSandboxInvocation(retryInvocation);
+      }
+      bootstrapNetworkRetry = {
+        attempted: true,
+        succeeded: child.status === 0,
+        initialExitCode,
+        reason: "build-network-prerequisite",
+      };
+    }
     const durationMs = Math.round((performance.now() - started) * 1000) / 1000;
     const status = stageStatus(child);
     const stdout = child.stdout ?? "";
@@ -389,9 +458,13 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
       payload: payloadSummary(payload),
       stdoutTail: trimTail(stdout),
       stderrTail: trimTail(stderr),
+      ...(bootstrapNetworkRetry ? { bootstrapNetworkRetry } : {}),
     };
     results.push(result);
     byId.set(stage.id, result);
+  }
+  } finally {
+    cleanupStrictSandboxWorkspaceOverlay(workspaceOverlay);
   }
 
   const requiredFailures = results.filter((stage) => stage.required && stage.status !== "pass");

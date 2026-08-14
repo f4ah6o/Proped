@@ -67,6 +67,37 @@ try {
   assert.deepEqual(planned.metadata.writablePaths, [path.relative(ROOT, WRITABLE)]);
   assert.equal(planned.metadata.sourceTree, "read-only");
   assert.equal(planned.metadata.upstreamGitWrites, "os-enforced-deny");
+  const overlayRoot = path.join(TMP, "overlay-state");
+  const overlayUpper = path.join(overlayRoot, "upper");
+  const overlayWork = path.join(overlayRoot, "work");
+  fs.mkdirSync(overlayUpper, { recursive: true });
+  fs.mkdirSync(overlayWork, { recursive: true });
+  const plannedOverlay = buildStrictSandboxInvocation({
+    command: [process.execPath, "-e", "process.exit(0)"],
+    cwd: ROOT,
+    repositoryRoot: ROOT,
+    writablePaths: [path.relative(ROOT, WRITABLE)],
+    platform: "linux",
+    backendPath: "/usr/bin/bwrap",
+    workspaceOverlay: { root: ROOT, upperDir: overlayUpper, workDir: overlayWork },
+  });
+  assert.ok(plannedOverlay.args.some((value, index, values) => value === "--overlay-src" && values[index + 1] === ROOT));
+  assert.ok(plannedOverlay.args.some((value, index, values) => value === "--overlay" && values[index + 1] === overlayUpper && values[index + 2] === overlayWork && values[index + 3] === ROOT));
+  assert.equal(plannedOverlay.metadata.sourceTree, "copy-on-write-overlay-host-read-only");
+  assert.equal(plannedOverlay.metadata.workspaceOverlay, "persistent-private-upper");
+  assert.equal(plannedOverlay.args.includes("--bind"), false, "workspace overlay must not bind generated paths back to the host checkout");
+  const plannedBootstrapNetwork = buildStrictSandboxInvocation({
+    command: ["true"],
+    cwd: ROOT,
+    repositoryRoot: ROOT,
+    platform: "linux",
+    backendPath: "/usr/bin/bwrap",
+    workspaceOverlay: { root: ROOT, upperDir: overlayUpper, workDir: overlayWork },
+    networkAccess: "bootstrap-allow",
+  });
+  assert.equal(plannedBootstrapNetwork.args.includes("--unshare-net"), false);
+  assert.equal(plannedBootstrapNetwork.metadata.network, "bootstrap-explicit-allow");
+  assert.equal(plannedBootstrapNetwork.environment.PROPED_NETWORK_POLICY, "bootstrap-network-explicit-allowed");
   assert.throws(() => buildStrictSandboxInvocation({
     command: ["true"], cwd: ROOT, repositoryRoot: ROOT, writablePaths: ["."], platform: "linux", backendPath: "/usr/bin/bwrap",
   }), /repository subpath/);

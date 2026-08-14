@@ -179,6 +179,7 @@ function stableStages(report) {
       exitCode: stage.exitCode,
       diagnostic: payloadDiagnostic ?? stderrDiagnostic,
       failureClasses: stageFailureClasses(stage),
+      ...(stage.bootstrapNetworkRetry ? { bootstrapNetworkRetry: stage.bootstrapNetworkRetry } : {}),
     };
   });
 }
@@ -686,6 +687,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
             mode: requestedSandboxMode,
             repositoryRoot: sandboxExecution.repositoryRoot,
             writablePaths: sandboxExecution.writablePaths,
+            allowBuildNetworkBootstrap: autoPrepare && !offline,
           },
       sourceEnvironment: runEnvironment,
     });

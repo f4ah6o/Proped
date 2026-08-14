@@ -942,7 +942,7 @@ jobs:
           PY
   production-external-contracts:
     name: Production external contracts
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     steps:
       - name: Checkout

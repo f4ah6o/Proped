@@ -286,6 +286,57 @@ function prepareInvocationInputs({ command, cwd, repositoryRoot, writablePaths =
   return { root, realCwd, writable };
 }
 
+
+function bubblewrapSupportsWorkspaceOverlay(backendPath, sourceEnvironment = process.env) {
+  const result = spawnSync(backendPath, ["--help"], {
+    encoding: "utf8",
+    shell: false,
+    timeout: 5_000,
+    env: { PATH: sourceEnvironment.PATH ?? "" },
+  });
+  const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  return result.status === 0 && text.includes("--overlay-src") && text.includes("--overlay");
+}
+
+export function createStrictSandboxWorkspaceOverlay({
+  repositoryRoot,
+  platform = process.platform,
+  backendPath = null,
+  sourceEnvironment = process.env,
+} = {}) {
+  const capabilities = assertStrictSandboxCapabilities({ platform, backendPath });
+  if (!bubblewrapSupportsWorkspaceOverlay(capabilities.backendPath, sourceEnvironment)) return null;
+  const root = fs.realpathSync(repositoryRoot);
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proped-web-overlay-"));
+  const upperDir = path.join(temporaryRoot, "upper");
+  const workDir = path.join(temporaryRoot, "work");
+  fs.mkdirSync(upperDir, { recursive: true });
+  fs.mkdirSync(workDir, { recursive: true });
+  return {
+    root,
+    temporaryRoot,
+    upperDir,
+    workDir,
+    backendPath: capabilities.backendPath,
+  };
+}
+
+export function cleanupStrictSandboxWorkspaceOverlay(overlay) {
+  if (!overlay?.temporaryRoot) return;
+  fs.rmSync(overlay.temporaryRoot, { recursive: true, force: true });
+}
+
+function prepareWorkspaceOverlay(root, overlay) {
+  if (!overlay) return null;
+  if (fs.realpathSync(overlay.root) !== root) throw new Error("strict sandbox workspace overlay root mismatch");
+  for (const candidate of [overlay.upperDir, overlay.workDir]) {
+    if (!path.isAbsolute(candidate) || !fs.existsSync(candidate)) throw new Error("strict sandbox workspace overlay path is unavailable");
+  }
+  fs.rmSync(overlay.workDir, { recursive: true, force: true });
+  fs.mkdirSync(overlay.workDir, { recursive: true });
+  return overlay;
+}
+
 export function buildStrictSandboxInvocation({
   command,
   cwd,
@@ -294,8 +345,12 @@ export function buildStrictSandboxInvocation({
   credentialReadDenyPaths = [],
   platform = process.platform,
   backendPath = null,
+  workspaceOverlay = null,
+  networkAccess = "deny",
 } = {}) {
   const { root, realCwd, writable } = prepareInvocationInputs({ command, cwd, repositoryRoot, writablePaths });
+  if (!["deny", "bootstrap-allow"].includes(networkAccess)) throw new Error(`unsupported strict sandbox network access: ${networkAccess}`);
+  const preparedOverlay = prepareWorkspaceOverlay(root, workspaceOverlay);
   if (root.startsWith("/tmp/") || root === "/tmp") {
     throw new Error("strict sandbox repository root cannot be under /tmp because /tmp is replaced with a private tmpfs");
   }
@@ -306,7 +361,7 @@ export function buildStrictSandboxInvocation({
     .map((candidate) => path.resolve(candidate)))].sort();
   const args = [
     "--die-with-parent",
-    "--unshare-net",
+    ...(networkAccess === "deny" ? ["--unshare-net"] : []),
     "--unshare-pid",
     "--unshare-ipc",
     "--unshare-uts",
@@ -314,14 +369,24 @@ export function buildStrictSandboxInvocation({
     "--ro-bind", "/", "/",
     "--dev-bind", "/dev", "/dev",
     "--proc", "/proc",
-    "--tmpfs", "/tmp",
   ];
+  if (preparedOverlay) {
+    args.push(
+      "--overlay-src", root,
+      "--overlay", preparedOverlay.upperDir, preparedOverlay.workDir, root,
+    );
+    const gitPath = path.join(root, ".git");
+    if (fs.existsSync(gitPath)) args.push("--ro-bind", gitPath, gitPath);
+  }
+  args.push("--tmpfs", "/tmp");
   for (const denied of deniedCredentialPaths) {
     const stat = fs.lstatSync(denied);
     if (stat.isDirectory()) args.push("--tmpfs", denied, "--remount-ro", denied);
     else args.push("--ro-bind", "/dev/null", denied);
   }
-  for (const directory of writable) args.push("--bind", directory, directory);
+  if (!preparedOverlay) {
+    for (const directory of writable) args.push("--bind", directory, directory);
+  }
   args.push(
     "--setenv", "HOME", "/tmp",
     "--setenv", "TMPDIR", "/tmp",
@@ -339,6 +404,7 @@ export function buildStrictSandboxInvocation({
       TMPDIR: "/tmp",
       TMP: "/tmp",
       TEMP: "/tmp",
+      PROPED_NETWORK_POLICY: networkAccess === "deny" ? "os-enforced-deny" : "bootstrap-network-explicit-allowed",
     },
     cleanupPaths: [],
     metadata: {
@@ -348,9 +414,10 @@ export function buildStrictSandboxInvocation({
       capabilities: capabilities.capabilities,
       requiredCapabilities: capabilities.requiredCapabilities,
       diagnostic: capabilities.diagnostic,
-      network: "os-enforced-deny",
+      network: networkAccess === "deny" ? "os-enforced-deny" : "bootstrap-explicit-allow",
       process: "pid-namespace-new-session",
-      sourceTree: "read-only",
+      sourceTree: preparedOverlay ? "copy-on-write-overlay-host-read-only" : "read-only",
+      workspaceOverlay: preparedOverlay ? "persistent-private-upper" : "none",
       temporaryDirectory: "private-tmpfs",
       credentials: "environment-allowlist-and-host-path-mask",
       deniedCredentialPaths,

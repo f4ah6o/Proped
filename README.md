@@ -2,504 +2,84 @@
 
 [日本語](README.ja.md) | English
 
-Proped explores reachable Rabbita UI states, checks model and transition properties, shrinks failures, and exports deterministic HTML, SVG, JSON, and Graphviz atlases.
+Proped is a CLI and library for deterministic UI exploration. This repository provides a native `proped` CLI for Web projects and a MoonBit CLI/library for Rabbita model exploration.
 
 ## Native CLI
 
-`proped` is the Rust-native product entry point. Repository builds keep the existing MoonBit exploration engine and Node/Playwright Web engine behind this shell instead of rewriting them.
+Build the native CLI from a checkout with Rust:
 
 ```bash
 cargo build -p proped-cli
 ./target/debug/proped -V
-./target/debug/proped setup
-./target/debug/proped doctor --json
-./target/debug/proped web inspect . --json
 ```
 
-Development builds report the CalVer package version as `proped 2026.8.0 (dev)`. Release builds embed a separate seven-character source SHA provenance, for example `proped 2026.8.0 (abcdef0)`; the Git SHA is not part of the package version. The native shell does not use a shell when it dispatches Web commands and preserves the existing dispatcher stdout, stderr, and exit status. `PROPED_RUNTIME_ROOT` can explicitly point at a Proped runtime tree containing `scripts/proped.mjs`.
+Prepare the runtime used by Proped, then check it:
 
-Release archives contain the native shell and read-only Proped JavaScript runtime sources under `lib/proped`, but intentionally exclude Node, `node_modules`, and Chromium. Official release artifacts target Linux x86_64, macOS Apple Silicon (arm64), and Windows x86_64; Intel Mac builds are not supported. `proped setup` is the explicit product-runtime acquisition command: it reuses a compatible installed Node when possible, otherwise installs the release-pinned managed Node after SHA-256 verification, prepares Proped's lockfile-pinned JavaScript dependencies with lifecycle scripts disabled, installs the pinned Playwright Chromium into per-user managed storage, and verifies readiness by launching the browser. A healthy second setup reuses the prepared runtime. `proped doctor --json` is observational and exposes the resolved managed paths; `doctor` and normal `web` commands never repair or download the Proped runtime implicitly.
+```bash
+./target/debug/proped setup
+./target/debug/proped doctor
+```
+
+`proped setup` prepares the Node/JavaScript and Playwright browser runtime used by the Web commands. It reuses a compatible installed Node when possible and otherwise installs the managed Node version. `proped doctor` checks runtime readiness without repairing or downloading it.
+
+Release packaging builds native archives on Linux, macOS, and Windows. An archive contains the native executable under `bin/` and the Proped runtime sources under `lib/proped/`. Node, `node_modules`, and Chromium are not bundled in the archive; run `proped setup` after unpacking it. A SHA-256 checksum is generated alongside each archive.
+
+If the runtime is stored somewhere other than the repository or the packaged `lib/proped` location, set `PROPED_RUNTIME_ROOT` to a Proped runtime tree containing `scripts/proped.mjs`.
+
+## Web projects
+
+Inspect a project without running its install, build, or start scripts:
+
+```bash
+proped web inspect <project>
+proped web inspect <project> --json
+```
+
+Run the combined onboarding and exploration campaign:
+
+```bash
+proped web campaign <project>
+```
+
+`web campaign` can prepare project dependencies. Use `--no-prepare` when dependency preparation must not run.
+
+For an explicit manifest-based flow:
+
+```bash
+proped web init <project> --output proped.web.json
+proped web doctor proped.web.json
+proped web prepare proped.web.json
+proped web compile proped.web.json
+proped web run proped.web.json
+```
+
+`web prepare` is the explicit dependency-install step. `web run` does not install missing target dependencies implicitly.
+
+Run `proped web --help` for the Web commands implemented by the checked-in dispatcher.
 
 ## MoonBit exploration CLI
 
-The existing MoonBit CLI remains the direct exploration-engine interface:
+The MoonBit CLI is the direct interface to the Rabbita exploration engine:
 
 ```bash
 moon run src/cli -- help
+moon run src/cli -- schema --json
 moon run src/cli -- demo list --json
 moon run src/cli -- demo run all --json
-moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json
-moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json
 moon run src/cli -- external run all --json
 ```
 
-`demo run all` writes demos to `demo/out/<demo-id>/`. `external run all` writes external targets to `demo/out/external/<id>/`. Both commands print one JSON result envelope to stdout. Agents and scripts should discover the stable command contract with:
+`demo run all` writes under `demo/out/<demo-id>/`. `external run all` writes under `demo/out/external/<id>/`.
 
-```bash
-moon run src/cli -- schema --json
-```
+The complete MoonBit command and output contract is documented in [docs/CLI.md](docs/CLI.md).
 
-CLI exit codes are `0` when each demo matches its declared expected outcome, `2` for invalid usage, and `3` for an expectation mismatch. `--json` may appear anywhere in the argument list. `--output <dir>` changes the artifact root.
+## Documentation
 
-See [docs/CLI.md](docs/CLI.md) for the complete MoonBit command and output contract.
-
-## Unknown Web project inspection
-
-Proped can inspect an unknown Web project without running install, build, or start scripts. The read-only inspector infers package manager, Node engine requirement, framework, build/serve commands, render mode, output directory, routing, storage/IndexedDB, WebSocket, service-worker, authentication, and server-side framework/persistence/API hints, and reports confidence plus ambiguities instead of silently guessing.
-
-```bash
-./target/debug/proped web inspect .
-./target/debug/proped web inspect . --json
-```
-
-The direct `node scripts/web_project_inspect.mjs` entry point remains available for internal and compatibility use.
-
-## Generated GitHub Actions quality gate
-
-A reviewed v2 manifest can generate a GitHub Actions workflow without modifying the repository unless `--output` is explicit:
-
-```bash
-node scripts/web_project_ci.mjs proped.web.json > proped-web.yml
-node scripts/web_project_ci.mjs proped.web.json --output .github/workflows/proped-web.yml
-```
-
-The generated workflow checks out Proped at a **full commit SHA**, uses read-only repository permissions, runs project dependency bootstrap separately, installs the Proped-managed Playwright/Chromium runtime, installs bubblewrap for strict execution, runs `web_project_run_v2.mjs`, and uploads `.proped/out` even when the quality gate fails.
-
-## Unified Web CLI
-
-The canonical Web onboarding entry point is now `proped web`. Inside the repository, the same dispatcher runs as `node scripts/proped.mjs web ...`. It does not invoke a shell and preserves each existing command's stdout, stderr, and exit code.
-
-```bash
-./target/debug/proped web inspect . --json
-./target/debug/proped web init . --output proped.web.json
-./target/debug/proped web doctor proped.web.json
-./target/debug/proped web review . --json
-./target/debug/proped web approve init review.json --output approvals.json
-./target/debug/proped web apply proped.web.json semantic-hints.json --output proped.web.approved.json
-./target/debug/proped web run proped.web.approved.json
-```
-
-The existing `web_project_*` and `web_semantic_*` scripts remain compatibility entry points.
-
-## Unknown-project campaign
-
-`web campaign` is the production-oriented one-command path for an unknown Web project. It performs read-only inspection and manifest inference, resolves already-installed Node/package-manager runtimes, prepares dependencies when required, compiles the inferred manifest, runs Generic Browser exploration, replays candidate failures, and emits a stable campaign summary without requiring a handwritten manifest.
-
-```bash
-./target/debug/proped web campaign .
-```
-
-A completed campaign reports `autoOnboarded`, `humanInterventions`, `interventionReasons`, canonical `failureClasses`, replay determinism, and explored state/transition/action counts. Stable quality failures are findings, not onboarding failures: a project can be `autoOnboarded: true` while `qualityPassed: false`. Critical inference ambiguity, missing compatible runtime, incomplete preparation, or an execution-stage failure remains explicit and requires intervention. By default the command is an explicit mutating orchestration and may run the existing credential-filtered dependency preparation phase; `--no-prepare` disables that behavior, `--offline` requests offline package-manager mode, and `--no-artifacts` suppresses `.proped/campaign/` output. Sandbox selection is safe-by-default for the host: Linux keeps strict isolation, macOS selects the constrained Seatbelt backend because Linux-equivalent strict process/home isolation is unavailable there, and no platform silently falls back to `caller-enforced`. The lower-level `web run` command remains non-installing and still requires preparation to be explicit.
-
-## Multi-project production benchmark
-
-`proped web benchmark <project...>` applies the same blind campaign contract to multiple targets without stopping after one intervention-required project. It reports auto-onboarding rate, intervention projects and counts, reproducible failure classes, replay determinism, total explored states/transitions/actions, and observed runtime distributions for framework, project/server mode, package manager, and state sources. Quality findings are intentionally independent from onboarding completion: a project can be automatically onboarded and still contribute reproducible findings without making the benchmark itself fail.
-
-```bash
-./target/debug/proped web benchmark ./targets/app-a ./targets/app-b
-```
-
-Exit 0 means every target reached campaign execution without human intervention, exit 1 means at least one target requires intervention, and exit 2 is reserved for benchmark/CLI errors. The aggregate artifact is written to `.proped/benchmark/summary.json` by default. `--no-prepare`, `--offline`, `--no-artifacts`, and the campaign sandbox modes are supported. For stable production regression gating, `--baseline <file>` compares the live corpus against a compact machine-independent baseline. Auto-onboarding loss, replay-determinism loss, increased human intervention, removed targets, or changed corpus metadata fail the baseline gate; finding-class additions/removals are reported separately and do not count as onboarding regressions. The repository CI runs the production corpus against `protocol/fixtures/production-campaign-baseline.json` with the host-safe default sandbox.
-
-For continuous production capability tracking, `--corpus production` runs the versioned offline corpus in `protocol/fixtures/production-campaign-corpus.json`. The corpus pins target identity, repository/revision metadata, tags, and project-specific executable adapter LOC, then evaluates explicit thresholds: auto-onboarding >= 80%, intervention-project rate <= 20%, deterministic replay = 100% where replay evidence exists, adapter LOC = 0, and zero onboarding regressions when `--previous <summary.json>` is supplied. Quality findings remain independent from this onboarding gate.
-
-```bash
-./target/debug/proped web benchmark --corpus production --offline
-./target/debug/proped web benchmark --corpus production --offline --previous .proped/benchmark/previous.json
-```
-
-### Explicit external OSS corpus
-
-`--corpus external` uses the checked-in pinned OSS corpus in `protocol/fixtures/external-production-corpus.json`: **11 targets across 6 repositories** (TodoMVC React/Vue, drawDB, five MoonBit Isomorphic apps, Rabbita Xterm Web, Proton calculator, and Ensenzu), all pinned by full commit SHA with **0 project-specific executable adapter LOC**. The corpus gate requires all 11 targets, at least 6 distinct repositories, and coverage of `framework-backed`, `pnpm`, `stateful`, and `static` runtime shapes. Ensenzu exercises exact `pnpm@11.5.3` selection through Corepack and can start from a dependency-unprepared checkout; its Cloudflare/Vite build emits a single client entry under `dist/client/index.html`, which Proped serves from the uniquely inferred nested document root. Git source acquisition is a separate explicit phase; benchmark execution never clones or fetches implicitly.
-
-```bash
-./target/debug/proped web corpus materialize external --checkout-root .proped/external-checkouts
-./target/debug/proped web corpus verify external --checkout-root .proped/external-checkouts
-./target/debug/proped web benchmark --corpus external --checkout-root .proped/external-checkouts
-```
-
-`--corpus frontier` (alias: `novelty`) uses `protocol/fixtures/external-frontier-corpus.json`, the seven-repository topology corpus that produced the first promotion evidence: SvelteKit monorepo + runtime renegotiation, Astro static export, React Router framework mode + Express custom server, SSR + embedded SQLite + Bun, Lit Web Components, Yarn Berry PnP monorepo + workspace prebuild, and legacy Webpack. The measured promotion baseline is **7/7 auto-onboarded, 7/7 viability-qualified, 100% deterministic replay, 0 human interventions, and 0 project-specific adapter LOC**. Frontier thresholds remain exploratory; `frontierScore.promotionEligible` records whether the complete 7/7 promotion condition is met.
-
-```bash
-./target/debug/proped web corpus materialize frontier --checkout-root .proped/frontier-checkouts
-./target/debug/proped web corpus verify frontier --checkout-root .proped/frontier-checkouts
-./target/debug/proped web benchmark --corpus frontier --checkout-root .proped/frontier-checkouts
-```
-
-### Promoted production topology contract
-
-`--corpus promoted-production` uses `protocol/fixtures/promoted-production-corpus.json`, which promotes those seven proven shapes into a strict production regression contract. Every target keeps the exact proven full commit SHA, Git checkout contract, topology ID, and adapter LOC 0. The gate requires auto-onboarding = 100%, intervention-project rate = 0, deterministic replay = 100%, regression budget = 0, seven distinct repositories, and complete `requiredTopologies` coverage. `protocol/fixtures/promoted-production-baseline.json` fixes the project-level green state, while `protocol/fixtures/frontier-7of7-promotion-evidence.json` preserves the promotion score and clean-checkout evidence.
-
-```bash
-./target/debug/proped web corpus materialize promoted-production --checkout-root .proped/promoted-checkouts
-./target/debug/proped web corpus verify promoted-production --checkout-root .proped/promoted-checkouts
-./target/debug/proped web benchmark --corpus promoted-production --baseline protocol/fixtures/promoted-production-baseline.json --checkout-root .proped/promoted-checkouts
-node scripts/release_gate.mjs
-```
-
-Frontier benchmark summaries expose `frontierScore` plus aggregate `interventionReasonDistribution`, `viabilityDistribution`, `viabilityFailureDistribution`, `deterministicReplayRate`, and `projectSpecificAdapterLoc`. Per-target `viability` marks failures in the declared dependency install, workspace build, project build, or managed start lifecycle as `failed`, while targets that reach the browser lifecycle are `qualified`; this separates upstream/pin viability from Proped generic-capability failures. `frontierScore.genericCapability` reports auto-onboarding only across qualified targets. Dependency bootstrap is bounded; `--prepare-timeout-ms <ms>` overrides the default 300-second install timeout and timed-out process trees become the explicit `prepare_timeout` intervention class instead of blocking the remaining frontier. For pnpm projects without a `packageManager` declaration, historical lockfile formats with an unambiguous runtime generation (`5.4` and `6.0`) are executed through pinned Corepack proxies instead of the host pnpm; Corepack auto-pin is disabled so preparation never writes a `packageManager` field upstream. Nested JavaScript workspaces inherit an exact ancestor `packageManager`, resolve dependency readiness at the lockfile/PnP install root, and may prebuild explicit local `workspace:*` dependencies in dependency order before the target build. The release gate is machine-readable and also verifies CI wiring for the self-contained production baseline, strict external production corpus, promoted topology corpus, Linux/macOS sandbox checks, managed-runtime distribution matrix, package-content contract, and source-SHA provenance before release tagging.
-
-Materialization accepts only full pinned revisions and HTTPS/file/absolute-local Git sources without embedded credentials, keeps each checkout under the explicit checkout root, ignores caller Git config injection, disables credential helpers, hooks, fsmonitor, and recursive submodule acquisition, rejects checkout filters and targets inside Git submodules, and fails closed on an existing dirty checkout or origin mismatch. Corpus entries may additionally declare explicit `source.nestedSources` with checkout-root-relative path, credential-free Git URL, and full revision. Proped requires every declaration to match a gitlink SHA and `.gitmodules` path/URL before independently materializing that checkout. A deeper declaration is allowed only when its Git-link ancestor is also explicitly declared; it is validated against the nearest declared ancestor revision. Proped never walks `.gitmodules` recursively or acquires undeclared submodules, and nested acquisition also disables hooks and checkout filters. When such an authorized checkout has a repository-root `moon.work`, the campaign can run the known MoonBit production prebuild as structured argv (`moon build --target js --release`, `shell=false`) before the Web project build; `--no-prepare` reports `workspace_prepare_required` instead of executing it. Parent-checkout cleanliness ignores submodule worktree state while target paths are forbidden from entering a gitlink, so an unrelated unmaterialized submodule cannot make verification unusable or become an implicit trust boundary. `web corpus verify` is read-only and checks origin, exact HEAD revision, parent-checkout cleanliness, path containment, and every target subdirectory. Before an external benchmark starts, the same verification is mandatory; after execution Proped restores tracked files to the pinned revision, removes non-ignored untracked files created by the run, removes newly created ignored roots that were absent before the benchmark, preserves pre-existing ignored roots, and verifies that the checkout is clean again. The checked-in `protocol/fixtures/canopy-nested-source-corpus.json` pins Canopy, seven top-level nested sources, and three explicitly declared Loom descendants (10 nested checkouts total) as a separate dogfood corpus; it remains outside the passing `external` production gate. Its live benchmark now completes with 100% auto-onboarding, zero human interventions, deterministic replay, and zero project-specific adapter LOC; Waku build writes stay constrained to the known `dist` and `.wrangler` generated roots, which are removed again by checkout cleanup. Dependency preparation remains the existing campaign phase; `--no-prepare` requires already-prepared dependencies and `--offline` keeps package-manager preparation offline.
-
-## Explicit Web project preparation
-
-`web run` never installs target dependencies implicitly. If a generated manifest has an install command and the target dependency artifact is missing, `web run` exits with `prepare_required`. Run the explicit setup phase first:
-
-```bash
-./target/debug/proped web prepare proped.web.json
-./target/debug/proped web run proped.web.json
-```
-
-`web prepare` executes the inferred install argv with `shell=false`, confines cwd to the project root, and passes only the credential-safe environment allowlist. Proped also derives Node requirements read-only from `package.json#engines.node`, `package.json#volta.node`, `.nvmrc`, and `.node-version`; compatible declarations are combined, while conflicting or unparseable selectors remain blocking ambiguities for `doctor`, `prepare`, and `run`. Network access is explicit to this setup command; `--offline` requests package-manager offline mode. The generated manifest carries a conservative Node requirement inferred from `package.json#engines.node`, `package.json#volta.node`, `.nvmrc`, and `.node-version`. Compatibility and preference are kept separate: `engines.node` and shorthand selectors define the allowed runtime range, while an exact `.nvmrc` / Volta / `.node-version` pin is retained as `nodePreferredVersion`. Proped selects the exact preferred runtime when installed, otherwise prefers an installed compatible runtime from the same major and reports the fallback as a doctor warning. Conflicting or unsupported selectors remain critical review-required ambiguities before any target install/build. Proped inventories already-installed Node runtimes (current process plus NVM, Volta, FNM, and asdf layouts), selects the highest compatible runtime for target install/build/preview subprocesses, and never downloads a runtime implicitly. The Proped process and managed Chromium stay on the Proped-owned runtime. If no installed runtime can satisfy the declared range, `web doctor`, `web prepare`, and `web run` fail before install/build. `web doctor` also reports dependency readiness before execution. Exact `packageManager` declarations for npm, pnpm, and Yarn are preserved in manifest v2 and executed through Corepack. `web prepare` is the only phase allowed to acquire an uncached package-manager version; normal run/build/preview set `COREPACK_ENABLE_NETWORK=0`, and the resolved Corepack cache path is preserved explicitly so strict sandbox execution can read the prepared manager without reopening network access.
-
-## Blind unknown-project validation
-
-A pinned blind run against `moonbitlang/website` (`a6222f7292ce50f2a08847ef0852b1a8d456a393`) reached real Generic Browser exploration with **0 project-specific executable adapter LOC**. The run drove the unknown Vite subproject with generated actions and coverage-guided exploration. Blind findings were converted into generic fixes: Docusaurus detection, explicit dependency preparation, package-manager completion markers, storage-access fail-closed snapshots, and unique-link `href` fallback. On the real blind app, locator uniqueness improved from **54.2% to 100%** without forced clicks.
-
-A second blind onboarding pass used pinned `dowdiness/canopy` (`cb41945b04801084e8abe1d8edc27eb0cdce4a1c`) as a server-state candidate. Read-only inspection identified local/session storage, IndexedDB, WebSocket, Hono, and five relative API call sites, and exposed the Waku lifecycle-classification gap. Waku is now first-class: Canopy is classified as `waku` / `server-rendered`, generated manifest v2 uses managed command-server mode with `npm run preview`, and the already-installed compatible NVM Node 22.22.3 is selected instead of incompatible Node 25. With the explicit multi-level nested-source contract and root `moon build --target js --release` prebuild, the pinned Canopy dogfood now reaches Waku build, Wrangler preview, generic browser exploration, and deterministic replay with 0 adapter LOC and 0 human interventions (32 states, 31 transitions, 9 actions).
-
-## Low-config Web project manifest v2
-
-The high-level v2 manifest is generated from read-only inspection and compiles to the existing v1 stage graph. The current canonical format is JSON; generation is stdout-only unless `--output` is explicit.
-
-```bash
-node scripts/web_project_init.mjs . > proped.web.json
-node scripts/web_project_doctor.mjs proped.web.json
-node scripts/web_project_compile.mjs proped.web.json
-```
-
-`web doctor` checks project/runtime/server/browser/sandbox readiness without running install, build, or start commands. Static output and managed command servers are executed by a Proped-owned browser stage after compilation.
-
-## Review-only server hooks
-
-When source inspection finds literal same-origin server interactions, `proped web review` can propose bounded server hooks without activating them. Literal GET/HEAD fetches or routes become low-risk read-only candidates; POST endpoints are ignored unless the path is explicitly reset-like, and reset candidates are high-risk. A human-approved read-only candidate is merged into manifest v2 `server.hooks.readOnly`; an approved reset candidate requires explicit risk acknowledgement before it can populate `server.hooks.reset`. Other mutation endpoints are never proposed as hooks, and `automaticActivation` remains false.
-
-Pinned Canopy dogfood proposed one real read-only candidate, `GET /api/pi-resume-chat/status`, at confidence 0.85. Approving only that candidate produced a manifest with exactly that read-only hook and no reset hook, with the other semantic candidates left pending.
-
-## Managed command-server endpoint discovery
-
-For full-stack projects, Generic Browser Mode requests a fresh loopback port through `PORT`/host environment hints but no longer assumes the target obeys it. The managed command-server runtime also scans bounded stdout/stderr for literal loopback HTTP(S) URLs and probes only those same-machine candidates. External/network URLs are ignored, the child receives the credential-safe environment allowlist, and readiness failure always terminates the process tree before returning. This keeps unknown preview servers usable without accepting arbitrary log-provided origins.
-
-## Fresh-campaign replay gate
-
-Manifest v2 defaults to three fresh campaign attempts. A candidate error is promoted to a quality failure only when the same canonical failure class appears in every attempt. A class that appears in only some runs becomes a `nondeterministic_failure_candidate` diagnostic instead of failing CI. This makes fresh-browser determinism part of the quality gate rather than a separate manual check.
-
-## Canonical failure classes
-
-Every Web failure can be assigned a stable canonical class in addition to its human-facing code. Classification uses the oracle family, normalized action pattern, semantic evidence paths, route family, and exception kind. Generated IDs, runtime generations, and concrete input values are normalized before hashing, so repeated occurrences cluster without losing the original failure code. Runner summaries and Atlas artifacts expose these canonical IDs.
-
-## Generic Web property packs
-
-Low-config Generic Browser Mode currently ships `browser-safety`, `navigation`, `reload-persistence`, and `stateful-server`. The packs are deliberately conservative: uncaught exceptions and observable local/session-storage drift are quality failures; visible state that disappears on reload without persistence evidence is an advisory candidate rather than an automatic CI failure. `stateful-server` can exercise discovered Create/Read/Update/Delete candidates, invalid input, reload, managed server restart, session boundaries, and replay, but it reaches `generic-covered` only when an approved read-only server hook projection proves that server state—not merely DOM, IndexedDB, or browser storage—changed and persisted.
-
-This already surfaces TodoMVC React and Vue reload-state loss from generic discovery alone, with no TodoMVC-specific Playwright adapter or semantic contract.
-
-## Dexie-aware metadata
-
-When inspection detects Dexie, manifest v2 carries the declared and—when already installed—the resolved Dexie version into Generic Browser Mode. The first adapter is intentionally version-bounded: Dexie 3.x is supported because the pinned real dependency verifies `indexedDB.open(name, Math.round(db.verno * 10))` and reads existing native versions as `idbdb.version / 10`. Unknown Dexie majors are not guessed; they produce a diagnostic and keep the native IndexedDB version.
-
-Real drawDB declares `^3.2.4`, resolves `3.2.7`, and is automatically reported as native IndexedDB version `670` / Dexie logical version `67`, including reconstructed schemas such as `++id,diagramId,lastModified,loadedFromGistId`.
-
-## IndexedDB metadata inventory
-
-When manifest v2 selects `state.indexedDB.mode = "auto-metadata"`, Generic Browser Mode records IndexedDB database names, native versions, object-store key paths, auto-increment flags, index definitions, and record counts. It intentionally does **not** read record payloads. In real drawDB dogfood this detects the `drawDB` native version 670 database and its `diagrams`/`templates` stores without a drawDB-specific adapter.
-
-## Volatility mining
-
-Manifest v2 runs bounded no-action fresh-context probes before a generic campaign. The miner reports paths that vary across runs, classifies generated IDs/tokens/timestamps separately from state-bearing storage/form/domain paths, and may propose a replacement rule. **No candidate is applied automatically** and raw volatile values are not included in the report. State-bearing volatility remains review-required.
-
-## Selector survival benchmark
-
-`web-selector-survival` turns a discovered action inventory into a semantic locator contract and compares it across minor UI revisions. Class names, generated DOM IDs, wrapper nodes, and element ordering can change without reducing survival when role/name/scope/test identity remain stable. The committed benchmark requires at least 95% survival for minor revisions and separately verifies that deliberately breaking the semantic accessibility contract is detected.
-
-```bash
-node scripts/test_web_selector_survival.mjs
-```
-
-## State novelty weighting
-
-Exploration can rank frontier states with a deterministic semantic novelty score. The scorer treats a new state fingerprint, route family, storage-key shape, IndexedDB schema shape, and accessible action-target frontier as separate novelty signals. Dynamic route IDs and storage values are not treated as novelty by themselves, reducing sensitivity to volatile data.
-
-```bash
-node scripts/test_web_state_novelty.mjs
-```
-
-## Unknown-project onboarding acceptance
-
-The committed onboarding regression corpus records six real-browser failure classes: three from TodoMVC React and three from drawDB. The pinned real runs reproduce all **6/6** classes deterministically on managed Chromium. A separate generic-property benchmark executes 10,000 healthy semantic transitions and records **0 false positives** (0 / 1000), while sensitivity controls still detect duplicate-submit and invalid-entity faults.
-
-```bash
-node scripts/test_web_healthy_transition_benchmark.mjs
-node scripts/test_unknown_web_onboarding_acceptance.mjs
-```
-
-## Human semantic approval workflow
-
-Semantic suggestions remain inert until a human records an explicit decision. An approval plan pins the semantic review hash, tracks `approve`/`reject`/`defer` per stable candidate ref, requires explicit acknowledgement for high-risk approvals, and rejects stale or tampered plans. Compiling a plan yields human-approved hints only; it never performs automatic activation.
-
-```bash
-node scripts/web_semantic_approval.mjs init review.json --output approvals.json
-node scripts/web_semantic_approval.mjs decide review.json approvals.json property:undo-redo-inverse approve --output approvals.json
-node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
-```
-
-## Coverage-guided Generic Browser exploration
-
-Generated manifest v2 enables a small bounded coverage-guided campaign by default, starting with `maxStates=32`, `maxTransitions=64`, and `maxDepth=4`. The frontier prioritizes semantic-state novelty and previously unseen actions, reconstructing each state by replaying its trace in a fresh context. **Destructive actions are always excluded**. Bounded mutations are allowed for self-contained `static-output` runs and, for managed command servers only, when manifest v2 explicitly sets `server.mutationPolicy = "bounded-managed"`; command mode otherwise remains deny-by-default and external servers remain safe-action-only. Exploration failures are promoted only when the exact discovered trace reproduces the same failure class in every fresh replay attempt; flaky candidates remain diagnostics.
-
-## Approved semantic runtime integration
-
-`semantic-hints.json` can be attached explicitly to manifest v2 as `semantics.approved`. Only human-approved hints enter runtime execution; unapproved candidates remain inert. The first runtime maps `property:saved-state-survives-reload` to the existing `reload-persistence` pack, adds `projection:route-identity` and `projection:persistence-summary` to semantic state, and applies concrete approved normalizer rules to fresh-context fingerprints. Approved hints without a generic executor are preserved as diagnostics instead of being silently activated.
-
-```bash
-node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
-node scripts/web_semantic_apply.mjs proped.web.json semantic-hints.json --output proped.web.approved.json
-node scripts/web_project_run_v2.mjs proped.web.approved.json
-```
-
-Without `--output`, `web_semantic_apply.mjs` is stdout-only and does not modify the source manifest. The compiled hint semantic hash is revalidated so post-approval tampering is rejected.
-
-## Unified semantic review report
-
-Property, projection, and normalizer suggestions can be reviewed through one bounded report. Every candidate gets a stable `kind:id` reference, HIGH/MEDIUM/LOW confidence band, semantic risk when applicable, recommended decision, evidence sources, and an explicit automatic-activation flag. The default CLI is human-readable; `--json` exposes the same review data for tooling.
-
-```bash
-node scripts/web_semantic_review.mjs .
-node scripts/web_semantic_review.mjs . --volatility volatility.json --json
-```
-
-## Review-only normalizer candidates
-
-Volatility findings can be promoted into explained normalizer candidates without applying them. The explainer combines fresh-context volatility with source-level evidence, assigns semantic risk, and recommends whether to review a replacement rule or keep the value observed. Generated DOM IDs, timestamps, and token-like values may receive low-risk replacement suggestions; storage, form, application-state, and IndexedDB paths remain high-risk and never receive an automatic replacement.
-
-```bash
-node scripts/web_normalizer_candidates.mjs . --volatility volatility.json --json
-```
-
-## Review-only semantic projection candidates
-
-Proped can also propose small declarative state projections instead of generating project-specific Playwright code. Current candidates cover selected-entity identity, entity collection counts, undo/redo history position, persistence metadata, normalized route identity, and graph/domain summaries. Each suggestion includes an output shape, source kind, confidence, and evidence; executable projection code is never generated or activated automatically.
-
-```bash
-node scripts/web_projection_candidates.mjs . --json
-```
-
-## Review-only semantic property candidates
-
-A bounded read-only static analyzer can propose higher-value semantic properties from three independent evidence sources: repository source snippets, existing test titles, and UI vocabulary. Current candidates include undo/redo inverse behavior, import/export roundtrips, Escape-cancels-edit, selection consistency after delete, saved-state reload persistence, and filter/source consistency. Candidates are **review-only**: confidence and evidence are reported, and automatic activation is always disabled.
-
-```bash
-node scripts/web_property_candidates.mjs . --json
-```
-
-## Multi-context scheduler prototype
-
-A deterministic multi-context scheduler explores interleavings over shared state and per-context state using context-tagged semantic actions. It records the transition graph and replays failure traces without relying on wall-clock concurrency. The synthetic regression finds a two-context lost-update race and reproduces the same failure signature from the recorded four-step interleaving.
-
-```bash
-node scripts/test_web_multi_context_scheduler.mjs
-```
-
-## Server reset and read-only API hooks
-
-Manifest v2 can declare optional same-origin server hooks for deterministic campaigns. A reset hook is an explicit credential-free `POST` relative path invoked before every fresh browser reset. Read-only hooks are limited to `GET`/`HEAD`; redirects and cross-origin URLs are denied, responses are byte-bounded, and artifacts keep only status, content hash, and JSON shape rather than raw bodies. This lets server-backed apps participate in fresh replay without a project-specific adapter.
-
-```json
-{
-  "hooks": {
-    "reset": { "method": "POST", "path": "/__test/reset", "expectedStatus": [204], "timeoutMs": 1000 },
-    "readOnly": [{ "id": "state", "method": "GET", "path": "/api/state", "expectedStatus": [200], "timeoutMs": 1000, "maxBytes": 65536 }]
-  }
-}
-```
-
-## Coverage-guided Web exploration
-
-A bounded explorer reconstructs frontier states by replaying semantic traces into fresh browser contexts, then prioritizes states with discovery novelty and globally unexecuted semantic actions. This avoids relying on browser-state cloning and keeps exploration reproducible. The synthetic regression reaches a new-route failure in three transitions and reproduces the same transition graph and semantic hash on a second run.
-
-```bash
-node scripts/test_web_coverage_guided_exploration.mjs
-```
-
-## Generic browser inventory
-
-For an already-running app, the generic browser adapter can discover actions and capture semantic state without project-specific Playwright code:
-
-```bash
-node scripts/web_browser_inventory.mjs http://127.0.0.1:3000 --json
-```
-
-Action resolution is fail-closed: ambiguous locators become diagnostics rather than `.first()` guesses. External network is denied by default while the target origin remains available.
-
-## Semantic browser quiescence
-
-Generic Browser Mode does not use `networkidle` as its readiness oracle. After each action it advances two animation frames, samples a semantic DOM/form/URL/storage fingerprint, tracks observable same-origin requests, and requires repeated stable samples with zero pending requests. A page that never stabilizes returns a `semantic_quiescence_timeout` diagnostic instead of an opaque wait failure.
-
-## Managed Chromium runtime
-
-Generic Browser Mode owns its browser runtime instead of inheriting one from the target project. The current pinned runtime is Playwright 1.62.0 with Chromium revision 1234 (Chromium 151.0.7922.34). Target applications do not need a Playwright dependency; runtime metadata is included in browser snapshots for reproducibility.
-
-## Strict Web execution sandbox
-
-On Linux, Web project stages can run under an OS-enforced bubblewrap boundary:
-
-```bash
-node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json \
-  --strict-sandbox \
-  --writable web/next-ssr-hydration/.next \
-  --writable web/nuxt-ssr-hydration/.output
-```
-
-Strict mode requires machine-readable `filesystem`, `network`, and `process` capabilities to all be `strict`. Linux + bubblewrap keeps the host checkout and `.git` immutable, uses a private persistent overlayfs worktree through unprivileged bubblewrap when supported, with a privileged host-mounted overlayfs fallback when explicitly available (otherwise it falls back to explicit writable build/artifact paths), provides a private `/tmp`, denies outbound network during execution, and applies a PID namespace/new session plus an allowlisted environment. Unknown-project campaigns may retry only a failed `project-build` once with explicit bootstrap network access when the first network-denied attempt proves a build-time network prerequisite; that retry remains credential-filtered, process-isolated, and copy-on-write, and browser execution returns to network-denied strict mode. Reports record the applied capability level per axis as `strict`, `constrained`, or `caller_enforced`. macOS can be selected explicitly with `proped web run <manifest> --sandbox-mode constrained`: the Seatbelt (`sandbox-exec`) backend denies network and filesystem writes by default, permits only explicit writable paths plus a private temporary HOME, filters the environment, denies reads of common host credential locations, and applies the policy to child processes. It is still reported as `constrained` because host process visibility and complete host-home read isolation are not provided; a strict manifest never silently downgrades on macOS.
-
-## Web mutation quality gate
-
-The framework-neutral Web mutation benchmark kills one reviewed mutation for each generic Web property and runs paired healthy controls. Its quality gate reports mutation score, false-positive rate, deterministic replay, minimized-trace drift, throughput, and elapsed-time violations as machine-readable codes.
-
-```bash
-node scripts/test_web_mutation_benchmark.mjs
-node scripts/test_web_mutation_benchmark.mjs --iterations 2000 --output .tmp/web-mutation
-node scripts/test_web_mutation_benchmark.mjs --minimum-mutation-score 1 --maximum-false-positive-rate 0 --no-artifacts
-```
-
-Invalid arguments exit with code `2`; a quality-gate failure exits with code `1` and writes the full result to stderr. Default runs write `summary.json`, `atlas.json`, `atlas.html`, `atlas.svg`, and `atlas.dot` below `protocol/out/web-mutation-benchmark/`.
-
-## Web project runner
-
-A strict Web project manifest can run the generic property pack, mutation quality gate, React/Vue Component Mode, Playwright Browser Mode, cross-mode replay, and Next.js/Nuxt SSR checks as one ordered quality graph.
-
-```bash
-node scripts/web_project_runner.mjs validate web/project-manifests/proped-web-quality.json
-node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json
-node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json --output .tmp/web-quality
-```
-
-The runner never invokes a shell. Manifest paths and stage working directories must remain inside the repository root. Exit `1` from a stage is classified as a quality-gate failure, exit `2` as usage error, other non-zero exits as execution failures, and dependent stages are blocked after prerequisite failure. Linux strict and macOS constrained runs apply their OS sandbox before spawning each stage and record the effective guarantees in the report; caller-enforced mode remains explicit. Every mode confines manifest/cwd/artifact paths and strips non-allowlisted environment variables before spawning stages.
-
-## Included demos
-
-| ID | Source | Expected | Coverage | Minimal counterexample |
-| --- | --- | --- | --- | --- |
-| `newsletter` | project | pass | validation, consent, submit, reset | — |
-| `rabbita-counter` | Rabbita `examples/counter` | pass | finite counter state space | — |
-| `rabbita-todo` | Rabbita `examples/todo` | failure | CRUD, tabs, filtering, statistics | `TitleChanged(" ") -> Add` |
-| `rabbita-sokoban` | Rabbita `examples/sokoban` | failure | movement, crates, branching history, timeline | `Move(Up) -> JumpTo("not-a-number")` |
-| `rabbita-subscriptions` | Rabbita `examples/subscriptions` | failure | timer and six browser event subscriptions | `ToggleTicker -> Tick` |
-| `rabbita-websocket` | Rabbita `examples/websocket` | failure | command-client lifecycle and transcript | `Connect -> Disconnect -> Disconnect` |
-
-The added practical runs cover 255 Sokoban states and 1,163 transitions, 640 subscription states and 1,718 transitions, and 800 WebSocket states and 4,428 transitions. Each expected failure is accepted only when both its property name and minimized trace match the declared signature.
-
-Vendored source, revision, hashes, license, adapter changes, and failure rationale are recorded under `src/vendor/`, [docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## External Rabbita applications
-
-External targets are pinned by manifests under `external/manifests/`. `external inspect-source` mechanically detects common `Model`, `Msg`, `update`, `view`, command, and subscription boundaries in a local source file. Effects are recorded as deterministic descriptors rather than executing upstream network or native operations. `scripts/external_harness.py` validates manifests, generates bounded action scaffolds for simple `Msg` payloads, prepares deterministic source-hash reports, previews explicit revision updates, and runs requested inspection commands with network denied.
-
-The external campaign currently includes fifteen runnable targets. `canopy-editor-integration` explores 900 states and 1,633 transitions and retains reverse-ordered document callbacks plus delivery after unmount. `rabbita-utility-batch` classifies ten public repositories, mechanically exercises four supported boundaries across 3,400 states and 7,646 transitions, and minimizes an initial empty-title submission to `FullstackSubmit`. `scripts/utility_batch.py` validates the committed classification report and can re-check pinned local checkouts without writing upstream.
-
-`scripts/utility_batch.py validate` verifies the classification report and fixture hashes. `scripts/utility_batch.py diff` compares pinned revisions with each upstream default branch and emits commit counts, changed target paths, and updated source hashes as JSON without writing upstream.
-
-The utility batch retains initial empty-title submission, late replies for older titles, and GraphSaved rollback via `IssuesSave -> IssuesSave -> IssuesDeliver(id=2) -> IssuesDeliver(id=1)`.
-
-Upstream repositories are read-only inputs: this project does not create issues, pull requests, comments, or commits in them. `external handoff <id>` generates local issue, reproduction, fix-plan, and PR-body drafts only. Security-sensitive findings are blocked from public export and isolated below ignored `.private/disclosures/`; see [docs/DISCLOSURE.md](docs/DISCLOSURE.md).
-
-Each public run writes `atlas.html`, `atlas.svg`, `atlas.json`, `atlas.dot`, and `summary.json`.
-
-## Library model
-
-```text
-initial Model
-  + actions(Model) -> Array[Msg]
-  + update(Model, Msg) -> Model
-  + view(Model) -> Html
-  + Property<Model, Msg>
-  + shrink(Msg) -> Array[Msg]
-  + dependencies(Model) -> Array[String]
-  = verified reachable UI state graph
-```
-
-`Machine::actions` returns only messages valid for the supplied model. Proped executes typed transitions, renders each discovered model without a browser, checks state and transition properties, and minimizes failing action traces. For practical runs, the runner retains the shortest counterexample per property instead of repeating equivalent failures from many generated cases.
-
-```moonbit
-let machine = rabbita_machine_with_action_id(
-  initial_model,
-  update,
-  available_actions,
-  shrink_msg,
-  view,
-  model_fingerprint,
-  stable_action_id,
-  describe_msg,
-  dependencies_for,
-)
-
-let report = run(machine, properties, RunConfig::default())
-let html = report_to_html(report)
-let svg = report_to_flow_svg(report)
-let json = report_to_json(report)
-let dot = report_to_dot(report)
-```
-
-`RunReport` records the effective seed, exploration bounds, states, raw transitions, structured minimized failure traces, dependencies, and diagnostics. `affected_state_ids` selects states whose dependency identifiers intersect a supplied change set.
-
-## Core API
-
-| API | Purpose |
-| --- | --- |
-| `Machine[Model, Msg]` | Pure update, reachable actions, rendering, identities, shrinking, dependencies |
-| `state_property` | Validate a model and its rendered HTML |
-| `transition_property` | Validate a before/message/after transition |
-| `run` | Deterministic exploration with validated defaults |
-| `run_checked` | Exploration with typed configuration errors |
-| `affected_state_ids` | Plan differential UI rebuilds |
-| `report_to_html` | Standalone state atlas |
-| `report_to_flow_svg` | Standalone graph |
-| `report_to_json` | CI and agent report |
-| `report_to_dot` | Graphviz report |
-
-## Repository layout
-
-```text
-src/
-  cli/                              CLI and machine-readable command contract
-  external/                         manifest validation, detection, effect modeling
-  examples/newsletter/              reusable project demo package
-  vendor/rabbita_counter/           passing counter baseline
-  vendor/rabbita_todo/              blank-title failure
-  vendor/rabbita_sokoban/           malformed timeline failure
-  vendor/rabbita_subscriptions/     stale timer failure
-  vendor/rabbita_websocket/         duplicate disconnect failure
-  vendor/proton_todo/               stale snapshot ordering failure
-  vendor/ensenzu_app/               numeric form and SVG application adapter
-  vendor/ensenzu_core/              pinned Ensenzu calculation implementation
-  vendor/moonbit_editor_file_tree/  file-tree resolve and auto-reveal adapter
-  vendor/canopy_components/         resizable, menu, and tabs finite adapter
-  vendor/canopy_editor_integration/ CodeMirror lifecycle/browser replay adapter
-  vendor/rabbita_utility_batch/     supported public utility-app batch
-  vendor/incr_typed_spreadsheet/     worksheet UI and backdating adapter
-  vendor/incr_typed_spreadsheet_core/ pinned worksheet implementation
-  vendor/isomorphic_suite/           Kanban, Todo, and Note matrix adapter
-  vendor/circular_state/              clean-room workspace/modal adapter
-  core.mbt                          exploration, shrinking, minimal failure retention
-  rabbita_adapter.mbt               browserless Rabbita rendering
-  atlas*.mbt                        report exporters
-  flow*.mbt                         deterministic graph layout
-external/                            pinned external manifests and schema
-```
-
-## Development
-
-```bash
-moon update
-moon fmt --check
-moon check --target native
-moon test --target native
-moon run src/cli -- demo run all --json
-moon run src/cli -- external run all --json
-```
-
-The server-side Rabbita renderer is marked experimental upstream, so `moon check` emits warning `0014` from `rabbita_adapter.mbt`.
+- [CLI reference](docs/CLI.md)
+- [Execution flow](docs/FLOW.md)
+- [Disclosure and safety notes](docs/DISCLOSURE.md)
+- [Web driver protocol](docs/WEB_DRIVER_PROTOCOL.md)
 
 ## License
 
-Proped is Apache-2.0. Vendored attribution is recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Apache-2.0. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

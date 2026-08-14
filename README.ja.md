@@ -2,506 +2,84 @@
 
 日本語 | [English](README.md)
 
-Proped は、Rabbita UI の到達可能状態を探索し、モデルと遷移のプロパティを検証し、failure traceを縮約して、決定的なHTML・SVG・JSON・Graphviz Atlasを出力します。
+Proped は、決定的な UI 探索を行う CLI / ライブラリです。このリポジトリには、Web プロジェクト向けの native `proped` CLI と、Rabbita モデル探索向けの MoonBit CLI / ライブラリが含まれます。
 
 ## Native CLI
 
-`proped` をRust製のproduct入口として追加しています。既存のMoonBit探索engineとNode/Playwright Web engineは書き直さず、このnative shellの背後で利用します。
+Rust が利用できる checkout では、次のように native CLI をビルドできます。
 
 ```bash
 cargo build -p proped-cli
 ./target/debug/proped -V
-./target/debug/proped setup
-./target/debug/proped doctor --json
-./target/debug/proped web inspect . --json
 ```
 
-development buildはCalVer package versionを`proped 2026.8.0 (dev)`として表示します。release buildではsource commitの7文字SHAをpackage versionとは分離して埋め込み、`proped 2026.8.0 (abcdef0)`のように表示します。native shellはWeb command dispatchでshellを使わず、既存dispatcherのstdout/stderr/exit statusを保持します。`PROPED_RUNTIME_ROOT`で`scripts/proped.mjs`を含むProped runtime treeを明示指定できます。
+Proped が使用する runtime を準備し、状態を確認します。
 
-公式release artifactの対象は Linux x86_64、macOS Apple Silicon (arm64)、Windows x86_64 です。Intel Mac buildはサポートしません。
+```bash
+./target/debug/proped setup
+./target/debug/proped doctor
+```
 
-release archiveにはnative shellと`lib/proped`以下のread-onlyなJavaScript runtime sourceを含めますが、Node、`node_modules`、Chromiumは意図的に内包しません。`proped setup`だけがproduct runtimeを明示取得します。互換Nodeが既にあれば再利用し、無ければreleaseでpinしたmanaged NodeをSHA-256検証後に導入します。Proped自身のlockfile固定JavaScript dependencyはlifecycle scriptを無効にして準備し、pin済みPlaywright Chromiumもuser単位のmanaged storageへ導入した後、実browser launchでreadinessを検証します。healthyな2回目のsetupは準備済みruntimeを再利用します。`proped doctor --json`は観測専用でresolved managed pathも返し、`doctor`や通常の`web` commandがProped runtimeを暗黙repair/downloadすることはありません。
+`proped setup` は Web command が使用する Node / JavaScript と Playwright browser runtime を準備します。互換性のある Node が既にあれば再利用し、なければ Proped が管理する Node version を導入します。`proped doctor` は runtime の readiness を確認しますが、repair や download は行いません。
 
-## MoonBit探索CLI
+Release packaging は Linux、macOS、Windows 向けの native archive を生成します。archive には `bin/` 配下の native executable と `lib/proped/` 配下の Proped runtime source が含まれます。Node、`node_modules`、Chromium は archive に含まれないため、展開後に `proped setup` を実行します。各 archive には SHA-256 checksum も生成されます。
 
-既存MoonBit CLIはexploration engineの直接入口として残します。
+runtime を repository や packaged `lib/proped` 以外に置く場合は、`scripts/proped.mjs` を含む Proped runtime tree を `PROPED_RUNTIME_ROOT` で指定できます。
+
+## Web プロジェクト
+
+install / build / start script を実行せずに project を inspection できます。
+
+```bash
+proped web inspect <project>
+proped web inspect <project> --json
+```
+
+onboarding と exploration をまとめて実行する場合は `campaign` を使います。
+
+```bash
+proped web campaign <project>
+```
+
+`web campaign` は必要に応じて project dependency を準備できます。dependency preparation を実行させない場合は `--no-prepare` を指定します。
+
+manifest を明示して段階的に実行する場合は次の command を使います。
+
+```bash
+proped web init <project> --output proped.web.json
+proped web doctor proped.web.json
+proped web prepare proped.web.json
+proped web compile proped.web.json
+proped web run proped.web.json
+```
+
+`web prepare` が dependency install を明示的に行う step です。`web run` は不足している target dependency を暗黙に install しません。
+
+checked-in dispatcher が実装している Web command は `proped web --help` で確認できます。
+
+## MoonBit 探索 CLI
+
+MoonBit CLI は Rabbita exploration engine の直接入口です。
 
 ```bash
 moon run src/cli -- help
+moon run src/cli -- schema --json
 moon run src/cli -- demo list --json
 moon run src/cli -- demo run all --json
-moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json
-moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json
 moon run src/cli -- external run all --json
 ```
 
-`demo run all` は各demoを `demo/out/<demo-id>/` に、`external run all` は外部targetを `demo/out/external/<id>/` に出力します。どちらもstdoutへ1つのJSON result envelopeを返します。エージェントやscriptは次のcommandから安定した契約を取得します。
+`demo run all` は `demo/out/<demo-id>/` 配下へ、`external run all` は `demo/out/external/<id>/` 配下へ出力します。
 
-```bash
-moon run src/cli -- schema --json
-```
+MoonBit command と output contract の詳細は [docs/CLI.ja.md](docs/CLI.ja.md) にあります。
 
-終了コードは、各demoが宣言した期待結果と一致した場合が `0`、引数エラーが `2`、期待結果との不一致が `3` です。`--json` は引数列の任意の位置に指定でき、`--output <dir>` でartifact rootを変更できます。
+## ドキュメント
 
-完全なMoonBit command・output契約は [docs/CLI.ja.md](docs/CLI.ja.md) にあります。
-
-## 未知Webプロジェクトのinspection
-
-Propedは未知のWebプロジェクトに対して、install/build/start scriptを実行せずread-only inspectionできます。package manager、framework、build/serve command、render mode、output directory、routing、storage/IndexedDB、WebSocket、service worker、authenticationのhintを推定し、無言で断定せずconfidenceとambiguityを返します。
-
-```bash
-./target/debug/proped web inspect .
-./target/debug/proped web inspect . --json
-```
-
-`node scripts/web_project_inspect.mjs`の直接入口はinternal/互換用途として残します。
-
-## Generated GitHub Actions quality gate
-
-review済みmanifest v2からGitHub Actions workflowを生成できます。`--output`を明示しない限りrepositoryは変更せずstdoutだけに出します。
-
-```bash
-node scripts/web_project_ci.mjs proped.web.json > proped-web.yml
-node scripts/web_project_ci.mjs proped.web.json --output .github/workflows/proped-web.yml
-```
-
-generated workflowはPropedを**full commit SHA**でpinし、repository permissionをread-onlyに保ち、project dependency bootstrapをstrict executionから分離します。その後Proped-managed Playwright/Chromium、bubblewrap、`web_project_run_v2.mjs`を実行し、quality gate失敗時も`.proped/out`をuploadします。
-
-## Unified Web CLI
-
-Web onboardingのcanonical入口を`proped web`へまとめました。repository内では`node scripts/proped.mjs web ...`として同じdispatcherを実行できます。dispatcherはshellを使わず、各既存commandのstdout/stderr/exit codeをそのまま保持します。
-
-```bash
-./target/debug/proped web inspect . --json
-./target/debug/proped web init . --output proped.web.json
-./target/debug/proped web doctor proped.web.json
-./target/debug/proped web review . --json
-./target/debug/proped web approve init review.json --output approvals.json
-./target/debug/proped web apply proped.web.json semantic-hints.json --output proped.web.approved.json
-./target/debug/proped web run proped.web.approved.json
-```
-
-既存`web_project_*` / `web_semantic_*` scriptsは互換入口として残します。
-
-## 未知project campaign
-
-`web campaign`は未知Web projectを1 commandで扱うproduction-orientedな入口です。read-only inspectionとmanifest推定、既存Node/package-manager runtimeの解決、必要時のdependency preparation、manifest compile、Generic Browser探索、candidate failure replayまでを束ね、手書きmanifestなしで安定したcampaign summaryを返します。
-
-```bash
-./target/debug/proped web campaign .
-```
-
-完走時は`autoOnboarded`、`humanInterventions`、`interventionReasons`、canonical `failureClasses`、replay determinism、探索したstate/transition/action数を返します。安定再現したquality failureはonboarding失敗ではなくfindingとして扱うため、`autoOnboarded: true`かつ`qualityPassed: false`になり得ます。critical inference ambiguity、互換runtime不足、prepare未完了、execution stage失敗は明示的なintervention reasonになります。campaign command自体を明示的なmutating orchestrationとして扱うため、既定では既存のcredential-filtered dependency preparationを必要時に実行します。`--no-prepare`で禁止、`--offline`でpackage-manager offline mode要求、`--no-artifacts`で`.proped/campaign/`生成を抑止できます。sandboxはhostで利用できる安全側を自動選択し、Linuxではstrict、macOSではLinux相当のstrict process/home isolationが成立しないためconstrained Seatbelt backendを使います。`caller-enforced`へ暗黙downgradeしません。lower-levelの`web run`は従来どおり暗黙installせず、prepare明示の境界を維持します。
-
-## 複数projectのproduction benchmark
-
-`proped web benchmark <project...>`は同じblind campaign contractを複数targetへ適用し、1件がintervention-requiredでも残りを継続します。auto-onboarding率、intervention project数/回数、reproducible failure class、replay determinism、総states/transitions/actionsに加え、framework、project/server mode、package manager、state sourceの実観測distributionを集約します。quality findingとonboarding completionは意図的に別軸で、完全自動オンボードされたprojectからfailureを発見してもbenchmark自体の失敗にはしません。
-
-```bash
-./target/debug/proped web benchmark ./targets/app-a ./targets/app-b
-```
-
-exit 0は全targetがhuman interventionなしでcampaign executionへ到達、exit 1は1件以上がintervention-required、exit 2はbenchmark/CLI自体のerrorです。aggregate artifactは既定で`.proped/benchmark/summary.json`へ保存します。`--no-prepare`、`--offline`、`--no-artifacts`、campaignと同じsandbox modeを利用できます。 production回帰を安定して止めるには`--baseline <file>`でmachine-independentなcompact baselineとlive corpusを比較できます。auto-onboarding低下、replay determinism低下、human intervention増加、target削除、corpus metadata変更はbaseline gateを失敗させ、finding classの追加/削除は別deltaとして報告してonboarding regression数には含めません。repository CIではhost-safeな既定sandboxでproduction corpusを`protocol/fixtures/production-campaign-baseline.json`と比較します。
-
-継続的なproduction能力測定には`--corpus production`を使います。`protocol/fixtures/production-campaign-corpus.json`のversioned offline corpusがtarget identity、repository/revision metadata、tags、project-specific executable adapter LOCを固定し、auto-onboarding >= 80%、intervention project rate <= 20%、replay evidenceがあるprojectのdeterministic replay = 100%、adapter LOC = 0をgateします。`--previous <summary.json>`を指定した場合はonboarding regressionも0件を要求します。quality findingはこのonboarding gateとは独立です。
-
-```bash
-./target/debug/proped web benchmark --corpus production --offline
-./target/debug/proped web benchmark --corpus production --offline --previous .proped/benchmark/previous.json
-```
-
-### 明示的なexternal OSS corpus
-
-`--corpus external`は`protocol/fixtures/external-production-corpus.json`に固定した実OSS corpusを使います。現在はfull commit SHAでpinした **6 repository / 11 target**（TodoMVC React/Vue、drawDB、MoonBit Isomorphic 5 app、Rabbita Xterm Web、Proton calculator、Ensenzu）で、**project-specific executable adapter LOCは0**です。corpus gateは11 target、6 repository以上、`framework-backed` / `pnpm` / `stateful` / `static` runtime shapeのcoverageを要求します。EnsenzuではCorepackによるexact `pnpm@11.5.3`選択とdependency未準備checkoutからのauto-prepareを通し、Cloudflare/Vite buildが出力する`dist/client/index.html`も唯一のnested document rootとして自動認識します。Git source取得は明示phaseとして分離され、benchmark自身がclone/fetchを暗黙実行することはありません。
-
-```bash
-./target/debug/proped web corpus materialize external --checkout-root .proped/external-checkouts
-./target/debug/proped web corpus verify external --checkout-root .proped/external-checkouts
-./target/debug/proped web benchmark --corpus external --checkout-root .proped/external-checkouts
-```
-
-`--corpus frontier`（alias: `novelty`）は`protocol/fixtures/external-frontier-corpus.json`に固定した、最初のproduction昇格evidenceを作った7 repositoryのtopology corpusです。対象shapeはSvelteKit monorepo + runtime renegotiation、Astro static export、React Router framework mode + Express custom server、SSR + embedded SQLite + Bun、Lit Web Components、Yarn Berry PnP monorepo + workspace prebuild、legacy Webpackです。実測promotion baselineは **7/7 auto-onboarded、7/7 viability-qualified、deterministic replay 100%、human intervention 0、project-specific adapter LOC 0** です。frontier側のthresholdは探索用のまま維持し、完全な7/7昇格条件を満たしたかを`frontierScore.promotionEligible`で記録します。
-
-```bash
-./target/debug/proped web corpus materialize frontier --checkout-root .proped/frontier-checkouts
-./target/debug/proped web corpus verify frontier --checkout-root .proped/frontier-checkouts
-./target/debug/proped web benchmark --corpus frontier --checkout-root .proped/frontier-checkouts
-```
-
-### Promoted production topology contract
-
-`--corpus promoted-production`は`protocol/fixtures/promoted-production-corpus.json`を使い、上記7 shapeをstrictなproduction regression contractへ昇格します。各targetは実証済みfull commit SHA、Git checkout contract、topology ID、adapter LOC 0を固定します。gateはauto-onboarding = 100%、intervention-project rate = 0、deterministic replay = 100%、regression budget = 0、7つの異なるrepository、`requiredTopologies`全件coverageを要求します。`protocol/fixtures/promoted-production-baseline.json`がproject単位のgreen stateを固定し、`protocol/fixtures/frontier-7of7-promotion-evidence.json`がpromotion scoreとclean-checkout evidenceを保存します。
-
-```bash
-./target/debug/proped web corpus materialize promoted-production --checkout-root .proped/promoted-checkouts
-./target/debug/proped web corpus verify promoted-production --checkout-root .proped/promoted-checkouts
-./target/debug/proped web benchmark --corpus promoted-production --baseline protocol/fixtures/promoted-production-baseline.json --checkout-root .proped/promoted-checkouts
-node scripts/release_gate.mjs
-```
-
-Frontier benchmark summaryは`frontierScore`に加え、aggregateの`interventionReasonDistribution`、`viabilityDistribution`、`viabilityFailureDistribution`、`deterministicReplayRate`、`projectSpecificAdapterLoc`を出力します。各targetの`viability`は、declared dependency install / workspace build / project build / managed start自体が成立しない場合を`failed`、browser lifecycleまで到達した場合を`qualified`として、upstream/pin viabilityとProped generic capability failureを分離します。`frontierScore.genericCapability`はqualified targetだけのauto-onboarding率を示します。dependency bootstrapはboundedで、`--prepare-timeout-ms <ms>`により既定300秒のinstall timeoutを上書きできます。timeoutしたprocess treeは残りのfrontierを停止させず、明示的な`prepare_timeout` intervention classになります。`packageManager`宣言のないpnpm projectでは、runtime世代を一意に決められる古いlockfile format（`5.4` / `6.0`）をhostのpnpmではなくpinしたCorepack proxyで実行します。Corepack auto-pinも無効化するため、prepareがupstream `package.json`へ`packageManager`を追記することはありません。nested JavaScript workspaceではancestorのexact `packageManager`を継承し、lockfile/PnPのinstall rootを基準にdependency readinessを判定し、target build前に明示的なlocal `workspace:*` dependencyを依存順にprebuildできます。release gateはmachine-readableで、release tag作成前にself-contained production baseline、strict external production corpus、promoted topology corpus、Linux/macOS sandbox check、managed-runtime distribution matrix、package内容contract、source-SHA provenanceのCI wiringも検証します。
-
-Git-backed entryのmaterializeはfull revisionとcredentialを埋め込まないHTTPS/file/absolute-local sourceだけを受け付け、checkoutを明示root配下へ限定します。corpus entryはさらに`source.nestedSources`としてcheckout-root-relative path、credential-free Git URL、full revisionを明示できます。Propedは各宣言をgitlink SHAと`.gitmodules`のpath/URLに照合してから独立checkoutとしてmaterializeします。多階層sourceはそのancestorも明示宣言されている場合だけ許可し、最も近い宣言済みancestor revisionに対して検証します。`.gitmodules`を再帰walkして未宣言submoduleを取得することはなく、nested側でもhook、checkout filter、recursive acquisitionを無効化します。authorized checkoutのrepository rootに`moon.work`がある場合は、Web project build前のknown-tool preparationとして`moon build --target js --release`をstructured argv / `shell=false`で実行でき、`--no-prepare`時は実行せず`workspace_prepare_required`へ倒します。caller由来Git config injectionを無視し、credential helper、Git hook、fsmonitor、recursive submodule取得を無効にし、checkout filterとGit submodule配下targetを拒否します。親checkoutのcleanliness判定ではsubmodule worktree stateを無視する一方、target pathがgitlinkへ入ること自体を禁止するため、無関係な未materialize submoduleでverify不能にならず、submodule内容を暗黙信頼もしません。既存checkoutがdirty、またはorigin不一致ならfail closedです。`web corpus verify`はread-onlyでorigin、exact HEAD revision、親checkout cleanliness、path containment、全target subdirectoryを検証します。external benchmark開始前にも同じverifyを必須とし、実行後はtracked fileをpin revisionへ戻し、run中に生成したnon-ignored untracked fileとbenchmark前には存在しなかった新規ignored rootを削除し、既存ignored rootは保持したままcheckoutが再びcleanであることを確認します。`protocol/fixtures/canopy-nested-source-corpus.json`にはCanopy、7 top-level nested source、Loom配下の明示3 source（計10 nested checkout）を別dogfood corpusとしてpinしており、passing `external` production gateには混ぜません。live benchmarkはauto-onboarding 100%、human intervention 0、deterministic replay、project-specific adapter LOC 0で完走し、Waku buildのwriteは既知生成領域`dist`と`.wrangler`だけに制限したうえでcleanup時に削除します。dependency preparationは既存campaign phaseのままで、`--no-prepare`は準備済みdependencyを要求し、`--offline`はpackage-manager preparationをofflineに制限します。
-
-## 明示的なWeb project preparation
-
-`web run`はtarget dependencyを暗黙installしません。生成manifestにinstall commandがあり、dependency artifactが未準備なら`prepare_required`で終了します。先に明示setup phaseを実行します。
-
-```bash
-./target/debug/proped web prepare proped.web.json
-./target/debug/proped web run proped.web.json
-```
-
-`web prepare`は推定install argvを`shell=false`、project root固定cwd、credential-safeなenvironment allowlistで実行します。 Node要件は`package.json#engines.node`、`package.json#volta.node`、`.nvmrc`、`.node-version`からread-onlyで推定し、整合する宣言は統合、競合または安全に解釈できないselectorは`doctor` / `prepare` / `run`でblocking ambiguityとして扱います。このsetup commandだけnetwork利用を明示的に許可し、`--offline`ではpackage-managerのoffline modeを要求します。生成manifestは`package.json#engines.node`、`package.json#volta.node`、`.nvmrc`、`.node-version`から保守的に推定したNode requirementを保持します。互換条件とpreferred runtimeを分離します。`engines.node`やshorthand selectorは許容range、exactな`.nvmrc` / Volta / `.node-version`は`nodePreferredVersion`として保持します。preferred exactが既にあればそれを選び、無ければ同majorの既存互換runtimeを優先してdoctor warning付きでfallbackします。競合または安全に解釈できないselectorは引き続きcriticalなreview-required ambiguityとしてtargetのinstall/build前に停止します。Propedは現在processに加えてNVM / Volta / FNM / asdfの既存Node runtimeをread-onlyでinventoryし、targetのinstall/build/preview subprocessだけに最も新しい互換runtimeを選択します。runtimeを暗黙downloadせず、Proped本体とmanaged ChromiumはProped-owned runtimeのままです。互換runtimeが既に存在しない場合だけ`web doctor` / `web prepare` / `web run`をinstall/build前に停止します。`web doctor`ではdependency readinessも事前表示します。 npm / pnpm / Yarnのexact `packageManager`宣言はmanifest v2へ保持し、実行commandはCorepack経由にします。未cacheのpackage-manager版を取得できるのは明示`web prepare`だけで、通常のrun/build/previewは`COREPACK_ENABLE_NETWORK=0`を強制します。Corepack cache pathも明示継承するため、strict sandboxでもprepare済みmanagerをnetwork再開なしで読み取れます。
-
-## 未知projectのblind validation
-
-`moonbitlang/website`のpin revision `a6222f7292ce50f2a08847ef0852b1a8d456a393`にblind適用し、**project固有executable adapter 0 LOC**で実Generic Browser探索まで到達しました。未知Vite subprojectをgenerated actionとcoverage-guided explorationだけで操作しています。blind findingからDocusaurus検出、明示dependency preparation、package-manager install完了marker、storage access拒否時のfail-closed snapshot、unique linkの`href` fallbackを一般機能として追加しました。実blind appのlocator uniquenessはforced clickなしで**54.2%から100%**へ改善しています。
-
-2本目のblind onboardingではpinした`dowdiness/canopy` (`cb41945b04801084e8abe1d8edc27eb0cdce4a1c`)をserver-state候補として適用しました。read-only inspectionだけでlocal/session storage、IndexedDB、WebSocket、Hono、relative API call 5件を認識し、Wakuをstatic React/Vite SPAと誤分類するlifecycle gapも発見しました。Wakuをfirst-class化したことでCanopyは`waku` / `server-rendered`、generated manifest v2は`npm run preview`を使うmanaged command-server modeとなり、互換NVM Node 22.22.3も自動選択します。さらにexplicit multi-level nested-source contractとroot `moon build --target js --release` prebuildを追加し、pinしたCanopy dogfoodはWaku build、Wrangler preview、generic browser exploration、deterministic replayまで0 adapter LOC / 0 human interventionで完走しました（32 states / 31 transitions / 9 actions）。
-
-## Low-config Web project manifest v2
-
-read-only inspection結果からhigh-level manifest v2を生成し、既存のv1 stage graphへcompileします。現時点のcanonical formatはJSONで、`--output`を明示しない限りstdout-onlyです。
-
-```bash
-node scripts/web_project_init.mjs . > proped.web.json
-node scripts/web_project_doctor.mjs proped.web.json
-node scripts/web_project_compile.mjs proped.web.json
-```
-
-`web doctor`はinstall/build/start commandを実行せず、project/runtime/server/browser/sandbox readinessを検査します。static outputやmanaged command serverはcompile後にProped-owned browser stageが扱います。
-
-## Review-only server hooks
-
-source inspectionでliteralなsame-origin server interactionを見つけると、`proped web review`はhookを自動有効化せず候補として提示できます。literal GET/HEAD fetch/routeはlow-risk read-only候補、POSTはpathが明示的にreset用途と判定できる場合だけhigh-risk reset候補にします。human-approved read-only候補はmanifest v2の`server.hooks.readOnly`へmergeし、reset候補は明示risk acknowledgementがないと`server.hooks.reset`へ入りません。通常のmutation endpointはhook候補化せず、`automaticActivation`は常にfalseです。
-
-pinしたCanopy dogfoodでは`GET /api/pi-resume-chat/status`をconfidence 0.85のread-only候補として1件提案しました。その候補だけをapproveすると、manifestには同じread-only hookだけが入り、reset hookはnull、他のsemantic candidateはpendingのまま維持されました。
-
-## Managed command-server endpoint discovery
-
-full-stack projectではGeneric Browser Modeが`PORT`/host環境変数でfreshなloopback portを要求しますが、targetがそのportへbindすることを前提にしません。managed command-server runtimeはboundedなstdout/stderrからliteralなloopback HTTP(S) URLだけも抽出し、same-machine candidateだけをreadiness probeします。external/network URLは無視し、childにはcredential-safe environment allowlistだけを渡し、readiness failure時もprocess treeを必ずcleanupします。未知preview serverのport差異を吸収しつつ、logに出た任意originを信用しない設計です。
-
-## Fresh-campaign replay gate
-
-manifest v2はfresh campaignを既定3回実行します。candidate errorは同じcanonical failure classが全attemptで再現した場合だけquality failureへ昇格します。一部runだけに出るclassはCI failureではなく`nondeterministic_failure_candidate` diagnosticへ降格します。fresh-browser determinismを手動確認ではなくquality gate自体へ組み込みます。
-
-## Canonical failure classes
-
-Web failureには人間向けfailure codeとは別にstableなcanonical classを付与できます。oracle family、normalized action pattern、semantic evidence path、route family、exception kindを使い、generated ID、runtime generation、具体的input valueを正規化してからhashします。元failure codeは保持したまま反復発生をclusterし、runner summary/Atlasにもcanonical IDを出します。
-
-## Generic Web property packs
-
-Low-config Generic Browser Modeでは現在`browser-safety`、`navigation`、`reload-persistence`、`stateful-server`を提供します。false positive抑制のため保守的に判定し、uncaught exceptionや観測可能なlocal/session storage driftだけをquality failureにします。storage evidenceなしでreload後にvisible stateが消える場合は自動CI failureではなくadvisory candidateに留めます。`stateful-server`は発見したCreate/Read/Update/Delete候補、invalid input、reload、managed server restart、session境界、replayを扱いますが、DOM・IndexedDB・browser storageではなくread-only server hook projectionでserver stateの変化と永続化を確認できた場合だけ`generic-covered`へ昇格します。
-
-このgeneric discoveryだけで、TodoMVC React/Vueのreload state lossをTodoMVC固有Playwright adapter/semantic contractなしにsurfaceできています。
-
-## Dexie-aware metadata
-
-inspectionでDexieを検出すると、manifest v2がdeclared versionと、install済みならresolved versionをGeneric Browser Modeへ渡します。初版adapterはversion-boundedで、実依存から`indexedDB.open(name, Math.round(db.verno * 10))`と`idbdb.version / 10`を確認できたDexie 3.xだけを自動変換します。未知majorは推測せずdiagnosticを出してnative IndexedDB versionを保持します。
-
-実drawDBは`^3.2.4`を宣言し`3.2.7`へresolveされ、native IndexedDB version `670` / Dexie logical version `67`として自動認識されます。`++id,diagramId,lastModified,loadedFromGistId`のようなstore schema descriptorも再構成します。
-
-## IndexedDB metadata inventory
-
-manifest v2で`state.indexedDB.mode = "auto-metadata"`を選ぶと、Generic Browser ModeはIndexedDBのdatabase名、native version、object store keyPath、auto-increment、index定義、record countを取得します。record payload自体は**読みません**。実drawDB dogfoodではdrawDB固有adapterなしで`drawDB` native version 670と`diagrams`/`templates` storeを検出できています。
-
-## Volatility mining
-
-manifest v2はgeneric campaign前にboundedなno-action fresh-context probeを実行できます。run間で変化するpathを抽出し、generated ID/token/timestampと、storage/form/domain stateの揺れを分離してnormalizer candidateを提案します。**candidateは自動適用せず**、raw volatile valueもreportへ出しません。state-bearing volatilityは必ずreview-requiredです。
-
-## Selector survival benchmark
-
-`web-selector-survival`はdiscovery済みaction inventoryをsemantic locator contractへ変換し、minor UI revision間で比較します。class名、生成DOM id、wrapper node、要素順が変わってもrole/name/scope/test identityが維持されていればsurvivalを保てます。commit済みbenchmarkではminor revisionに95%以上を要求し、semantic accessibility contractを意図的に壊した場合は低下を検出できることも別に確認します。
-
-```bash
-node scripts/test_web_selector_survival.mjs
-```
-
-## State novelty weighting
-
-exploration frontierはdeterministicなsemantic novelty scoreで順位付けできます。新しいstate fingerprint、route family、storage key shape、IndexedDB schema shape、accessible action target frontierを別々のnovelty signalとして扱います。動的route IDやstorage valueそのものはnoveltyにしないため、volatile dataへの過剰反応を抑えます。
-
-```bash
-node scripts/test_web_state_novelty.mjs
-```
-
-## Unknown-project onboarding acceptance
-
-commit済みonboarding regression corpusには、TodoMVC React 3件 + drawDB 3件のreal-browser failure classを記録しています。pinした実runで**6/6**をmanaged Chromium上でdeterministicに再検出しました。別のgeneric-property benchmarkでは10,000 healthy semantic transitionsを実行して**false positive 0件**（0 / 1000）で、duplicate-submit / invalid-entity sensitivity controlは正常に検出します。
-
-```bash
-node scripts/test_web_healthy_transition_benchmark.mjs
-node scripts/test_unknown_web_onboarding_acceptance.mjs
-```
-
-## Human semantic approval workflow
-
-semantic suggestionは人間が明示decisionを記録するまでinertです。approval planはsemantic review hashをpinし、stable candidate refごとに`approve`/`reject`/`defer`を保持します。high-risk approveは明示risk acknowledgement必須で、stale/tampered planは拒否します。compileして得られるのはhuman-approved hintsだけで、自動activationは行いません。
-
-```bash
-node scripts/web_semantic_approval.mjs init review.json --output approvals.json
-node scripts/web_semantic_approval.mjs decide review.json approvals.json property:undo-redo-inverse approve --output approvals.json
-node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
-```
-
-## Coverage-guided Generic Browser exploration
-
-生成manifest v2は小さくboundedなcoverage-guided explorationを既定で有効化し、`maxStates=32` / `maxTransitions=64` / `maxDepth=4`から開始します。frontierはsemantic state noveltyと未実行actionを優先し、各stateはfresh contextへtrace replayして再構成します。**destructive actionは常に探索対象外**です。bounded mutationはself-containedな`static-output`実行に加え、managed command serverでmanifest v2が`server.mutationPolicy = "bounded-managed"`を明示した場合だけ許可します。command modeはそれ以外deny-by-default、external serverはsafe actionのみです。探索failureは、発見したtraceそのものをfresh contextで再実行し、全attemptで同じfailure classが再現した場合だけquality failureへ昇格します。flaky candidateはdiagnosticのままです。
-
-## Approved semantic runtime integration
-
-`semantic-hints.json`はmanifest v2の`semantics.approved`へ明示的に適用できます。承認済みhintだけがruntimeへ入り、未承認candidateは実行されません。初版runtimeは`property:saved-state-survives-reload`を既存`reload-persistence` packへ接続し、`projection:route-identity` / `projection:persistence-summary`をsemantic stateへ追加し、具体的なapproved normalizer ruleをfresh-context fingerprintへ適用します。未対応のapproved hintは黙って実行せずdiagnosticとして保持します。
-
-```bash
-node scripts/web_semantic_approval.mjs compile review.json approvals.json --output semantic-hints.json
-node scripts/web_semantic_apply.mjs proped.web.json semantic-hints.json --output proped.web.approved.json
-node scripts/web_project_run_v2.mjs proped.web.approved.json
-```
-
-`web_semantic_apply.mjs`は`--output`を省略するとstdout-onlyで、元manifestを書き換えません。compiled hintsのsemantic hashを再検証するため、承認後の改変も拒否します。
-
-## Unified semantic review report
-
-property/projection/normalizer提案を1つのbounded review reportで確認できます。各candidateにstableな`kind:id` ref、HIGH/MEDIUM/LOW confidence band、必要に応じたsemantic risk、recommended decision、evidence source、automatic activation flagを表示します。既定CLIは人間向け表示、`--json`では同じreview dataをtooling向けに出力します。
-
-```bash
-node scripts/web_semantic_review.mjs .
-node scripts/web_semantic_review.mjs . --volatility volatility.json --json
-```
-
-## Review-only normalizer candidates
-
-volatility findingをそのまま適用せず、説明付きnormalizer候補へ昇格できます。fresh-context volatilityとsource evidenceを組み合わせ、semantic riskと推奨判断を付けます。DOM generated ID/timestamp/tokenはlow-risk replacement候補にできますが、storage/form/application-state/IndexedDB pathはhigh-riskのまま保持し、自動replacementは出しません。
-
-```bash
-node scripts/web_normalizer_candidates.mjs . --volatility volatility.json --json
-```
-
-## Review-only semantic projection candidates
-
-project-specificなPlaywright codeを生成する代わりに、小さなdeclarative state projection候補を提案できます。現在はselected entity identity、entity collection count、undo/redo history position、persistence metadata、normalized route identity、graph/domain summaryを候補化します。各提案にはoutput shape・source kind・confidence・evidenceを付け、実行projection codeは生成も自動activationもしません。
-
-```bash
-node scripts/web_projection_candidates.mjs . --json
-```
-
-## Review-only semantic property candidates
-
-boundedなread-only static analyzerで、repository source snippet・既存test title・UI vocabularyの3系統から高価値なsemantic property候補を提案できます。現在はundo/redo inverse、import/export roundtrip、Escapeによるedit cancel、delete後のselection consistency、save後reload persistence、filter/source consistencyなどを候補化します。候補は**review-only**で、confidence/evidenceを表示し、自動activationは常に無効です。
-
-```bash
-node scripts/web_property_candidates.mjs . --json
-```
-
-## Multi-context scheduler prototype
-
-deterministicなmulti-context schedulerで、shared stateとcontextごとのstateに対するcontext-tagged semantic actionのinterleavingを探索できます。wall-clock concurrencyへ依存せずtransition graphを記録し、failure traceをreplayします。synthetic regressionでは2 contextのlost-update raceを検出し、記録した4-step interleavingから同一failure signatureを再現します。
-
-```bash
-node scripts/test_web_multi_context_scheduler.mjs
-```
-
-## Server reset / read-only API hooks
-
-manifest v2ではdeterministic campaign向けにsame-origin server hookを任意宣言できます。reset hookはcredentialなしの明示`POST` relative pathで、fresh browser resetの直前に毎回呼びます。read-only hookは`GET`/`HEAD`だけに制限し、redirect/cross-originを拒否、responseはbyte上限を設け、artifactにはraw bodyではなくstatus/content hash/JSON shapeだけを残します。server-backed appでもproject-specific adapterなしでfresh replayへ参加できます。
-
-```json
-{
-  "hooks": {
-    "reset": { "method": "POST", "path": "/__test/reset", "expectedStatus": [204], "timeoutMs": 1000 },
-    "readOnly": [{ "id": "state", "method": "GET", "path": "/api/state", "expectedStatus": [200], "timeoutMs": 1000, "maxBytes": 65536 }]
-  }
-}
-```
-
-## Coverage-guided Web exploration
-
-bounded explorerはsemantic traceをfresh browser contextへreplayしてfrontier stateを再構成し、discovery noveltyと未実行semantic actionを優先します。browser state cloneへ依存せずreproducibleに探索できます。synthetic regressionでは3 transitionsで新route上のfailureへ到達し、2回目も同一transition graph/semantic hashを再現します。
-
-```bash
-node scripts/test_web_coverage_guided_exploration.mjs
-```
-
-## Generic browser inventory
-
-起動済みアプリに対して、project-specificなPlaywright codeなしでgeneric browser adapterがaction discoveryとsemantic state captureを行えます。
-
-```bash
-node scripts/web_browser_inventory.mjs http://127.0.0.1:3000 --json
-```
-
-locatorが曖昧な場合は`.first()`で推測せずdiagnosticへ倒します。target originは許可し、外部networkはdefault denyです。
-
-## Semantic browser quiescence
-
-Generic Browser Modeはready判定を`networkidle`へ依存させません。各action後に2 animation frame進め、DOM/form/URL/storageのsemantic fingerprintをsamplingし、観測可能なsame-origin requestを追跡したうえで、pending request=0かつ連続安定sampleを要求します。安定し続けないページは不透明なwait failureではなく`semantic_quiescence_timeout` diagnosticになります。
-
-## Managed Chromium runtime
-
-Generic Browser Modeはtarget projectのbrowser dependencyを使わず、Proped側でbrowser runtimeを所有します。現在はPlaywright 1.62.0 / Chromium revision 1234（Chromium 151.0.7922.34）をpinしています。target側にPlaywright dependencyは不要で、再現性のためruntime metadataをbrowser snapshotへ含めます。
-
-## Strict Web execution sandbox
-
-LinuxではWeb project stageをOS-enforcedなbubblewrap境界で実行できます。
-
-```bash
-node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json \
-  --strict-sandbox \
-  --writable web/next-ssr-hydration/.next \
-  --writable web/nuxt-ssr-hydration/.output
-```
-
-strict modeはmachine-readableな`filesystem` / `network` / `process`の3 capabilityすべてに`strict`を要求します。Linux + bubblewrapではhost checkoutと`.git`を不変に保ち、unprivileged bubblewrapがpersistent overlayfsを利用できる場合はprivateなcopy-on-write worktree上でbuildを実行し、明示的にmount capabilityを持つprivileged callerではhost-mounted overlayfsもfallbackとして利用できます。どちらも利用できない環境では従来どおり明示build/artifact pathだけをwrite許可します。private `/tmp`、execution中のoutbound-network deny、PID namespace/new session、allowlist済みenvironmentも維持します。未知project campaignで最初のnetwork-denied `project-build`がbuild-time network prerequisiteを明示した場合だけ、credential-filter済み・process isolation・copy-on-writeを維持したbootstrap network retryを1回許可し、その後のbrowser executionはstrict network denyへ戻します。reportには各軸を`strict` / `constrained` / `caller_enforced`で保存します。macOSでは`proped web run <manifest> --sandbox-mode constrained`を明示するとSeatbelt（`sandbox-exec`）backendを使い、networkとfilesystem writeをdefault deny、明示writable pathとprivate temporary HOMEだけのwrite許可、environment allowlist、代表的なhost credential pathのread deny、child processへのpolicy継承を適用します。ただしhost process visibilityとhost HOME全体のread isolationは提供できないため3軸とも`constrained`としてreportし、strict manifestをmacOSでsilent downgradeすることはありません。
-
-## Web mutation品質ゲート
-
-framework-neutralなWeb mutation benchmarkは、generic Web propertyごとにレビュー済みmutationを1件実行し、対応するhealthy controlも検証します。品質ゲートはmutation score、false-positive rate、deterministic replay、最小traceのずれ、throughput、elapsed timeの違反を機械可読codeで返します。
-
-```bash
-node scripts/test_web_mutation_benchmark.mjs
-node scripts/test_web_mutation_benchmark.mjs --iterations 2000 --output .tmp/web-mutation
-node scripts/test_web_mutation_benchmark.mjs --minimum-mutation-score 1 --maximum-false-positive-rate 0 --no-artifacts
-```
-
-不正な引数は終了コード`2`、品質ゲート違反は終了コード`1`で、完全な結果をstderrへJSON出力します。default実行は`protocol/out/web-mutation-benchmark/`へ`summary.json`、`atlas.json`、`atlas.html`、`atlas.svg`、`atlas.dot`を生成します。
-
-## Web project runner
-
-厳格なWeb project manifestから、generic property pack、mutation quality gate、React/Vue Component Mode、Playwright Browser Mode、cross-mode replay、Next.js/Nuxt SSRを依存順に1つのquality graphとして実行できます。
-
-```bash
-node scripts/web_project_runner.mjs validate web/project-manifests/proped-web-quality.json
-node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json
-node scripts/web_project_runner.mjs run web/project-manifests/proped-web-quality.json --output .tmp/web-quality
-```
-
-runnerはshellを経由しません。manifest pathとstage cwdはrepository root外へescapeできません。stageのexit `1`はquality gate failure、exit `2`はusage error、その他のnon-zeroはexecution failureとして分類し、依存stageが失敗した後続stageはblockedになります。Linux strictとmacOS constrainedでは各stage起動前にOS sandboxを適用し、実際の保証をreportへ保存します。caller-enforced modeも明示的に残します。すべてのmodeでmanifest/cwd/artifact pathをrepository内へ制限し、stage起動時にallowlist外の環境変数を引き継ぎません。
-
-## 同梱demo
-
-| ID | 出所 | 期待結果 | 検証内容 | 最小counterexample |
-| --- | --- | --- | --- | --- |
-| `newsletter` | project | pass | validation、consent、submit、reset | — |
-| `rabbita-counter` | Rabbita `examples/counter` | pass | 有限counter状態空間 | — |
-| `rabbita-todo` | Rabbita `examples/todo` | failure | CRUD、tab、filter、statistics | `TitleChanged(" ") -> Add` |
-| `rabbita-sokoban` | Rabbita `examples/sokoban` | failure | move、crate、branch history、timeline | `Move(Up) -> JumpTo("not-a-number")` |
-| `rabbita-subscriptions` | Rabbita `examples/subscriptions` | failure | timerと6種類のbrowser event subscription | `ToggleTicker -> Tick` |
-| `rabbita-websocket` | Rabbita `examples/websocket` | failure | command client lifecycleとtranscript | `Connect -> Disconnect -> Disconnect` |
-
-追加した実用runは、Sokoban 255 state・1,163 transition、subscriptions 640 state・1,718 transition、WebSocket 800 state・4,428 transitionを探索します。expected failureはproperty名と最小traceが宣言済みsignatureに一致した場合だけ成功扱いになります。
-
-vendor source、revision、hash、license、adapter変更、failureの根拠は `src/vendor/`、[docs/VENDORED_DEMOS.md](docs/VENDORED_DEMOS.md)、[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記録しています。
-
-## 外部Rabbitaアプリケーション
-
-外部targetは `external/manifests/` のmanifestでrevisionとhashを固定します。`external inspect-source` はlocal source fileから `Model`、`Msg`、`update`、`view`、command、subscriptionの候補を機械検出します。upstreamのnetwork・native処理は実行せず、決定的なeffect descriptorとして記録します。`scripts/external_harness.py` はmanifest validation、単純な`Msg` payloadの有限action scaffold生成、決定的なsource hash report、明示的revision更新のpreview、network deny環境でのinspection command実行を提供します。
-
-external campaignは15 runnable targetです。`canopy-editor-integration`は900 state・1,633 transitionでdocument callbackの逆順適用とunmount後配送を保持します。`rabbita-utility-batch`は公開10 repositoryを分類し、supported 4境界を3,400 state・7,646 transitionで機械探索して、初期空タイトル送信を`FullstackSubmit`へ縮約しました。`scripts/utility_batch.py`はcommit済み分類reportを検証し、upstreamへ書き込まずに固定checkoutを再確認できます。
-
-`scripts/utility_batch.py validate` は分類reportとfixture hashを検証し、`scripts/utility_batch.py diff` は固定revisionと各upstream既定branchを比較してcommit数・変更対象path・更新後source hashをJSONで出力します。upstream側への書き込みは行いません。
-
-Utility batchは初期空タイトル送信と古いtitleへのlate replyに加え、`IssuesSave -> IssuesSave -> IssuesDeliver(id=2) -> IssuesDeliver(id=1)`によるGraphSaved rollbackを保持します。
-
-外部repositoryはread-only inputとして扱い、相手側へissue、PR、comment、commitを作成しません。`external handoff <id>`はissue、再現、fix plan、PR本文のローカル下書きだけを生成します。security-sensitive findingはpublic exportを拒否し、Gitでignoreされる `.private/disclosures/`へ隔離します。詳細は [docs/DISCLOSURE.ja.md](docs/DISCLOSURE.ja.md) を参照してください。
-
-public runは `atlas.html`、`atlas.svg`、`atlas.json`、`atlas.dot`、`summary.json` を生成します。
-
-## ライブラリモデル
-
-```text
-initial Model
-  + actions(Model) -> Array[Msg]
-  + update(Model, Msg) -> Model
-  + view(Model) -> Html
-  + Property<Model, Msg>
-  + shrink(Msg) -> Array[Msg]
-  + dependencies(Model) -> Array[String]
-  = 検証済みの到達可能UI状態graph
-```
-
-`Machine::actions` は、そのmodelで有効なmessageだけを返します。Propedは型付きtransitionを実行し、各modelをbrowserなしでrenderし、状態・遷移propertyを検証して、失敗したaction列を最小化します。実用規模のrunでは、生成caseごとに同じfailureを繰り返さず、propertyごとに最短のcounterexampleだけを保持します。
-
-```moonbit
-let machine = rabbita_machine_with_action_id(
-  initial_model,
-  update,
-  available_actions,
-  shrink_msg,
-  view,
-  model_fingerprint,
-  stable_action_id,
-  describe_msg,
-  dependencies_for,
-)
-
-let report = run(machine, properties, RunConfig::default())
-let html = report_to_html(report)
-let svg = report_to_flow_svg(report)
-let json = report_to_json(report)
-let dot = report_to_dot(report)
-```
-
-`RunReport` は、実際に使用したseed、探索上限、state、raw transition、構造化された最小failure trace、dependency、diagnosticを保持します。`affected_state_ids` は、指定した変更集合とdependency識別子が交差するstateを選択します。
-
-## Core API
-
-| API | 役割 |
-| --- | --- |
-| `Machine[Model, Msg]` | pure update、到達可能action、render、identity、shrink、dependency |
-| `state_property` | modelとrendered HTMLを検証 |
-| `transition_property` | before/message/after transitionを検証 |
-| `run` | 検証済みdefaultによる決定的探索 |
-| `run_checked` | 型付き設定エラーを返す探索 |
-| `affected_state_ids` | 差分UI build対象を計画 |
-| `report_to_html` | 単独で開けるstate Atlas |
-| `report_to_flow_svg` | 単独graph |
-| `report_to_json` | CI・agent向けreport |
-| `report_to_dot` | Graphviz report |
-
-## リポジトリ構成
-
-```text
-src/
-  cli/                              CLIとmachine-readable command契約
-  external/                         manifest検証、source検出、effect model
-  examples/newsletter/              再利用可能なproject demo package
-  vendor/rabbita_counter/           passするcounter baseline
-  vendor/rabbita_todo/              blank title failure
-  vendor/rabbita_sokoban/           malformed timeline failure
-  vendor/rabbita_subscriptions/     stale timer failure
-  vendor/rabbita_websocket/         duplicate disconnect failure
-  vendor/proton_todo/               stale snapshot ordering failure
-  vendor/ensenzu_app/               numeric form・SVG application adapter
-  vendor/ensenzu_core/              固定したEnsenzu計算実装
-  vendor/moonbit_editor_file_tree/  file tree resolve・auto-reveal adapter
-  vendor/canopy_components/         resizable・menu・tabs finite adapter
-  vendor/canopy_editor_integration/ CodeMirror lifecycle・browser replay adapter
-  vendor/rabbita_utility_batch/     supported公開utility app batch
-  vendor/incr_typed_spreadsheet/     worksheet UI・backdating adapter
-  vendor/incr_typed_spreadsheet_core/ pinned worksheet実装
-  vendor/isomorphic_suite/           Kanban・Todo・Note matrix adapter
-  vendor/circular_state/              clean-room workspace・modal adapter
-  core.mbt                          探索、shrink、最小failure保持
-  rabbita_adapter.mbt               browserless Rabbita rendering
-  atlas*.mbt                        report exporter
-  flow*.mbt                         決定的graph layout
-external/                            pinned external manifestとschema
-```
-
-## 開発
-
-```bash
-moon update
-moon fmt --check
-moon check --target native
-moon test --target native
-moon run src/cli -- demo run all --json
-moon run src/cli -- external run all --json
-```
-
-Rabbita upstreamではserver-side rendererがexperimental扱いのため、`moon check` は `rabbita_adapter.mbt` から warning `0014` を出します。
+- [CLI リファレンス](docs/CLI.ja.md)
+- [実行フロー](docs/FLOW.ja.md)
+- [Disclosure / safety notes](docs/DISCLOSURE.ja.md)
+- [Web driver protocol](docs/WEB_DRIVER_PROTOCOL.md)
 
 ## License
 
-Proped は Apache-2.0 です。vendorしたコードの帰属は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記録しています。
+Apache-2.0。詳細は [LICENSE](LICENSE) と [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。

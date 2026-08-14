@@ -287,54 +287,74 @@ function prepareInvocationInputs({ command, cwd, repositoryRoot, writablePaths =
 }
 
 
-function bubblewrapSupportsWorkspaceOverlay(backendPath, sourceEnvironment = process.env) {
-  const result = spawnSync(backendPath, ["--help"], {
-    encoding: "utf8",
-    shell: false,
-    timeout: 5_000,
-    env: { PATH: sourceEnvironment.PATH ?? "" },
-  });
-  const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-  return result.status === 0 && text.includes("--overlay-src") && text.includes("--overlay");
-}
-
 export function createStrictSandboxWorkspaceOverlay({
   repositoryRoot,
   platform = process.platform,
   backendPath = null,
   sourceEnvironment = process.env,
 } = {}) {
-  const capabilities = assertStrictSandboxCapabilities({ platform, backendPath });
-  if (!bubblewrapSupportsWorkspaceOverlay(capabilities.backendPath, sourceEnvironment)) return null;
+  assertStrictSandboxCapabilities({ platform, backendPath });
+  if (platform !== "linux" || typeof process.geteuid !== "function" || process.geteuid() !== 0) return null;
+  const mountExecutable = executableOnPath("mount", sourceEnvironment);
+  const umountExecutable = executableOnPath("umount", sourceEnvironment);
+  if (!mountExecutable || !umountExecutable) return null;
+
   const root = fs.realpathSync(repositoryRoot);
-  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proped-web-overlay-"));
+  const temporaryBase = fs.existsSync("/var/tmp") ? "/var/tmp" : os.tmpdir();
+  const temporaryRoot = fs.mkdtempSync(path.join(temporaryBase, "proped-web-overlay-"));
   const upperDir = path.join(temporaryRoot, "upper");
   const workDir = path.join(temporaryRoot, "work");
-  fs.mkdirSync(upperDir, { recursive: true });
-  fs.mkdirSync(workDir, { recursive: true });
+  const mergedRoot = path.join(temporaryRoot, "merged");
+  fs.chmodSync(temporaryRoot, 0o755);
+  fs.mkdirSync(upperDir, { recursive: true, mode: 0o755 });
+  fs.mkdirSync(workDir, { recursive: true, mode: 0o755 });
+  fs.mkdirSync(mergedRoot, { recursive: true, mode: 0o755 });
+  const mounted = spawnSync(mountExecutable, [
+    "-t", "overlay", "overlay",
+    "-o", `lowerdir=${root},upperdir=${upperDir},workdir=${workDir}`,
+    mergedRoot,
+  ], {
+    encoding: "utf8",
+    shell: false,
+    timeout: 10_000,
+    env: { PATH: sourceEnvironment.PATH ?? "" },
+  });
+  if (mounted.status !== 0) {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+    return null;
+  }
   return {
     root,
     temporaryRoot,
     upperDir,
     workDir,
-    backendPath: capabilities.backendPath,
+    mergedRoot: fs.realpathSync(mergedRoot),
+    mountExecutable,
+    umountExecutable,
+    mounted: true,
   };
 }
 
 export function cleanupStrictSandboxWorkspaceOverlay(overlay) {
   if (!overlay?.temporaryRoot) return;
-  fs.rmSync(overlay.temporaryRoot, { recursive: true, force: true });
-}
-
-function prepareWorkspaceOverlay(root, overlay) {
-  if (!overlay) return null;
-  if (fs.realpathSync(overlay.root) !== root) throw new Error("strict sandbox workspace overlay root mismatch");
-  for (const candidate of [overlay.upperDir, overlay.workDir]) {
-    if (!path.isAbsolute(candidate) || !fs.existsSync(candidate)) throw new Error("strict sandbox workspace overlay path is unavailable");
+  if (overlay.mounted && overlay.mergedRoot && overlay.umountExecutable) {
+    const environment = { PATH: process.env.PATH ?? "" };
+    let unmounted = spawnSync(overlay.umountExecutable, [overlay.mergedRoot], {
+      encoding: "utf8",
+      shell: false,
+      timeout: 10_000,
+      env: environment,
+    });
+    if (unmounted.status !== 0) {
+      unmounted = spawnSync(overlay.umountExecutable, ["-l", overlay.mergedRoot], {
+        encoding: "utf8",
+        shell: false,
+        timeout: 10_000,
+        env: environment,
+      });
+    }
   }
-  fs.rmSync(overlay.workDir, { recursive: true, force: true });
-  fs.mkdirSync(overlay.workDir, { recursive: true });
-  return overlay;
+  fs.rmSync(overlay.temporaryRoot, { recursive: true, force: true });
 }
 
 export function buildStrictSandboxInvocation({
@@ -345,12 +365,11 @@ export function buildStrictSandboxInvocation({
   credentialReadDenyPaths = [],
   platform = process.platform,
   backendPath = null,
-  workspaceOverlay = null,
+  privateWorkspace = false,
   networkAccess = "deny",
 } = {}) {
   const { root, realCwd, writable } = prepareInvocationInputs({ command, cwd, repositoryRoot, writablePaths });
   if (!["deny", "bootstrap-allow"].includes(networkAccess)) throw new Error(`unsupported strict sandbox network access: ${networkAccess}`);
-  const preparedOverlay = prepareWorkspaceOverlay(root, workspaceOverlay);
   if (root.startsWith("/tmp/") || root === "/tmp") {
     throw new Error("strict sandbox repository root cannot be under /tmp because /tmp is replaced with a private tmpfs");
   }
@@ -370,11 +389,8 @@ export function buildStrictSandboxInvocation({
     "--dev-bind", "/dev", "/dev",
     "--proc", "/proc",
   ];
-  if (preparedOverlay) {
-    args.push(
-      "--overlay-src", root,
-      "--overlay", preparedOverlay.upperDir, preparedOverlay.workDir, root,
-    );
+  if (privateWorkspace) {
+    args.push("--bind", root, root);
     const gitPath = path.join(root, ".git");
     if (fs.existsSync(gitPath)) args.push("--ro-bind", gitPath, gitPath);
   }
@@ -384,7 +400,7 @@ export function buildStrictSandboxInvocation({
     if (stat.isDirectory()) args.push("--tmpfs", denied, "--remount-ro", denied);
     else args.push("--ro-bind", "/dev/null", denied);
   }
-  if (!preparedOverlay) {
+  if (!privateWorkspace) {
     for (const directory of writable) args.push("--bind", directory, directory);
   }
   args.push(
@@ -416,8 +432,8 @@ export function buildStrictSandboxInvocation({
       diagnostic: capabilities.diagnostic,
       network: networkAccess === "deny" ? "os-enforced-deny" : "bootstrap-explicit-allow",
       process: "pid-namespace-new-session",
-      sourceTree: preparedOverlay ? "copy-on-write-overlay-host-read-only" : "read-only",
-      workspaceOverlay: preparedOverlay ? "persistent-private-upper" : "none",
+      sourceTree: privateWorkspace ? "private-copy-on-write-worktree-host-read-only" : "read-only",
+      workspaceOverlay: privateWorkspace ? "host-mounted-private-overlayfs" : "none",
       temporaryDirectory: "private-tmpfs",
       credentials: "environment-allowlist-and-host-path-mask",
       deniedCredentialPaths,

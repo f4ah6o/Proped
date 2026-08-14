@@ -324,6 +324,12 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
         sourceEnvironment,
       })
     : null;
+  const effectiveSandboxRoot = workspaceOverlay?.mergedRoot ?? sandboxRoot;
+  const projectOffset = path.relative(sandboxRoot, realRepositoryRoot);
+  const effectiveProjectRoot = workspaceOverlay
+    ? path.resolve(effectiveSandboxRoot, projectOffset)
+    : projectRoot;
+  const effectiveWritablePaths = workspaceOverlay ? [] : sandboxWritablePaths;
 
   try {
   for (const stage of manifest.stages) {
@@ -348,7 +354,7 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
       continue;
     }
 
-    const cwd = resolveExistingInside(projectRoot, stage.cwd, `${stage.id}.cwd`);
+    const cwd = resolveExistingInside(effectiveProjectRoot, stage.cwd, `${stage.id}.cwd`);
     const started = performance.now();
     let executable = stage.command[0];
     let args = stage.command.slice(1);
@@ -357,12 +363,12 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
       invocation = buildStrictSandboxInvocation({
         command: stage.command,
         cwd,
-        repositoryRoot: sandboxRoot,
-        writablePaths: sandboxWritablePaths,
+        repositoryRoot: effectiveSandboxRoot,
+        writablePaths: effectiveWritablePaths,
         credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
         platform: sandboxPlatform,
         backendPath: sandboxBackendPath,
-        workspaceOverlay,
+        privateWorkspace: workspaceOverlay !== null,
       });
     } else if (sandboxMode === "constrained") {
       invocation = buildMacosConstrainedSandboxInvocation({
@@ -409,12 +415,12 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
       const retryInvocation = buildStrictSandboxInvocation({
         command: stage.command,
         cwd,
-        repositoryRoot: sandboxRoot,
-        writablePaths: sandboxWritablePaths,
+        repositoryRoot: effectiveSandboxRoot,
+        writablePaths: effectiveWritablePaths,
         credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
         platform: sandboxPlatform,
         backendPath: sandboxBackendPath,
-        workspaceOverlay,
+        privateWorkspace: workspaceOverlay !== null,
         networkAccess: "bootstrap-allow",
       });
       sandboxMetadata = retryInvocation.metadata;

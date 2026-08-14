@@ -985,6 +985,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes bubblewrap
 
+      - name: Verify private strict worktree sandbox
+        run: |
+          sudo env \
+            "PATH=$PATH" \
+            "PROPED_REQUIRE_PRIVATE_OVERLAY=1" \
+            "$(command -v node)" scripts/test_web_execution_sandbox.mjs --live
+
       - name: Materialize promoted frontier corpus
         run: |
           sudo env \

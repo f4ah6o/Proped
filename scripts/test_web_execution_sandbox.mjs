@@ -8,6 +8,8 @@ import {
   buildMacosConstrainedSandboxInvocation,
   buildStrictSandboxInvocation,
   cleanupSandboxInvocation,
+  cleanupStrictSandboxWorkspaceOverlay,
+  createStrictSandboxWorkspaceOverlay,
   macosConstrainedSandboxCapabilities,
   macosConstrainedSourceEnvironment,
   macosCredentialReadDenyPaths,
@@ -67,32 +69,25 @@ try {
   assert.deepEqual(planned.metadata.writablePaths, [path.relative(ROOT, WRITABLE)]);
   assert.equal(planned.metadata.sourceTree, "read-only");
   assert.equal(planned.metadata.upstreamGitWrites, "os-enforced-deny");
-  const overlayRoot = path.join(TMP, "overlay-state");
-  const overlayUpper = path.join(overlayRoot, "upper");
-  const overlayWork = path.join(overlayRoot, "work");
-  fs.mkdirSync(overlayUpper, { recursive: true });
-  fs.mkdirSync(overlayWork, { recursive: true });
-  const plannedOverlay = buildStrictSandboxInvocation({
+  const plannedPrivateWorkspace = buildStrictSandboxInvocation({
     command: [process.execPath, "-e", "process.exit(0)"],
     cwd: ROOT,
     repositoryRoot: ROOT,
-    writablePaths: [path.relative(ROOT, WRITABLE)],
     platform: "linux",
     backendPath: "/usr/bin/bwrap",
-    workspaceOverlay: { root: ROOT, upperDir: overlayUpper, workDir: overlayWork },
+    privateWorkspace: true,
   });
-  assert.ok(plannedOverlay.args.some((value, index, values) => value === "--overlay-src" && values[index + 1] === ROOT));
-  assert.ok(plannedOverlay.args.some((value, index, values) => value === "--overlay" && values[index + 1] === overlayUpper && values[index + 2] === overlayWork && values[index + 3] === ROOT));
-  assert.equal(plannedOverlay.metadata.sourceTree, "copy-on-write-overlay-host-read-only");
-  assert.equal(plannedOverlay.metadata.workspaceOverlay, "persistent-private-upper");
-  assert.equal(plannedOverlay.args.includes("--bind"), false, "workspace overlay must not bind generated paths back to the host checkout");
+  assert.ok(plannedPrivateWorkspace.args.some((value, index, values) => value === "--bind" && values[index + 1] === ROOT && values[index + 2] === ROOT));
+  assert.ok(plannedPrivateWorkspace.args.some((value, index, values) => value === "--ro-bind" && values[index + 1] === path.join(ROOT, ".git") && values[index + 2] === path.join(ROOT, ".git")));
+  assert.equal(plannedPrivateWorkspace.metadata.sourceTree, "private-copy-on-write-worktree-host-read-only");
+  assert.equal(plannedPrivateWorkspace.metadata.workspaceOverlay, "host-mounted-private-overlayfs");
   const plannedBootstrapNetwork = buildStrictSandboxInvocation({
     command: ["true"],
     cwd: ROOT,
     repositoryRoot: ROOT,
     platform: "linux",
     backendPath: "/usr/bin/bwrap",
-    workspaceOverlay: { root: ROOT, upperDir: overlayUpper, workDir: overlayWork },
+    privateWorkspace: true,
     networkAccess: "bootstrap-allow",
   });
   assert.equal(plannedBootstrapNetwork.args.includes("--unshare-net"), false);
@@ -208,6 +203,43 @@ socket.once('timeout', () => { socket.destroy(); finish(true); });
         networkDenied: true,
       });
       console.log(JSON.stringify({ ok: true, runtime: "web-execution-sandbox-live", ...result, backend: capabilities.backend }));
+
+      const overlayHostSource = path.join(TMP, "overlay-host-source.txt");
+      const overlayHostGenerated = path.join(TMP, "overlay-generated.txt");
+      fs.writeFileSync(overlayHostSource, "host-original\n");
+      fs.rmSync(overlayHostGenerated, { force: true });
+      const workspaceOverlay = createStrictSandboxWorkspaceOverlay({ repositoryRoot: ROOT });
+      if (process.env.PROPED_REQUIRE_PRIVATE_OVERLAY === "1") {
+        assert.ok(workspaceOverlay, "private strict workspace overlay is required in this environment");
+      }
+      if (workspaceOverlay) {
+        const overlaySource = path.join(workspaceOverlay.mergedRoot, path.relative(ROOT, overlayHostSource));
+        const overlayGenerated = path.join(workspaceOverlay.mergedRoot, path.relative(ROOT, overlayHostGenerated));
+        const mutateProbe = "const fs=require('node:fs');const [source,generated]=process.argv.slice(1);if(fs.readFileSync(source,'utf8')!=='host-original\\n')process.exit(2);fs.writeFileSync(source,'overlay-mutated\\n');fs.writeFileSync(generated,'generated\\n');";
+        const verifyProbe = "const fs=require('node:fs');const [source,generated]=process.argv.slice(1);process.exit(fs.readFileSync(source,'utf8')==='overlay-mutated\\n'&&fs.readFileSync(generated,'utf8')==='generated\\n'?0:3);";
+        try {
+          for (const [probeSource, label] of [[mutateProbe, "mutate"], [verifyProbe, "verify"]]) {
+            const overlayInvocation = buildStrictSandboxInvocation({
+              command: [process.execPath, "-e", probeSource, overlaySource, overlayGenerated],
+              cwd: workspaceOverlay.mergedRoot,
+              repositoryRoot: workspaceOverlay.mergedRoot,
+              privateWorkspace: true,
+            });
+            const overlayCompleted = spawnSync(overlayInvocation.executable, overlayInvocation.args, {
+              cwd: workspaceOverlay.mergedRoot,
+              encoding: "utf8",
+              timeout: 10_000,
+              env: environment,
+            });
+            assert.equal(overlayCompleted.status, 0, `${label}: ${overlayCompleted.stdout}\n${overlayCompleted.stderr}`);
+          }
+          assert.equal(fs.readFileSync(overlayHostSource, "utf8"), "host-original\n");
+          assert.equal(fs.existsSync(overlayHostGenerated), false);
+          console.log(JSON.stringify({ ok: true, runtime: "web-execution-sandbox-private-worktree-live", stagePersistence: true, hostCheckoutImmutable: true }));
+        } finally {
+          cleanupStrictSandboxWorkspaceOverlay(workspaceOverlay);
+        }
+      }
     } else if (process.platform === "darwin") {
       const capabilities = macosConstrainedSandboxCapabilities();
       assert.equal(capabilities.available, true, capabilities.reason);

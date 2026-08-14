@@ -22,7 +22,7 @@ Prepare the runtime used by Proped, then check it:
 
 `proped setup` prepares the Node/JavaScript and Playwright browser runtime used by the Web commands. It reuses a compatible installed Node when possible and otherwise installs the managed Node version. `proped doctor` checks runtime readiness without repairing or downloading it.
 
-Release packaging builds native archives on Linux, macOS, and Windows. An archive contains the native executable under `bin/` and the Proped runtime sources under `lib/proped/`. Node, `node_modules`, and Chromium are not bundled in the archive; run `proped setup` after unpacking it. A SHA-256 checksum is generated alongside each archive.
+Release packaging builds native archives on Linux x86_64, macOS Apple Silicon (arm64), and Windows x86_64. Intel Mac builds are not supported. An archive contains the native executable under `bin/` and the Proped runtime sources under `lib/proped/`. Node, `node_modules`, and Chromium are not bundled in the archive; run `proped setup` after unpacking it. A SHA-256 checksum is generated alongside each archive.
 
 If the runtime is stored somewhere other than the repository or the packaged `lib/proped` location, set `PROPED_RUNTIME_ROOT` to a Proped runtime tree containing `scripts/proped.mjs`.
 
@@ -56,6 +56,10 @@ proped web run proped.web.json
 `web prepare` is the explicit dependency-install step. `web run` does not install missing target dependencies implicitly.
 
 Run `proped web --help` for the Web commands implemented by the checked-in dispatcher.
+
+### Real OSS benchmark gates
+
+Proped keeps real OSS onboarding evidence in pinned corpora. `external-production` is the strict regression corpus, while `promoted-production` contains frontier topologies that have demonstrated 100% auto-onboarding, deterministic replay, zero human intervention, and zero project-specific adapter LOC. The scheduled OSS campaign records these metrics and compares each run with the previous campaign artifact.
 
 ## MoonBit exploration CLI
 

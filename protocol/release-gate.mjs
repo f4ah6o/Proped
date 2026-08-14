@@ -94,6 +94,7 @@ export function evaluateReleaseGate({ root = path.resolve(path.dirname(fileURLTo
   const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
   const readmeJa = fs.readFileSync(path.join(root, "README.ja.md"), "utf8");
   const changes = fs.readFileSync(path.join(root, "CHANGES.md"), "utf8");
+  const firstReleaseNotes = fs.readFileSync(path.join(root, ".github/release-notes/first-release.md"), "utf8");
 
   const staticChecks = [
     check("self-contained-production-baseline", productionBaseline.corpus.id === production.id && productionBaseline.corpus.semanticHash === production.semanticHash, productionBaseline.corpus, { id: production.id, semanticHash: production.semanticHash }),
@@ -110,6 +111,10 @@ export function evaluateReleaseGate({ root = path.resolve(path.dirname(fileURLTo
     check("release-source-provenance", releaseWorkflow.includes("SOURCE_SHA") && releaseWorkflow.includes("--provenance") && releaseWorkflow.includes("Verify source belongs to main history"), "source SHA provenance", true),
     check("release-gate-wired", releaseWorkflow.includes("Release acceptance contract") && releaseWorkflow.includes("scripts/release_gate.mjs"), "release gate before immutable tag", true),
     check("release-native-artifacts", releaseWorkflow.includes("native-artifacts") && releaseWorkflow.includes("scripts/package_native_cli.py") && releaseWorkflow.includes("gh release create"), "cross-platform artifacts + GitHub Release", true),
+    check("release-prefixless-calver", releaseWorkflow.includes("format: YYYY.MM.PATCH") && releaseWorkflow.includes("timezone: Asia/Tokyo") && !/^\s+prefix:\s*v\s*$/m.test(releaseWorkflow), "prefixless YYYY.MM.PATCH in Asia/Tokyo", true),
+    check("release-draft-first", releaseWorkflow.includes("Detect first public release") && releaseWorkflow.includes("first_release") && releaseWorkflow.includes("--notes-file .github/release-notes/first-release.md") && releaseWorkflow.includes("--draft") && releaseWorkflow.includes("--generate-notes"), "first release drafts reviewed notes; later releases use generated notes", true),
+    check("release-explicit-platforms", releaseWorkflow.includes("ubuntu-24.04") && releaseWorkflow.includes("macos-26") && releaseWorkflow.includes("windows-2025") && !releaseWorkflow.includes("macos-latest"), "Linux x86_64 + macOS 26 arm64 + Windows x86_64 explicit runners", true),
+    check("release-no-intel-mac", !/macos-(?:[0-9]+-)?(?:intel|large)/.test(releaseWorkflow) && firstReleaseNotes.includes("Intel Mac builds are not supported") && readme.includes("Intel Mac builds are not supported") && readmeJa.includes("Intel Mac buildはサポートしません"), "Apple Silicon macOS only; Intel Mac unsupported", true),
     check("docs-production-promotion", readme.includes("promoted-production") && readmeJa.includes("promoted-production"), "README + README.ja promoted production documentation", true),
     check("changes-production-promotion", changes.includes("promoted-production") && changes.includes("7/7"), "CHANGES promotion evidence", true),
   ];

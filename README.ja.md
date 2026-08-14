@@ -18,6 +18,8 @@ cargo build -p proped-cli
 
 development buildはCalVer package versionを`proped 2026.8.0 (dev)`として表示します。release buildではsource commitの7文字SHAをpackage versionとは分離して埋め込み、`proped 2026.8.0 (abcdef0)`のように表示します。native shellはWeb command dispatchでshellを使わず、既存dispatcherのstdout/stderr/exit statusを保持します。`PROPED_RUNTIME_ROOT`で`scripts/proped.mjs`を含むProped runtime treeを明示指定できます。
 
+公式release artifactの対象は Linux x86_64、macOS Apple Silicon (arm64)、Windows x86_64 です。Intel Mac buildはサポートしません。
+
 release archiveにはnative shellと`lib/proped`以下のread-onlyなJavaScript runtime sourceを含めますが、Node、`node_modules`、Chromiumは意図的に内包しません。`proped setup`だけがproduct runtimeを明示取得します。互換Nodeが既にあれば再利用し、無ければreleaseでpinしたmanaged NodeをSHA-256検証後に導入します。Proped自身のlockfile固定JavaScript dependencyはlifecycle scriptを無効にして準備し、pin済みPlaywright Chromiumもuser単位のmanaged storageへ導入した後、実browser launchでreadinessを検証します。healthyな2回目のsetupは準備済みruntimeを再利用します。`proped doctor --json`は観測専用でresolved managed pathも返し、`doctor`や通常の`web` commandがProped runtimeを暗黙repair/downloadすることはありません。
 
 ## MoonBit探索CLI

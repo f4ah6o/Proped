@@ -697,7 +697,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
       manifest,
       inspection,
       intervention("campaign_execution_failed", error.message, {
-        code: error.code ?? "campaign_execution_failed",
+        osErrorCode: error.code ?? null,
         platform: error.platform ?? null,
         backend: error.backend ?? null,
       }),

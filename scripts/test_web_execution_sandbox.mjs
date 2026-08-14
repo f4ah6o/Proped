@@ -100,7 +100,7 @@ try {
     },
   });
   assert.ok(plannedBubblewrapOverlay.args.some((value, index, values) => value === "--overlay-src" && values[index + 1] === ROOT));
-  assert.ok(plannedBubblewrapOverlay.args.some((value, index, values) => value === "--overlay" && values[index + 1] === bubblewrapOverlayUpper && values[index + 2] === bubblewrapOverlayWork && values[index + 3] === ROOT));
+  assert.ok(plannedBubblewrapOverlay.args.some((value, index, values) => value === "--overlay" && values[index + 1] === bubblewrapOverlayUpper && values[index + 2].startsWith(path.dirname(bubblewrapOverlayWork) + path.sep + "work-") && values[index + 3] === ROOT));
   assert.equal(plannedBubblewrapOverlay.metadata.workspaceOverlay, "bubblewrap-persistent-overlayfs");
   const plannedBootstrapNetwork = buildStrictSandboxInvocation({
     command: ["true"],
@@ -113,6 +113,14 @@ try {
   });
   assert.equal(plannedBootstrapNetwork.args.includes("--unshare-net"), false);
   assert.equal(plannedBootstrapNetwork.metadata.network, "bootstrap-explicit-allow");
+  const restrictiveCleanupRoot = path.join(TMP, "restrictive-overlay-cleanup");
+  const restrictiveChild = path.join(restrictiveCleanupRoot, "upper", "generated");
+  fs.mkdirSync(restrictiveChild, { recursive: true });
+  fs.writeFileSync(path.join(restrictiveChild, "artifact.txt"), "generated\n");
+  fs.chmodSync(restrictiveChild, 0o500);
+  const cleanupResult = cleanupStrictSandboxWorkspaceOverlay({ kind: "bubblewrap-overlayfs", temporaryRoot: restrictiveCleanupRoot });
+  assert.equal(cleanupResult.ok, true);
+  assert.equal(fs.existsSync(restrictiveCleanupRoot), false);
   assert.equal(plannedBootstrapNetwork.environment.PROPED_NETWORK_POLICY, "bootstrap-network-explicit-allowed");
   assert.throws(() => buildStrictSandboxInvocation({
     command: ["true"], cwd: ROOT, repositoryRoot: ROOT, writablePaths: ["."], platform: "linux", backendPath: "/usr/bin/bwrap",

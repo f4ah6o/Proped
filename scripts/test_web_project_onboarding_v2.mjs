@@ -78,7 +78,7 @@ try {
   assert.deepEqual(compiledReport.manifest.stages.map((stage) => stage.id), ["project-build", "generic-browser"]);
   assert.equal(compiledReport.execution.sandboxMode, "strict");
   assert.equal(compiledReport.execution.strictSandbox, true);
-  assert.deepEqual(compiledReport.execution.writablePaths, ["dist", "node_modules/.vite-temp"]);
+  assert.deepEqual(compiledReport.execution.writablePaths, ["dist", "node_modules/.vite", "node_modules/.vite-temp"]);
   assert.equal(compiledReport.manifest.stages.find((stage) => stage.id === "generic-browser").timeoutMs, 760_000, "browser stage timeout must account for bounded frontier trace replay operations");
 
   // Run the same generated configuration without the build stage, using the

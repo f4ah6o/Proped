@@ -365,8 +365,21 @@ export function createStrictSandboxWorkspaceOverlay({
   };
 }
 
+function relaxPrivateTreePermissions(candidate) {
+  if (!candidate || !fs.existsSync(candidate)) return;
+  let stat;
+  try { stat = fs.lstatSync(candidate); } catch { return; }
+  if (stat.isSymbolicLink()) return;
+  if (stat.isDirectory()) {
+    try { fs.chmodSync(candidate, stat.mode | 0o700); } catch {}
+    let entries = [];
+    try { entries = fs.readdirSync(candidate); } catch { return; }
+    for (const entry of entries) relaxPrivateTreePermissions(path.join(candidate, entry));
+  }
+}
+
 export function cleanupStrictSandboxWorkspaceOverlay(overlay) {
-  if (!overlay?.temporaryRoot) return;
+  if (!overlay?.temporaryRoot) return { ok: true, removed: false };
   if (overlay.kind === "host-overlayfs" && overlay.mounted && overlay.mergedRoot && overlay.umountExecutable) {
     const environment = { PATH: process.env.PATH ?? "" };
     let unmounted = spawnSync(overlay.umountExecutable, [overlay.mergedRoot], {
@@ -384,15 +397,32 @@ export function cleanupStrictSandboxWorkspaceOverlay(overlay) {
       });
     }
   }
-  fs.rmSync(overlay.temporaryRoot, { recursive: true, force: true });
+  try {
+    relaxPrivateTreePermissions(overlay.temporaryRoot);
+    fs.rmSync(overlay.temporaryRoot, { recursive: true, force: true, maxRetries: 2, retryDelay: 20 });
+    return { ok: true, removed: true };
+  } catch (error) {
+    // Cleanup of an OS-temporary COW upper must never replace a completed target result.
+    // The host checkout remains immutable; the OS owns eventual /tmp reclamation.
+    return { ok: false, removed: false, code: error.code ?? "overlay_cleanup_failed" };
+  }
 }
 
 function prepareBubblewrapWorkspaceOverlay(root, overlay) {
   if (!overlay || overlay.kind !== "bubblewrap-overlayfs") return null;
   if (fs.realpathSync(overlay.root) !== root) throw new Error("strict sandbox workspace overlay root mismatch");
   if (!path.isAbsolute(overlay.upperDir) || !fs.existsSync(overlay.upperDir)) throw new Error("strict sandbox workspace overlay upper path is unavailable");
-  fs.rmSync(overlay.workDir, { recursive: true, force: true });
-  fs.mkdirSync(overlay.workDir, { recursive: true, mode: 0o755 });
+  if (overlay.workDir && fs.existsSync(overlay.workDir)) {
+    try {
+      relaxPrivateTreePermissions(overlay.workDir);
+      fs.rmSync(overlay.workDir, { recursive: true, force: true });
+    } catch {
+      // A previous user-namespace overlay workdir may contain restrictive internal
+      // entries. It is private temporary state, so leave it for final cleanup and
+      // allocate a fresh empty workdir for the next mount.
+    }
+  }
+  overlay.workDir = fs.mkdtempSync(path.join(overlay.temporaryRoot ?? path.dirname(overlay.upperDir), "work-"));
   return overlay;
 }
 

@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 18 * * 0" # Monday 03:17 JST
+  pull_request:
+    paths:
+      - ".github/workflows/oss-campaign.yaml"
 
 permissions:
   contents: read
@@ -15,6 +18,7 @@ concurrency:
 
 jobs:
   benchmark:
+    if: ${{ github.event_name != 'pull_request' }}
     name: ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -32,7 +36,7 @@ jobs:
             artifact: oss-campaign-frontier
 
     env:
-      CHECKOUT_ROOT: ${{ runner.temp }}/proped-oss-${{ matrix.id }}
+      CHECKOUT_ROOT: ${{ github.workspace }}/.tmp/oss-campaign/${{ matrix.id }}/checkouts
       OUTPUT_ROOT: ${{ github.workspace }}/.proped/oss-campaign/${{ matrix.id }}
 
     steps:

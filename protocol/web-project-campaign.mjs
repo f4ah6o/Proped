@@ -58,35 +58,65 @@ export function campaignSandboxExecutionScope(projectRoot, inspection, manifest,
     if (pathInside(realGitRoot, projectRoot)) repositoryRoot = realGitRoot;
   }
   const writablePaths = [...(compiled.execution.writablePaths ?? [])];
+  let workspaceRoot = null;
   if (manifest.bootstrap.build) {
-    const workspaceRoot = moonWorkspaceRoot(projectRoot, repositoryRoot);
+    workspaceRoot = moonWorkspaceRoot(projectRoot, repositoryRoot);
     if (workspaceRoot) {
       for (const directory of ["_build", ".mooncakes"]) {
         writablePaths.push(path.relative(projectRoot, path.join(workspaceRoot, directory)));
       }
     }
   }
-  return { repositoryRoot, writablePaths: unique(writablePaths), moonWorkspaceRoot: moonWorkspaceRoot(projectRoot, repositoryRoot) };
+  return { repositoryRoot, writablePaths: unique(writablePaths), moonWorkspaceRoot: workspaceRoot };
 }
 
 export function prepareMoonWorkspaceForSandbox(workspaceRoot, { sourceEnvironment = process.env, timeoutMs = 300_000 } = {}) {
   const environment = safeExecutionEnvironment(sourceEnvironment, { osEnforced: false });
   environment.PROPED_NETWORK_POLICY = "explicit-bootstrap-network-allowed";
-  const child = spawnSyncIsolated("moon", ["build", "--target", "js"], {
-    cwd: workspaceRoot,
-    encoding: "utf8",
-    shell: false,
-    env: environment,
-    stdio: ["ignore", "pipe", "pipe"],
-    timeout: timeoutMs,
-    killSignal: "SIGKILL",
+  const startedAt = Date.now();
+  const run = (args) => {
+    const remaining = Math.max(1, timeoutMs - (Date.now() - startedAt));
+    return spawnSyncIsolated("moon", args, {
+      cwd: workspaceRoot,
+      encoding: "utf8",
+      shell: false,
+      env: environment,
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: remaining,
+      killSignal: "SIGKILL",
+    });
+  };
+  const summarize = (child, command) => ({
+    command,
+    exitCode: child.status,
+    signal: child.signal ?? null,
+    timedOut: child?.error?.code === "ETIMEDOUT",
+    stdoutTail: (child.stdout ?? "").slice(-8192),
+    stderrTail: (child.stderr ?? "").slice(-8192),
+    ...(child.error ? { error: child.error.message } : {}),
   });
-  const timedOut = child?.error?.code === "ETIMEDOUT";
+
+  const buildCommand = ["moon", "build", "--target", "js"];
+  let child = run(buildCommand.slice(1));
+  const initialBuild = summarize(child, buildCommand);
+  let registryUpdate = null;
+  const registryUnavailable = child.status !== 0 && /moon update|module was not found in the registry|failed to resolve registry dependency/i.test(`${child.stdout ?? ""}\n${child.stderr ?? ""}`);
+  if (registryUnavailable && !initialBuild.timedOut && Date.now() - startedAt < timeoutMs) {
+    const updateCommand = ["moon", "update"];
+    const update = run(updateCommand.slice(1));
+    registryUpdate = summarize(update, updateCommand);
+    if (update.status === 0 && !registryUpdate.timedOut && Date.now() - startedAt < timeoutMs) {
+      child = run(buildCommand.slice(1));
+    }
+  }
+
+  const finalBuild = summarize(child, buildCommand);
+  const timedOut = finalBuild.timedOut || registryUpdate?.timedOut === true;
   return {
     ok: child.status === 0 && !timedOut,
     runtime: "moon-workspace-prepare",
     status: timedOut ? "timed-out" : child.status === 0 ? "prepared" : "failed",
-    command: ["moon", "build", "--target", "js"],
+    command: buildCommand,
     workspaceRoot,
     exitCode: child.status,
     signal: child.signal ?? null,
@@ -94,9 +124,11 @@ export function prepareMoonWorkspaceForSandbox(workspaceRoot, { sourceEnvironmen
     timeoutMs,
     networkPolicy: "explicit-network-allowed",
     credentials: "environment-allowlist-deny",
-    stdoutTail: (child.stdout ?? "").slice(-8192),
-    stderrTail: (child.stderr ?? "").slice(-8192),
-    ...(child.error ? { error: child.error.message } : {}),
+    stdoutTail: finalBuild.stdoutTail,
+    stderrTail: finalBuild.stderrTail,
+    initialBuild,
+    registryUpdate,
+    ...(finalBuild.error ? { error: finalBuild.error } : {}),
   };
 }
 

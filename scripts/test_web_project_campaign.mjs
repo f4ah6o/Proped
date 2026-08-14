@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { campaignSandboxExecutionScope, classifyCampaignStageIntervention, classifyCampaignTargetViability, resolveCampaignSandboxMode, runUnknownWebProjectCampaign } from "../protocol/web-project-campaign.mjs";
+import { campaignSandboxExecutionScope, classifyCampaignStageIntervention, classifyCampaignTargetViability, prepareMoonWorkspaceForSandbox, resolveCampaignSandboxMode, runUnknownWebProjectCampaign } from "../protocol/web-project-campaign.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, ".tmp/web-project-campaign-test");
@@ -71,6 +71,41 @@ try {
   );
   assert.equal(moonScope.repositoryRoot, fs.realpathSync(moonWorkspace));
   assert.deepEqual(moonScope.writablePaths, ["../.mooncakes", "../_build", "dist"]);
+  assert.equal(moonScope.moonWorkspaceRoot, fs.realpathSync(moonWorkspace));
+
+  const staticMoonScope = campaignSandboxExecutionScope(
+    fs.realpathSync(moonApp),
+    { target: { gitRoot: fs.realpathSync(moonWorkspace) } },
+    { bootstrap: { build: null } },
+    { execution: { writablePaths: ["dist"] } },
+  );
+  assert.deepEqual(staticMoonScope.writablePaths, ["dist"]);
+  assert.equal(staticMoonScope.moonWorkspaceRoot, null);
+
+  const fakeMoonBin = path.join(TMP, "fake-moon-bin");
+  const fakeMoonState = path.join(TMP, "fake-moon-updated");
+  fs.mkdirSync(fakeMoonBin, { recursive: true });
+  const fakeMoon = path.join(fakeMoonBin, "moon");
+  fs.writeFileSync(fakeMoon, `#!/bin/sh
+if [ "$1" = "update" ]; then
+  touch ${JSON.stringify(fakeMoonState)}
+  exit 0
+fi
+if [ "$1" = "build" ] && [ ! -f ${JSON.stringify(fakeMoonState)} ]; then
+  echo 'Hint: you may need to run moon update to update the registry' >&2
+  exit 255
+fi
+exit 0
+`);
+  fs.chmodSync(fakeMoon, 0o755);
+  const freshMoon = prepareMoonWorkspaceForSandbox(moonWorkspace, {
+    sourceEnvironment: { ...process.env, PATH: `${fakeMoonBin}:${process.env.PATH ?? ""}` },
+    timeoutMs: 10_000,
+  });
+  assert.equal(freshMoon.ok, true, JSON.stringify(freshMoon));
+  assert.equal(freshMoon.initialBuild.exitCode, 255);
+  assert.equal(freshMoon.registryUpdate.exitCode, 0);
+  assert.equal(freshMoon.exitCode, 0);
 
   writeProject();
 

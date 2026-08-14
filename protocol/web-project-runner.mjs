@@ -324,9 +324,11 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
         sourceEnvironment,
       })
     : null;
-  const effectiveSandboxRoot = workspaceOverlay?.mergedRoot ?? sandboxRoot;
+  const hostWorkspaceOverlay = workspaceOverlay?.kind === "host-overlayfs";
+  const bubblewrapWorkspaceOverlay = workspaceOverlay?.kind === "bubblewrap-overlayfs";
+  const effectiveSandboxRoot = hostWorkspaceOverlay ? workspaceOverlay.mergedRoot : sandboxRoot;
   const projectOffset = path.relative(sandboxRoot, realRepositoryRoot);
-  const effectiveProjectRoot = workspaceOverlay
+  const effectiveProjectRoot = hostWorkspaceOverlay
     ? path.resolve(effectiveSandboxRoot, projectOffset)
     : projectRoot;
   const effectiveWritablePaths = workspaceOverlay ? [] : sandboxWritablePaths;
@@ -368,7 +370,8 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
         credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
         platform: sandboxPlatform,
         backendPath: sandboxBackendPath,
-        privateWorkspace: workspaceOverlay !== null,
+        privateWorkspace: hostWorkspaceOverlay,
+        workspaceOverlay: bubblewrapWorkspaceOverlay ? workspaceOverlay : null,
       });
     } else if (sandboxMode === "constrained") {
       invocation = buildMacosConstrainedSandboxInvocation({
@@ -420,7 +423,8 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
         credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
         platform: sandboxPlatform,
         backendPath: sandboxBackendPath,
-        privateWorkspace: workspaceOverlay !== null,
+        privateWorkspace: hostWorkspaceOverlay,
+        workspaceOverlay: bubblewrapWorkspaceOverlay ? workspaceOverlay : null,
         networkAccess: "bootstrap-allow",
       });
       sandboxMetadata = retryInvocation.metadata;

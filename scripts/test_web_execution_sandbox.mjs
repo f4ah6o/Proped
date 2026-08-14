@@ -81,6 +81,27 @@ try {
   assert.ok(plannedPrivateWorkspace.args.some((value, index, values) => value === "--ro-bind" && values[index + 1] === path.join(ROOT, ".git") && values[index + 2] === path.join(ROOT, ".git")));
   assert.equal(plannedPrivateWorkspace.metadata.sourceTree, "private-copy-on-write-worktree-host-read-only");
   assert.equal(plannedPrivateWorkspace.metadata.workspaceOverlay, "host-mounted-private-overlayfs");
+  const bubblewrapOverlayRoot = path.join(TMP, "bubblewrap-overlay-state");
+  const bubblewrapOverlayUpper = path.join(bubblewrapOverlayRoot, "upper");
+  const bubblewrapOverlayWork = path.join(bubblewrapOverlayRoot, "work");
+  fs.mkdirSync(bubblewrapOverlayUpper, { recursive: true });
+  fs.mkdirSync(bubblewrapOverlayWork, { recursive: true });
+  const plannedBubblewrapOverlay = buildStrictSandboxInvocation({
+    command: [process.execPath, "-e", "process.exit(0)"],
+    cwd: ROOT,
+    repositoryRoot: ROOT,
+    platform: "linux",
+    backendPath: "/usr/bin/bwrap",
+    workspaceOverlay: {
+      kind: "bubblewrap-overlayfs",
+      root: ROOT,
+      upperDir: bubblewrapOverlayUpper,
+      workDir: bubblewrapOverlayWork,
+    },
+  });
+  assert.ok(plannedBubblewrapOverlay.args.some((value, index, values) => value === "--overlay-src" && values[index + 1] === ROOT));
+  assert.ok(plannedBubblewrapOverlay.args.some((value, index, values) => value === "--overlay" && values[index + 1] === bubblewrapOverlayUpper && values[index + 2] === bubblewrapOverlayWork && values[index + 3] === ROOT));
+  assert.equal(plannedBubblewrapOverlay.metadata.workspaceOverlay, "bubblewrap-persistent-overlayfs");
   const plannedBootstrapNetwork = buildStrictSandboxInvocation({
     command: ["true"],
     cwd: ROOT,
@@ -213,20 +234,23 @@ socket.once('timeout', () => { socket.destroy(); finish(true); });
         assert.ok(workspaceOverlay, "private strict workspace overlay is required in this environment");
       }
       if (workspaceOverlay) {
-        const overlaySource = path.join(workspaceOverlay.mergedRoot, path.relative(ROOT, overlayHostSource));
-        const overlayGenerated = path.join(workspaceOverlay.mergedRoot, path.relative(ROOT, overlayHostGenerated));
+        const hostMounted = workspaceOverlay.kind === "host-overlayfs";
+        const overlayRoot = hostMounted ? workspaceOverlay.mergedRoot : ROOT;
+        const overlaySource = path.join(overlayRoot, path.relative(ROOT, overlayHostSource));
+        const overlayGenerated = path.join(overlayRoot, path.relative(ROOT, overlayHostGenerated));
         const mutateProbe = "const fs=require('node:fs');const [source,generated]=process.argv.slice(1);if(fs.readFileSync(source,'utf8')!=='host-original\\n')process.exit(2);fs.writeFileSync(source,'overlay-mutated\\n');fs.writeFileSync(generated,'generated\\n');";
         const verifyProbe = "const fs=require('node:fs');const [source,generated]=process.argv.slice(1);process.exit(fs.readFileSync(source,'utf8')==='overlay-mutated\\n'&&fs.readFileSync(generated,'utf8')==='generated\\n'?0:3);";
         try {
           for (const [probeSource, label] of [[mutateProbe, "mutate"], [verifyProbe, "verify"]]) {
             const overlayInvocation = buildStrictSandboxInvocation({
               command: [process.execPath, "-e", probeSource, overlaySource, overlayGenerated],
-              cwd: workspaceOverlay.mergedRoot,
-              repositoryRoot: workspaceOverlay.mergedRoot,
-              privateWorkspace: true,
+              cwd: overlayRoot,
+              repositoryRoot: overlayRoot,
+              privateWorkspace: hostMounted,
+              workspaceOverlay: workspaceOverlay.kind === "bubblewrap-overlayfs" ? workspaceOverlay : null,
             });
             const overlayCompleted = spawnSync(overlayInvocation.executable, overlayInvocation.args, {
-              cwd: workspaceOverlay.mergedRoot,
+              cwd: overlayRoot,
               encoding: "utf8",
               timeout: 10_000,
               env: environment,

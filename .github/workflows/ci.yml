@@ -986,27 +986,22 @@ jobs:
           sudo apt-get install --yes bubblewrap
 
       - name: Verify private strict worktree sandbox
-        run: |
-          sudo env \
-            "PATH=$PATH" \
-            "PROPED_REQUIRE_PRIVATE_OVERLAY=1" \
-            "$(command -v node)" scripts/test_web_execution_sandbox.mjs --live
+        env:
+          PROPED_REQUIRE_PRIVATE_OVERLAY: "1"
+        run: node scripts/test_web_execution_sandbox.mjs --live
 
       - name: Materialize promoted frontier corpus
         run: |
-          sudo env \
-            "PATH=$PATH" \
-            "$(command -v node)" scripts/web_project_corpus.mjs materialize promoted-production \
+          node scripts/web_project_corpus.mjs materialize promoted-production \
               --checkout-root .tmp/ci-promoted-production
 
       - name: Promoted frontier production regression gate
         run: |
-          sudo env \
-            "PATH=$PATH" \
+          env \
             "PROPED_NODE_RUNTIME_PATHS=$PROPED_NODE_RUNTIME_PATHS" \
             "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
             "MOON_HOME=$HOME/.moon" \
-            "$(command -v node)" scripts/web_project_benchmark.mjs \
+            node scripts/web_project_benchmark.mjs \
               --corpus promoted-production \
               --baseline protocol/fixtures/promoted-production-baseline.json \
               --checkout-root .tmp/ci-promoted-production \
@@ -1015,19 +1010,16 @@ jobs:
 
       - name: Materialize external production corpus
         run: |
-          sudo env \
-            "PATH=$PATH" \
-            "$(command -v node)" scripts/web_project_corpus.mjs materialize external-production \
+          node scripts/web_project_corpus.mjs materialize external-production \
               --checkout-root .tmp/ci-external-production
 
       - name: External production regression gate
         run: |
-          sudo env \
-            "PATH=$PATH" \
+          env \
             "PROPED_NODE_RUNTIME_PATHS=$PROPED_NODE_RUNTIME_PATHS" \
             "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
             "MOON_HOME=$HOME/.moon" \
-            "$(command -v node)" scripts/web_project_benchmark.mjs \
+            node scripts/web_project_benchmark.mjs \
               --corpus external-production \
               --checkout-root .tmp/ci-external-production \
               --no-artifacts \

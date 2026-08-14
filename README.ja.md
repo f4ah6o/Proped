@@ -22,7 +22,7 @@ Proped が使用する runtime を準備し、状態を確認します。
 
 `proped setup` は Web command が使用する Node / JavaScript と Playwright browser runtime を準備します。互換性のある Node が既にあれば再利用し、なければ Proped が管理する Node version を導入します。`proped doctor` は runtime の readiness を確認しますが、repair や download は行いません。
 
-Release packaging は Linux、macOS、Windows 向けの native archive を生成します。archive には `bin/` 配下の native executable と `lib/proped/` 配下の Proped runtime source が含まれます。Node、`node_modules`、Chromium は archive に含まれないため、展開後に `proped setup` を実行します。各 archive には SHA-256 checksum も生成されます。
+Release packaging は Linux x86_64、macOS Apple Silicon (arm64)、Windows x86_64 向けの native archive を生成します。Intel Mac buildはサポートしません。archive には `bin/` 配下の native executable と `lib/proped/` 配下の Proped runtime source が含まれます。Node、`node_modules`、Chromium は archive に含まれないため、展開後に `proped setup` を実行します。各 archive には SHA-256 checksum も生成されます。
 
 runtime を repository や packaged `lib/proped` 以外に置く場合は、`scripts/proped.mjs` を含む Proped runtime tree を `PROPED_RUNTIME_ROOT` で指定できます。
 
@@ -56,6 +56,10 @@ proped web run proped.web.json
 `web prepare` が dependency install を明示的に行う step です。`web run` は不足している target dependency を暗黙に install しません。
 
 checked-in dispatcher が実装している Web command は `proped web --help` で確認できます。
+
+### 実OSS benchmark gate
+
+Proped は pinned corpus に実OSS onboarding の evidence を保持します。`external-production` は strict regression corpus、`promoted-production` は auto-onboarding 100%、deterministic replay、human intervention 0、project-specific adapter LOC 0 を実証した frontier topology の production corpus です。scheduled OSS campaign はこれらのKPIを記録し、前回campaign artifactとの差分も比較します。
 
 ## MoonBit 探索 CLI
 

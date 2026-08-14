@@ -71,6 +71,7 @@ for (const [relative, expectedServer, expectedFramework] of optional) {
     assert.equal(manifest.project.framework, expectedFramework);
     assert.equal(result.manifest.stages.at(-1).id, "generic-browser");
     if (["vue-vite", "react-vite", "vite"].includes(expectedFramework)) {
+      assert.ok(result.execution.writablePaths.includes(path.join(relative, "node_modules", ".vite")));
       assert.ok(result.execution.writablePaths.includes(path.join(relative, "node_modules", ".vite-temp")));
     }
     if (relative === ".tmp/external-ensenzu/app") {

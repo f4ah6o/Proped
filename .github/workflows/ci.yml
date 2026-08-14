@@ -985,26 +985,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes bubblewrap
 
-      - name: Materialize external production corpus
-        run: |
-          sudo env \
-            "PATH=$PATH" \
-            "$(command -v node)" scripts/web_project_corpus.mjs materialize external-production \
-              --checkout-root .tmp/ci-external-production
-
-      - name: External production regression gate
-        run: |
-          sudo env \
-            "PATH=$PATH" \
-            "PROPED_NODE_RUNTIME_PATHS=$PROPED_NODE_RUNTIME_PATHS" \
-            "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
-            "MOON_HOME=$HOME/.moon" \
-            "$(command -v node)" scripts/web_project_benchmark.mjs \
-              --corpus external-production \
-              --checkout-root .tmp/ci-external-production \
-              --no-artifacts \
-              --sandbox-mode strict
-
       - name: Materialize promoted frontier corpus
         run: |
           sudo env \
@@ -1023,6 +1003,26 @@ jobs:
               --corpus promoted-production \
               --baseline protocol/fixtures/promoted-production-baseline.json \
               --checkout-root .tmp/ci-promoted-production \
+              --no-artifacts \
+              --sandbox-mode strict
+
+      - name: Materialize external production corpus
+        run: |
+          sudo env \
+            "PATH=$PATH" \
+            "$(command -v node)" scripts/web_project_corpus.mjs materialize external-production \
+              --checkout-root .tmp/ci-external-production
+
+      - name: External production regression gate
+        run: |
+          sudo env \
+            "PATH=$PATH" \
+            "PROPED_NODE_RUNTIME_PATHS=$PROPED_NODE_RUNTIME_PATHS" \
+            "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
+            "MOON_HOME=$HOME/.moon" \
+            "$(command -v node)" scripts/web_project_benchmark.mjs \
+              --corpus external-production \
+              --checkout-root .tmp/ci-external-production \
               --no-artifacts \
               --sandbox-mode strict
 

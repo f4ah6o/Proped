@@ -397,7 +397,21 @@ export function compileWebProjectManifestV2(manifest, repositoryRoot) {
     "web-components-vite",
   ]);
   if (manifest.bootstrap.build && viteBuildFrameworks.has(manifest.project.framework)) {
+    writablePaths.push(path.join(manifest.project.root, "node_modules", ".vite"));
     writablePaths.push(path.join(manifest.project.root, "node_modules", ".vite-temp"));
+  }
+  const frameworkScratchDirectories = {
+    astro: [".astro", path.join("node_modules", ".astro")],
+    docusaurus: [".docusaurus"],
+    "react-router-framework": [".react-router"],
+    remix: [".react-router"],
+    sveltekit: [".svelte-kit"],
+  };
+  for (const directory of frameworkScratchDirectories[manifest.project.framework] ?? []) {
+    writablePaths.push(path.join(manifest.project.root, directory));
+  }
+  if (manifest.bootstrap.build && projectDeclaresDependency(repositoryRoot, manifest.project.root, "velite")) {
+    writablePaths.push(path.join(manifest.project.root, ".velite"));
   }
   if (manifest.bootstrap.build && (
     manifest.project.framework === "waku"

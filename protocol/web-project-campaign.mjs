@@ -166,15 +166,21 @@ function campaignExplorationMetrics(report) {
 }
 
 function stableStages(report) {
-  return (report?.stages ?? []).map((stage) => ({
-    id: stage.id,
-    kind: stage.kind,
-    required: stage.required,
-    status: stage.status,
-    exitCode: stage.exitCode,
-    diagnostic: typeof stage?.payload?.error === "string" ? stage.payload.error : null,
-    failureClasses: stageFailureClasses(stage),
-  }));
+  return (report?.stages ?? []).map((stage) => {
+    const payloadDiagnostic = typeof stage?.payload?.error === "string" ? stage.payload.error : null;
+    const stderrDiagnostic = typeof stage?.stderrTail === "string" && stage.stderrTail.trim().length > 0
+      ? stage.stderrTail.trim().slice(-4096)
+      : null;
+    return {
+      id: stage.id,
+      kind: stage.kind,
+      required: stage.required,
+      status: stage.status,
+      exitCode: stage.exitCode,
+      diagnostic: payloadDiagnostic ?? stderrDiagnostic,
+      failureClasses: stageFailureClasses(stage),
+    };
+  });
 }
 
 export function classifyCampaignTargetViability({ autoOnboarded = false, interventionReasons = [], stages = [], inspection = null, details = {} } = {}) {

@@ -14,6 +14,9 @@ function unique(values) {
 
 function stableProjectResult(result, index) {
   const entry = result.benchmarkEntry ?? null;
+  const failureDiagnostics = (result.stages ?? [])
+    .filter((stage) => typeof stage?.diagnostic === "string" && stage.diagnostic.length > 0)
+    .map((stage) => ({ id: stage.id, status: stage.status, exitCode: stage.exitCode, diagnostic: stage.diagnostic }));
   return {
     index,
     corpusEntryId: entry?.id ?? null,
@@ -38,6 +41,7 @@ function stableProjectResult(result, index) {
       transitions: result.metrics?.transitions ?? 0,
       actions: result.metrics?.actions ?? 0,
     },
+    ...(failureDiagnostics.length > 0 ? { failureDiagnostics } : {}),
   };
 }
 

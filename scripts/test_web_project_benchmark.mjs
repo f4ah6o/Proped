@@ -23,6 +23,7 @@ try {
     {
       id: "blocked-project", status: "intervention-required", autoOnboarded: false, qualityPassed: null,
       humanInterventions: 1, interventionReasons: [{ code: "server_review_required" }], failureClasses: [],
+      stages: [{ id: "project-build", status: "quality_gate_failed", exitCode: 1, diagnostic: "EPERM: generated cache write denied" }],
       deterministicReplay: null, runtimeProfile: { framework: "unknown", projectMode: "unknown", serverMode: "review-required", packageManager: null, stateSources: ["dom"] }, metrics: { states: 0, transitions: 0, actions: 0 },
     },
   ]);
@@ -49,6 +50,7 @@ try {
   assert.deepEqual(aggregate.runtimeDistribution.stateSources, { dom: 2, indexedDB: 1 });
   assert.equal(aggregate.projects[0].autoOnboarded, true);
   assert.equal(aggregate.projects[0].qualityPassed, false, "quality findings must not erase successful onboarding");
+  assert.match(aggregate.projects[1].failureDiagnostics[0].diagnostic, /EPERM/);
 
   fs.mkdirSync(PASS, { recursive: true });
   fs.writeFileSync(path.join(PASS, "index.html"), "<!doctype html><main><h1>Plain static</h1><button>Open</button></main>\n");

@@ -1,0 +1,109 @@
+name: Production contracts
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "issues/**"
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "issues/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-contract:
+    name: Production contract (${{ matrix.corpus }})
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - corpus: promoted-production
+            checkout_root: .tmp/ci-promoted-production
+            baseline: protocol/fixtures/promoted-production-baseline.json
+          - corpus: external-production
+            checkout_root: .tmp/ci-external-production
+            baseline: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Node 20 frontier runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.0
+
+      - name: Register Node 20 frontier runtime
+        run: echo "PROPED_NODE_RUNTIME_PATHS=$(command -v node)" >> "$GITHUB_ENV"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm frontier runtime
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.29.3
+          run_install: false
+
+      - name: Set up Bun frontier runtime
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.6
+
+      - name: Set up MoonBit
+        uses: hustcer/setup-moonbit@v1
+
+      - name: Prepare managed browser runtime
+        run: |
+          npm ci --prefix web/playwright-browser --ignore-scripts
+          npx --prefix web/playwright-browser playwright install --with-deps --only-shell chromium
+
+      - name: Verify production contract delegation
+        run: node scripts/test_production_contract_delegation.mjs
+
+      - name: Install strict sandbox backend
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes bubblewrap
+
+      - name: Verify private strict worktree sandbox
+        env:
+          PROPED_REQUIRE_PRIVATE_OVERLAY: "1"
+        run: node scripts/test_web_execution_sandbox.mjs --live
+
+      - name: Materialize production corpus
+        run: |
+          node scripts/web_project_corpus.mjs materialize "${{ matrix.corpus }}" \
+            --checkout-root "${{ matrix.checkout_root }}"
+
+      - name: Production regression gate
+        run: |
+          args=(
+            --corpus "${{ matrix.corpus }}"
+            --checkout-root "${{ matrix.checkout_root }}"
+            --no-artifacts
+            --sandbox-mode strict
+          )
+          if [ -n "${{ matrix.baseline }}" ]; then
+            args+=(--baseline "${{ matrix.baseline }}")
+          fi
+          env \
+            "PROPED_NODE_RUNTIME_PATHS=$PROPED_NODE_RUNTIME_PATHS" \
+            "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
+            "MOON_HOME=$HOME/.moon" \
+            node scripts/web_project_benchmark.mjs "${args[@]}"

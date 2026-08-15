@@ -23,20 +23,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  production-contract:
-    name: Production contract (${{ matrix.corpus }})
+  plan:
+    name: Production shard plan
     runs-on: ubuntu-26.04
-    timeout-minutes: 60
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify production contract delegation
+        run: node scripts/test_production_contract_delegation.mjs
+
+      - name: Verify production contract sharding
+        run: node scripts/test_production_contract_sharding.mjs
+
+      - name: Build checkout-safe shard matrix
+        id: matrix
+        run: echo "matrix=$(node scripts/web_project_benchmark_shard.mjs matrix)" >> "$GITHUB_OUTPUT"
+
+  shard:
+    name: Production shard (${{ matrix.corpus }} / ${{ matrix.shard }})
+    needs: plan
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - corpus: promoted-production
-            checkout_root: .tmp/ci-promoted-production
-            baseline: protocol/fixtures/promoted-production-baseline.json
-          - corpus: external-production
-            checkout_root: .tmp/ci-external-production
-            baseline: ""
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,9 +91,6 @@ jobs:
           npm ci --prefix web/playwright-browser --ignore-scripts
           npx --prefix web/playwright-browser playwright install --with-deps --only-shell chromium
 
-      - name: Verify production contract delegation
-        run: node scripts/test_production_contract_delegation.mjs
-
       - name: Install strict sandbox backend
         run: |
           sudo apt-get update
@@ -86,24 +101,82 @@ jobs:
           PROPED_REQUIRE_PRIVATE_OVERLAY: "1"
         run: node scripts/test_web_execution_sandbox.mjs --live
 
-      - name: Materialize production corpus
+      - name: Materialize production shard
         run: |
-          node scripts/web_project_corpus.mjs materialize "${{ matrix.corpus }}" \
+          node scripts/web_project_benchmark_shard.mjs materialize \
+            --corpus "${{ matrix.corpus }}" \
+            --targets "${{ matrix.targets }}" \
             --checkout-root "${{ matrix.checkout_root }}"
 
-      - name: Production regression gate
+      - name: Run production shard
+        env:
+          SHARD_OUTPUT: .proped/shards/${{ matrix.corpus }}--${{ matrix.shard }}.json
         run: |
-          args=(
-            --corpus "${{ matrix.corpus }}"
-            --checkout-root "${{ matrix.checkout_root }}"
-            --no-artifacts
-            --sandbox-mode strict
-          )
-          if [ -n "${{ matrix.baseline }}" ]; then
-            args+=(--baseline "${{ matrix.baseline }}")
-          fi
           env \
             "PROPED_NODE_RUNTIME_PATHS=$PROPED_NODE_RUNTIME_PATHS" \
             "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
             "MOON_HOME=$HOME/.moon" \
-            node scripts/web_project_benchmark.mjs "${args[@]}"
+            node scripts/web_project_benchmark_shard.mjs run \
+              --corpus "${{ matrix.corpus }}" \
+              --targets "${{ matrix.targets }}" \
+              --checkout-root "${{ matrix.checkout_root }}" \
+              --output "$SHARD_OUTPUT" \
+              --sandbox-mode strict
+
+      - name: Upload shard evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-shard-${{ matrix.corpus }}-${{ matrix.shard }}
+          path: .proped/shards/*.json
+          if-no-files-found: error
+          retention-days: 1
+
+  aggregate:
+    name: Production aggregate gate
+    needs: shard
+    if: ${{ always() }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download shard evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: production-shard-*
+          path: .proped/shards
+          merge-multiple: true
+
+      - name: Aggregate production gates
+        run: |
+          set +e
+          mkdir -p .proped/aggregate
+          node scripts/web_project_benchmark_shard.mjs aggregate \
+            --corpus promoted-production \
+            --input-dir .proped/shards \
+            --baseline protocol/fixtures/promoted-production-baseline.json \
+            --output .proped/aggregate/promoted-production.json
+          promoted_status=$?
+          node scripts/web_project_benchmark_shard.mjs aggregate \
+            --corpus external-production \
+            --input-dir .proped/shards \
+            --output .proped/aggregate/external-production.json
+          external_status=$?
+          if [ "$promoted_status" -ne 0 ] || [ "$external_status" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload aggregate evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-contract-aggregate
+          path: .proped/aggregate/*.json
+          if-no-files-found: warn
+          retention-days: 7

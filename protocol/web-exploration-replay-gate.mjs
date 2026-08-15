@@ -8,8 +8,7 @@ function failureCode(failure) {
   return failure?.code ?? failure?.property ?? failure?.failureClass ?? null;
 }
 
-async function replayCandidate(driver, candidate) {
-  const trace = candidate?.trace ?? [];
+async function replayCandidateTrace(driver, candidate, trace) {
   if (!Array.isArray(trace) || trace.length === 0) return false;
   if (!failureCode(candidate)) return false;
   const targetFinding = classifyWebFinding(candidate);
@@ -31,6 +30,75 @@ async function replayCandidate(driver, candidate) {
     }
   }
   return false;
+}
+
+async function replayCandidate(driver, candidate) {
+  return replayCandidateTrace(driver, candidate, candidate?.trace ?? []);
+}
+
+function withoutIndex(values, removed) {
+  return values.filter((_, index) => index !== removed);
+}
+
+export async function shrinkWebExplorationFailureTrace(driver, candidate, { budget = 128 } = {}) {
+  if (!driver) throw new Error("exploration failure shrink requires driver");
+  if (!candidate || !Array.isArray(candidate.trace) || candidate.trace.length === 0) {
+    throw new Error("exploration failure shrink requires a non-empty candidate trace");
+  }
+  if (!Number.isSafeInteger(budget) || budget < 1) throw new Error("exploration failure shrink budget must be a positive safe integer");
+
+  const finding = classifyWebFinding(candidate);
+  const originalTrace = [...candidate.trace];
+  let trace = [...originalTrace];
+  let evaluations = 0;
+  let exhausted = false;
+  let changed = true;
+
+  while (changed && !exhausted) {
+    changed = false;
+    for (let index = 0; index < trace.length; index += 1) {
+      if (evaluations >= budget) {
+        exhausted = true;
+        break;
+      }
+      const candidateTrace = withoutIndex(trace, index);
+      evaluations += 1;
+      if (await replayCandidateTrace(driver, candidate, candidateTrace)) {
+        trace = candidateTrace;
+        changed = true;
+        break;
+      }
+    }
+  }
+
+  let oneMinimal = !exhausted;
+  if (oneMinimal) {
+    for (let index = 0; index < trace.length; index += 1) {
+      if (evaluations >= budget) {
+        exhausted = true;
+        oneMinimal = false;
+        break;
+      }
+      evaluations += 1;
+      if (await replayCandidateTrace(driver, candidate, withoutIndex(trace, index))) {
+        oneMinimal = false;
+        break;
+      }
+    }
+  }
+
+  const stable = {
+    version: WEB_EXPLORATION_REPLAY_GATE_VERSION,
+    findingGroupId: finding.id,
+    originalTrace,
+    trace,
+    originalLength: originalTrace.length,
+    length: trace.length,
+    evaluations,
+    budget,
+    minimality: oneMinimal ? "one-minimal" : exhausted ? "budget-exhausted" : "not-one-minimal",
+  };
+  return { ...stable, semanticHash: semanticHash(stable) };
 }
 
 export async function replayWebExplorationFailureCampaign(driver, failures = []) {

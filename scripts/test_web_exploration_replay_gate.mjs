@@ -67,17 +67,17 @@ assert.equal(clean.deterministic, true);
 const strongProvenance = {
   name: "TypeError",
   message: "TypeError: synthetic item 12345",
-  topProjectFrame: { sourcePath: "src/items.js", function: "openItem", line: 42, column: 7 },
+  topProjectFrame: { sourcePath: "src/items.js", projectOwned: true, function: "openItem", line: 42, column: 7 },
 };
 const equivalentProvenance = {
   name: "TypeError",
   message: "TypeError: synthetic item 98765",
-  topProjectFrame: { sourcePath: "src/items.js", function: "openItem", line: 42, column: 7 },
+  topProjectFrame: { sourcePath: "src/items.js", projectOwned: true, function: "openItem", line: 42, column: 7 },
 };
 const differentProvenance = {
   name: "TypeError",
   message: "TypeError: synthetic item 98765",
-  topProjectFrame: { sourcePath: "src/other.js", function: "openItem", line: 42, column: 7 },
+  topProjectFrame: { sourcePath: "src/other.js", projectOwned: true, function: "openItem", line: 42, column: 7 },
 };
 const strongFailure = {
   code: "browser_uncaught_exception",
@@ -110,6 +110,15 @@ assert.equal(grouped.groupCount, 2);
 assert.equal(grouped.strongGroupCount, 2);
 assert.equal(grouped.singletonGroupCount, 0);
 assert.equal(grouped.groups.find((group) => group.id === strongA.id).count, 2);
+
+const unownedFrame = classifyWebFinding({
+  ...strongFailure,
+  diagnosticProvenance: {
+    ...strongProvenance,
+    topProjectFrame: { ...strongProvenance.topProjectFrame, projectOwned: false },
+  },
+});
+assert.equal(unownedFrame.grouping, "singleton");
 
 const unsafeAbsolutePath = classifyWebFinding({
   ...strongFailure,

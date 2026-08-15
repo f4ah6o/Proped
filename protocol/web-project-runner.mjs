@@ -537,14 +537,23 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
   return finalizeWebProjectReport(repositoryRoot, manifest, options, results, sandboxMetadata);
 }
 
-function declaredResources(stage) {
-  return stage.exclusiveResources === undefined ? ["*"] : stage.exclusiveResources;
+function declaredResources(projectRoot, stage) {
+  if (stage.exclusiveResources === undefined) return ["*"];
+  return stage.exclusiveResources.map((resource) => path.resolve(projectRoot, resource));
+}
+
+function resourcePathsOverlap(left, right) {
+  return left === right
+    || left.startsWith(`${right}${path.sep}`)
+    || right.startsWith(`${left}${path.sep}`);
 }
 
 function resourcesConflict(resources, activeResources, runningCount) {
   if (resources.includes("*")) return runningCount > 0;
   if (activeResources.has("*")) return true;
-  return resources.some((resource) => activeResources.has(resource));
+  return resources.some((resource) => (
+    [...activeResources].some((activeResource) => resourcePathsOverlap(resource, activeResource))
+  ));
 }
 
 function acquireResources(resources, activeResources) {
@@ -631,7 +640,7 @@ export async function runWebProjectConcurrent(repositoryRoot, manifest, options 
       }
 
       if (running.size >= maxConcurrency) break;
-      const resources = declaredResources(stage);
+      const resources = declaredResources(projectRoot, stage);
       if (resourcesConflict(resources, activeResources, running.size)) continue;
 
       acquireResources(resources, activeResources);

@@ -13,201 +13,130 @@
       "id": "web-property-pack",
       "kind": "check",
       "cwd": ".",
-      "command": [
-        "node",
-        "scripts/test_web_property_pack.mjs"
-      ],
+      "command": ["node", "scripts/test_web_property_pack.mjs"],
       "timeoutMs": 30000,
       "dependsOn": [],
+      "exclusiveResources": [],
       "required": true
     },
     {
       "id": "network-timer-schedule",
       "kind": "check",
       "cwd": ".",
-      "command": [
-        "node",
-        "scripts/test_network_timer_schedule.mjs"
-      ],
+      "command": ["node", "scripts/test_network_timer_schedule.mjs"],
       "timeoutMs": 30000,
-      "dependsOn": [
-        "web-property-pack"
-      ],
+      "dependsOn": ["web-property-pack"],
+      "exclusiveResources": [],
       "required": true
     },
     {
       "id": "web-dogfood-schema",
       "kind": "check",
       "cwd": ".",
-      "command": [
-        "python3",
-        "-m",
-        "json.tool",
-        "external/schema/web-dogfood-manifest.schema.json"
-      ],
+      "command": ["python3", "-m", "json.tool", "external/schema/web-dogfood-manifest.schema.json"],
       "timeoutMs": 30000,
-      "dependsOn": [
-        "web-property-pack"
-      ],
+      "dependsOn": ["web-property-pack"],
+      "exclusiveResources": [],
       "required": true
     },
     {
       "id": "external-web-dogfood",
       "kind": "check",
       "cwd": ".",
-      "command": [
-        "node",
-        "scripts/test_external_web_dogfood.mjs"
-      ],
+      "command": ["node", "scripts/test_external_web_dogfood.mjs"],
       "timeoutMs": 30000,
-      "dependsOn": [
-        "web-dogfood-schema"
-      ],
+      "dependsOn": ["web-dogfood-schema"],
+      "exclusiveResources": [],
       "required": true
     },
     {
       "id": "mutation-quality",
       "kind": "quality",
       "cwd": ".",
-      "command": [
-        "node",
-        "scripts/test_web_mutation_benchmark.mjs",
-        "--no-artifacts"
-      ],
+      "command": ["node", "scripts/test_web_mutation_benchmark.mjs", "--no-artifacts"],
       "timeoutMs": 30000,
-      "dependsOn": [
-        "web-property-pack"
-      ],
+      "dependsOn": ["web-property-pack"],
+      "exclusiveResources": [],
       "required": true
     },
     {
       "id": "react-component",
       "kind": "component",
       "cwd": ".",
-      "command": [
-        "npm",
-        "test",
-        "--prefix",
-        "web/react-component"
-      ],
+      "command": ["npm", "test", "--prefix", "web/react-component"],
       "timeoutMs": 180000,
-      "dependsOn": [
-        "web-property-pack"
-      ],
+      "dependsOn": ["web-property-pack"],
+      "exclusiveResources": ["web/react-component"],
       "required": true
     },
     {
       "id": "vue-component",
       "kind": "component",
       "cwd": ".",
-      "command": [
-        "npm",
-        "test",
-        "--prefix",
-        "web/vue-component"
-      ],
+      "command": ["npm", "test", "--prefix", "web/vue-component"],
       "timeoutMs": 180000,
-      "dependsOn": [
-        "web-property-pack"
-      ],
+      "dependsOn": ["web-property-pack"],
+      "exclusiveResources": ["web/vue-component"],
       "required": true
     },
     {
       "id": "playwright-browser",
       "kind": "browser",
       "cwd": ".",
-      "command": [
-        "npm",
-        "test",
-        "--prefix",
-        "web/playwright-browser"
-      ],
+      "command": ["npm", "test", "--prefix", "web/playwright-browser"],
       "timeoutMs": 60000,
-      "dependsOn": [
-        "web-property-pack"
-      ],
+      "dependsOn": ["web-property-pack"],
+      "exclusiveResources": ["web/playwright-browser"],
       "required": true
     },
     {
       "id": "cross-mode-replay",
       "kind": "browser-replay",
       "cwd": ".",
-      "command": [
-        "node",
-        "scripts/test_cross_mode_replay.mjs"
-      ],
+      "command": ["node", "scripts/test_cross_mode_replay.mjs"],
       "timeoutMs": 60000,
-      "dependsOn": [
-        "react-component",
-        "vue-component",
-        "playwright-browser"
-      ],
+      "dependsOn": ["react-component", "vue-component", "playwright-browser"],
+      "exclusiveResources": ["web/react-component", "web/vue-component", "web/playwright-browser"],
       "required": true
     },
     {
       "id": "next-build",
       "kind": "ssr-build",
       "cwd": ".",
-      "command": [
-        "npm",
-        "run",
-        "build",
-        "--prefix",
-        "web/next-ssr-hydration"
-      ],
+      "command": ["npm", "run", "build", "--prefix", "web/next-ssr-hydration"],
       "timeoutMs": 300000,
-      "dependsOn": [
-        "web-property-pack"
-      ],
+      "dependsOn": ["web-property-pack"],
+      "exclusiveResources": ["web/next-ssr-hydration"],
       "required": true
     },
     {
       "id": "next-ssr-hydration",
       "kind": "ssr",
       "cwd": ".",
-      "command": [
-        "npm",
-        "test",
-        "--prefix",
-        "web/next-ssr-hydration"
-      ],
+      "command": ["npm", "test", "--prefix", "web/next-ssr-hydration"],
       "timeoutMs": 60000,
-      "dependsOn": [
-        "next-build"
-      ],
+      "dependsOn": ["next-build"],
+      "exclusiveResources": ["web/next-ssr-hydration"],
       "required": true
     },
     {
       "id": "nuxt-build",
       "kind": "ssr-build",
       "cwd": ".",
-      "command": [
-        "npm",
-        "run",
-        "build",
-        "--prefix",
-        "web/nuxt-ssr-hydration"
-      ],
+      "command": ["npm", "run", "build", "--prefix", "web/nuxt-ssr-hydration"],
       "timeoutMs": 300000,
-      "dependsOn": [
-        "web-property-pack"
-      ],
+      "dependsOn": ["web-property-pack"],
+      "exclusiveResources": ["web/nuxt-ssr-hydration"],
       "required": true
     },
     {
       "id": "nuxt-ssr-hydration",
       "kind": "ssr",
       "cwd": ".",
-      "command": [
-        "npm",
-        "test",
-        "--prefix",
-        "web/nuxt-ssr-hydration"
-      ],
+      "command": ["npm", "test", "--prefix", "web/nuxt-ssr-hydration"],
       "timeoutMs": 60000,
-      "dependsOn": [
-        "nuxt-build"
-      ],
+      "dependsOn": ["nuxt-build"],
+      "exclusiveResources": ["web/nuxt-ssr-hydration"],
       "required": true
     }
   ],

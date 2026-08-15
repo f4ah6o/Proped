@@ -133,7 +133,16 @@ export class NextSsrHydrationDriver {
     this.server = extractServerObservation(await serverResponse.text());
     await this.page.goto(this.url, { waitUntil: "domcontentloaded" });
     await this.page.locator("main[data-ready=true]").waitFor({ state: "visible" });
-    await this.page.waitForTimeout(100);
+    if (caseName === "mismatch") {
+      await this.page.waitForFunction(
+        (serverLabel) => document.getElementById("hydration-label")?.textContent !== serverLabel,
+        this.server.label,
+        { timeout: 5_000 },
+      );
+      await this.page.waitForTimeout(50);
+    } else {
+      await this.page.waitForTimeout(100);
+    }
     this.router = router;
     this.caseName = caseName;
     return this.snapshot();
@@ -211,7 +220,6 @@ export class NextSsrHydrationDriver {
     });
     return this.snapshot();
   }
-
 
   async attemptExternalNetwork() {
     await this.page.evaluate(async () => {

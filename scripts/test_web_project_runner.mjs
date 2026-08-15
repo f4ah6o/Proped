@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import {
   loadWebProjectManifest,
   runWebProject,
+  runWebProjectConcurrent,
   validateWebProjectManifest,
 } from "../protocol/web-project-runner.mjs";
 
@@ -23,6 +24,7 @@ function stage(id, command, options = {}) {
     command,
     timeoutMs: options.timeoutMs ?? 5000,
     dependsOn: options.dependsOn ?? [],
+    ...(options.exclusiveResources !== undefined ? { exclusiveResources: options.exclusiveResources } : {}),
     required: options.required ?? true,
   };
 }
@@ -51,10 +53,15 @@ function cli(args) {
   });
 }
 
+function overlapProbe(marker, peer, hash) {
+  return `const fs=require('node:fs');const marker=${JSON.stringify(marker)};const peer=${JSON.stringify(peer)};fs.writeFileSync(marker,'ready');const deadline=Date.now()+3000;(function wait(){if(fs.existsSync(peer)){console.log(JSON.stringify({ok:true,semanticHash:${JSON.stringify(hash)}}));return;}if(Date.now()>deadline){process.exit(12);return;}setTimeout(wait,10);})();`;
+}
+
 const sample = loadWebProjectManifest(ROOT, SAMPLE);
 assert.equal(sample.id, "proped-web-quality");
 assert.equal(sample.stages.length, 13);
 assert.equal(sample.stages.find((item) => item.id === "cross-mode-replay").dependsOn.length, 3);
+assert.ok(sample.stages.every((item) => Array.isArray(item.exclusiveResources)));
 
 assert.throws(
   () => validateWebProjectManifest({ ...sample, unexpected: true }, ROOT),
@@ -67,6 +74,12 @@ assert.throws(
 assert.throws(
   () => validateWebProjectManifest(manifest([stage("escape", [process.execPath, "-e", "0"], { cwd: ".." })]), ROOT),
   /escapes repository root/,
+);
+assert.throws(
+  () => validateWebProjectManifest(manifest([
+    stage("resource-escape", [process.execPath, "-e", "0"], { exclusiveResources: ["../outside"] }),
+  ]), ROOT),
+  /exclusiveResources.*escapes repository root/,
 );
 assert.throws(
   () => validateWebProjectManifest(manifest([
@@ -113,6 +126,96 @@ try {
   assert.equal(success.passedStageCount, 2);
   assert.equal(success.requiredFailureCount, 0);
   assert.equal(success.stages[1].payload.semanticHash, "bbb");
+
+  const markerA = path.join(TMP, "parallel-a.ready");
+  const markerB = path.join(TMP, "parallel-b.ready");
+  const parallelStages = [
+    stage("parallel-a", [process.execPath, "-e", overlapProbe(markerA, markerB, "pa")], { exclusiveResources: [] }),
+    stage("parallel-b", [process.execPath, "-e", overlapProbe(markerB, markerA, "pb")], { exclusiveResources: [] }),
+    stage("parallel-join", [process.execPath, "-e", "console.log(JSON.stringify({ok:true,semanticHash:'pj'}))"], {
+      dependsOn: ["parallel-a", "parallel-b"],
+      exclusiveResources: [],
+    }),
+  ];
+  const parallel = await runWebProjectConcurrent(
+    ROOT,
+    manifest(parallelStages, ".tmp/web-project-runner-test/parallel"),
+    { writeArtifacts: false, maxConcurrency: 4 },
+  );
+  assert.equal(parallel.ok, true, "safe independent stages must overlap to satisfy the synchronization probe");
+  assert.deepEqual(parallel.stages.map((item) => item.id), ["parallel-a", "parallel-b", "parallel-join"]);
+  fs.rmSync(markerA, { force: true });
+  fs.rmSync(markerB, { force: true });
+  const parallelReplay = await runWebProjectConcurrent(
+    ROOT,
+    manifest(parallelStages, ".tmp/web-project-runner-test/parallel-replay"),
+    { writeArtifacts: false, maxConcurrency: 4 },
+  );
+  assert.equal(parallelReplay.ok, true);
+  assert.equal(parallelReplay.semanticHash, parallel.semanticHash);
+
+  const resourceLock = path.join(TMP, "resource.lock");
+  const lockProgram = `const fs=require('node:fs');const p=${JSON.stringify(resourceLock)};try{fs.writeFileSync(p,'locked',{flag:'wx'});}catch{process.exit(9);}setTimeout(()=>{fs.rmSync(p,{force:true});console.log(JSON.stringify({ok:true,semanticHash:'lock'}));},120);`;
+  const locked = await runWebProjectConcurrent(
+    ROOT,
+    manifest([
+      stage("locked-a", [process.execPath, "-e", lockProgram], { exclusiveResources: [".tmp/web-project-runner-test/shared"] }),
+      stage("locked-b", [process.execPath, "-e", lockProgram], { exclusiveResources: [".tmp/web-project-runner-test/shared"] }),
+    ], ".tmp/web-project-runner-test/locked"),
+    { writeArtifacts: false, maxConcurrency: 4 },
+  );
+  assert.equal(locked.ok, true, "stages sharing an exclusive resource must be serialized");
+
+  const nestedRoot = path.join(TMP, "nested");
+  const nestedChild = path.join(nestedRoot, "child");
+  fs.mkdirSync(nestedChild, { recursive: true });
+  const nestedResourceLock = path.join(nestedChild, "resource.lock");
+  const nestedLockProgram = `const fs=require('node:fs');const p=${JSON.stringify(nestedResourceLock)};try{fs.writeFileSync(p,'locked',{flag:'wx'});}catch{process.exit(9);}setTimeout(()=>{fs.rmSync(p,{force:true});console.log(JSON.stringify({ok:true,semanticHash:'nested-lock'}));},120);`;
+  const nestedLocked = await runWebProjectConcurrent(
+    ROOT,
+    manifest([
+      stage("nested-parent", [process.execPath, "-e", nestedLockProgram], {
+        exclusiveResources: [".tmp/web-project-runner-test/nested"],
+      }),
+      stage("nested-child", [process.execPath, "-e", nestedLockProgram], {
+        exclusiveResources: [".tmp/web-project-runner-test/nested/child/../child"],
+      }),
+    ], ".tmp/web-project-runner-test/nested-locked"),
+    { writeArtifacts: false, maxConcurrency: 4 },
+  );
+  assert.equal(
+    nestedLocked.ok,
+    true,
+    "ancestor/descendant resource paths, including normalized equivalents, must be serialized",
+  );
+
+  const unknownLock = path.join(TMP, "unknown-resource.lock");
+  const unknownLockProgram = `const fs=require('node:fs');const p=${JSON.stringify(unknownLock)};try{fs.writeFileSync(p,'locked',{flag:'wx'});}catch{process.exit(9);}setTimeout(()=>{fs.rmSync(p,{force:true});console.log(JSON.stringify({ok:true,semanticHash:'unknown'}));},80);`;
+  const conservative = await runWebProjectConcurrent(
+    ROOT,
+    manifest([
+      stage("unknown-a", [process.execPath, "-e", unknownLockProgram]),
+      stage("unknown-b", [process.execPath, "-e", unknownLockProgram]),
+    ], ".tmp/web-project-runner-test/conservative"),
+    { writeArtifacts: false, maxConcurrency: 4 },
+  );
+  assert.equal(conservative.ok, true, "undeclared resource stages must retain conservative serial behavior");
+
+  const concurrentFailure = await runWebProjectConcurrent(
+    ROOT,
+    manifest([
+      stage("parallel-fail", [process.execPath, "-e", "process.exit(1)"], { exclusiveResources: [] }),
+      stage("parallel-independent", [process.execPath, "-e", "console.log(JSON.stringify({ok:true,semanticHash:'independent'}))"], { exclusiveResources: [] }),
+      stage("parallel-blocked", [process.execPath, "-e", "process.exit(99)"], {
+        dependsOn: ["parallel-fail"],
+        exclusiveResources: [],
+      }),
+    ], ".tmp/web-project-runner-test/concurrent-failure"),
+    { writeArtifacts: false, maxConcurrency: 4 },
+  );
+  assert.equal(concurrentFailure.ok, false);
+  assert.deepEqual(concurrentFailure.stages.map((item) => item.status), ["quality_gate_failed", "pass", "blocked"]);
+  assert.deepEqual(concurrentFailure.stages[2].blockedBy, ["parallel-fail"]);
 
   const targetBin = path.join(TMP, "target-node-bin");
   fs.mkdirSync(targetBin, { recursive: true });
@@ -258,4 +361,8 @@ console.log(JSON.stringify({
   classifications: ["pass", "quality_gate_failed", "blocked", "usage_error", "execution_failed", "timeout"],
   targetRuntimeEnvironment: true,
   isolatedProcessTreeCleanup: process.platform !== "win32",
+  concurrentScheduler: true,
+  explicitResourceLocks: true,
+  nestedResourceLocks: true,
+  synchronizationProbe: true,
 }));

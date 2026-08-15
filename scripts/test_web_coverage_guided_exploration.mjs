@@ -59,6 +59,29 @@ const second = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { m
 assert.equal(second.semanticHash, first.semanticHash);
 assert.deepEqual(second.transitionGraph, first.transitionGraph);
 
+class SyntheticDriftDriver extends SyntheticCoverageDriver {
+  constructor() { super(); this.driftPending = false; }
+  snapshot() {
+    const stable = super.snapshot();
+    if (this.driftPending && this.state === "admin") {
+      this.driftPending = false;
+      return { ...stable, fingerprint: semanticHash({ state: this.state, delayedDrift: true }) };
+    }
+    if (this.driftPending && this.state !== "admin") this.driftPending = false;
+    return stable;
+  }
+  async execute(action) {
+    const result = await super.execute(action);
+    if (action.id === "z-admin") this.driftPending = true;
+    return result;
+  }
+}
+
+const driftDriver = new SyntheticDriftDriver();
+const drift = await exploreWebCoverageGuided(driftDriver, { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
+assert.equal(drift.semanticHash, first.semanticHash, "a drifted live snapshot must fall back to deterministic reset/replay instead of changing the graph");
+assert.deepEqual(drift.transitionGraph, first.transitionGraph);
+assert.equal(driftDriver.resetCount, 3, "live fingerprint drift must force one additional reset/replay before the admin frontier action");
 
 class SyntheticSafetyDriver {
   constructor() { this.state = "home"; }
@@ -114,5 +137,6 @@ console.log(JSON.stringify({
   destructiveFiltered: safety.transitionGraph.every((edge) => edge.actionId !== "delete-account"),
   liveFrontierResetCount: firstDriver.resetCount,
   liveFrontierActionsCount: firstDriver.actionsCount,
+  driftFallbackResetCount: driftDriver.resetCount,
   executionFailureDiagnostic: executionFailure.diagnostics.find((item) => item.code === "frontier_action_execution_failed")?.code ?? null,
 }));

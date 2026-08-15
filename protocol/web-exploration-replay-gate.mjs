@@ -8,10 +8,15 @@ function failureCode(failure) {
   return failure?.code ?? failure?.property ?? failure?.failureClass ?? null;
 }
 
+function failureRoute(failure) {
+  return failure?.route ?? failure?.url ?? failure?.evidence?.route ?? failure?.evidence?.url ?? null;
+}
+
 async function replayCandidateTrace(driver, candidate, trace) {
   if (!Array.isArray(trace) || trace.length === 0) return false;
   if (!failureCode(candidate)) return false;
   const targetFinding = classifyWebFinding(candidate);
+  const targetRoute = failureRoute(candidate);
   const replayedTrace = [];
   await driver.reset();
   for (const actionId of trace) {
@@ -24,7 +29,7 @@ async function replayCandidateTrace(driver, candidate, trace) {
       const observedFinding = classifyWebFinding({
         ...violation,
         trace: violation?.trace ?? replayedTrace,
-        route: violation?.route ?? violation?.url ?? result.snapshot?.url ?? null,
+        route: failureRoute(violation) ?? (targetRoute ? result.snapshot?.url ?? null : null),
       });
       if (observedFinding.id === targetFinding.id) return true;
     }

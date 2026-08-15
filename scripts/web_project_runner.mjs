@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   loadWebProjectManifest,
-  runWebProject,
+  runWebProjectConcurrent,
 } from "../protocol/web-project-runner.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -15,7 +15,7 @@ const HELP = `Usage:
 
 Commands:
   validate    Validate a Web project manifest without executing stages
-  run         Execute the ordered stage graph and aggregate its quality result
+  run         Execute the dependency-aware stage graph and aggregate its quality result
 
 Options:
   --output <dir>    Override the manifest artifact output directory
@@ -100,7 +100,7 @@ if (options.command === "validate") {
 
 let report;
 try {
-  report = runWebProject(ROOT, manifest, {
+  report = await runWebProjectConcurrent(ROOT, manifest, {
     output: options.output,
     writeArtifacts: options.writeArtifacts,
     sandbox: options.strictSandbox ? { mode: "strict", writablePaths: options.writablePaths } : null,

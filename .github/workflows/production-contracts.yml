@@ -92,8 +92,6 @@ jobs:
             --checkout-root "${{ matrix.checkout_root }}"
 
       - name: Production regression gate
-        env:
-          PROPED_CI_PRODUCTION_CONTRACT: "1"
         run: |
           args=(
             --corpus "${{ matrix.corpus }}"

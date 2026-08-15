@@ -4,7 +4,7 @@ import { semanticHash } from "../protocol/ui-driver-v1.mjs";
 import { exploreWebCoverageGuided } from "../protocol/web-coverage-guided-exploration.mjs";
 
 class SyntheticCoverageDriver {
-  constructor() { this.state = "home"; }
+  constructor() { this.state = "home"; this.resetCount = 0; this.actionsCount = 0; }
   snapshot() {
     const route = this.state === "admin" || this.state === "crashed" ? "/admin" : "/";
     return {
@@ -14,8 +14,9 @@ class SyntheticCoverageDriver {
       applicationState: null,
     };
   }
-  async reset() { this.state = "home"; return this.snapshot(); }
+  async reset() { this.resetCount += 1; this.state = "home"; return this.snapshot(); }
   async actions() {
+    this.actionsCount += 1;
     const action = (id, kind, role, name) => ({ id, kind, target: { role, name, within: [] } });
     const actions = {
       home: [
@@ -41,7 +42,8 @@ class SyntheticCoverageDriver {
   }
 }
 
-const first = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
+const firstDriver = new SyntheticCoverageDriver();
+const first = await exploreWebCoverageGuided(firstDriver, { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
 assert.equal(first.states, 3);
 assert.equal(first.transitions, 3);
 assert.deepEqual(first.transitionGraph.map((edge) => edge.actionId), ["a-noise", "z-admin", "m-crash"]);
@@ -50,11 +52,36 @@ assert.equal(first.failureCount, 1);
 assert.equal(first.failures[0].property, "browser_uncaught_exception");
 assert.equal(first.frontierExhausted, false);
 assert.equal(first.truncatedByTransitionLimit, true);
+assert.equal(firstDriver.resetCount, 2, "the initial frontier and directly reached admin frontier must reuse the live trace instead of resetting again");
+assert.equal(firstDriver.actionsCount, 5, "live frontier reuse must carry forward the action inventory already observed for the current state");
 
 const second = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
 assert.equal(second.semanticHash, first.semanticHash);
 assert.deepEqual(second.transitionGraph, first.transitionGraph);
 
+class SyntheticDriftDriver extends SyntheticCoverageDriver {
+  constructor() { super(); this.driftPending = false; }
+  snapshot() {
+    const stable = super.snapshot();
+    if (this.driftPending && this.state === "admin") {
+      this.driftPending = false;
+      return { ...stable, fingerprint: semanticHash({ state: this.state, delayedDrift: true }) };
+    }
+    if (this.driftPending && this.state !== "admin") this.driftPending = false;
+    return stable;
+  }
+  async execute(action) {
+    const result = await super.execute(action);
+    if (action.id === "z-admin") this.driftPending = true;
+    return result;
+  }
+}
+
+const driftDriver = new SyntheticDriftDriver();
+const drift = await exploreWebCoverageGuided(driftDriver, { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
+assert.equal(drift.semanticHash, first.semanticHash, "a drifted live snapshot must fall back to deterministic reset/replay instead of changing the graph");
+assert.deepEqual(drift.transitionGraph, first.transitionGraph);
+assert.equal(driftDriver.resetCount, 3, "live fingerprint drift must force one additional reset/replay before the admin frontier action");
 
 class SyntheticSafetyDriver {
   constructor() { this.state = "home"; }
@@ -108,5 +135,8 @@ console.log(JSON.stringify({
   deterministic: second.semanticHash === first.semanticHash,
   failureProperty: first.failures[0].property,
   destructiveFiltered: safety.transitionGraph.every((edge) => edge.actionId !== "delete-account"),
+  liveFrontierResetCount: firstDriver.resetCount,
+  liveFrontierActionsCount: firstDriver.actionsCount,
+  driftFallbackResetCount: driftDriver.resetCount,
   executionFailureDiagnostic: executionFailure.diagnostics.find((item) => item.code === "frontier_action_execution_failed")?.code ?? null,
 }));

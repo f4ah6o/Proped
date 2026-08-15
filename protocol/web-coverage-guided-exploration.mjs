@@ -27,6 +27,12 @@ function edgeKey(fingerprint, actionId) {
   return `${fingerprint}\u0000${actionId}`;
 }
 
+function sameTrace(left, right) {
+  return Array.isArray(left)
+    && left.length === right.length
+    && left.every((actionId, index) => actionId === right[index]);
+}
+
 function frontierScore(node, executedEdges, executedActionSignatures, actionFilter) {
   const available = node.inventory.actions.filter((action) => actionFilter(action) && !executedEdges.has(edgeKey(node.snapshot.fingerprint, action.id)));
   const globallyNew = available.filter((action) => !executedActionSignatures.has(actionSignature(action)));
@@ -112,6 +118,9 @@ export async function exploreWebCoverageGuided(driver, {
   };
   stateByFingerprint.set(initialSnapshot.fingerprint, initialNode);
   routeFamilies.add(webRouteFamily(initialSnapshot.url));
+  let currentTrace = [];
+  let currentFingerprint = initialSnapshot.fingerprint;
+  let currentInventory = initialInventory;
 
   while (transitions.length < maxTransitions && stateByFingerprint.size < maxStates) {
     const selected = selectFrontierNode([...stateByFingerprint.values()], executedEdges, executedActionSignatures, maxDepth, actionFilter);
@@ -121,7 +130,31 @@ export async function exploreWebCoverageGuided(driver, {
     executedEdges.add(edgeKey(source.snapshot.fingerprint, action.id));
     executedActionSignatures.add(actionSignature(action));
 
-    const replay = await replayTrace(driver, source.trace);
+    let replay = null;
+    let replayInventory = null;
+    const reuseCandidate = sameTrace(currentTrace, source.trace)
+      && currentFingerprint === source.snapshot.fingerprint
+      && currentInventory
+      && typeof driver.snapshot === "function";
+    if (reuseCandidate) {
+      try {
+        const liveSnapshot = await driver.snapshot();
+        currentFingerprint = liveSnapshot.fingerprint;
+        if (liveSnapshot.fingerprint === source.snapshot.fingerprint) {
+          replay = { ok: true, snapshot: liveSnapshot };
+          replayInventory = currentInventory;
+        }
+      } catch {
+        currentFingerprint = null;
+      }
+    }
+    if (!replay) {
+      replay = await replayTrace(driver, source.trace);
+      currentTrace = replay.ok ? [...source.trace] : null;
+      currentFingerprint = replay.ok ? replay.snapshot.fingerprint : null;
+      currentInventory = replay.ok ? await driver.actions() : null;
+      replayInventory = currentInventory;
+    }
     if (!replay.ok) {
       diagnostics.push(replay.executionError ? {
         code: "frontier_trace_replay_execution_failed",
@@ -137,7 +170,6 @@ export async function exploreWebCoverageGuided(driver, {
       });
       continue;
     }
-    const replayInventory = await driver.actions();
     const replayAction = replayInventory.actions.find((candidate) => candidate.id === action.id);
     if (!replayAction) {
       diagnostics.push({
@@ -153,6 +185,9 @@ export async function exploreWebCoverageGuided(driver, {
     try {
       result = await driver.execute(replayAction);
     } catch (error) {
+      currentTrace = null;
+      currentFingerprint = null;
+      currentInventory = null;
       diagnostics.push({
         code: "frontier_action_execution_failed",
         sourceFingerprint: source.snapshot.fingerprint,
@@ -165,6 +200,9 @@ export async function exploreWebCoverageGuided(driver, {
     const nextSnapshot = result.snapshot;
     const nextInventory = await driver.actions();
     const nextTrace = [...source.trace, action.id];
+    currentTrace = nextTrace;
+    currentFingerprint = nextSnapshot.fingerprint;
+    currentInventory = nextInventory;
     transitions.push({
       from: source.snapshot.fingerprint,
       actionId: action.id,

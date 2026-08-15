@@ -1,7 +1,8 @@
+import { classifyWebFinding } from "./web-finding-group.mjs";
 import { runFailureReplayGate } from "./web-replay-gate.mjs";
 import { semanticHash } from "./ui-driver-v1.mjs";
 
-export const WEB_EXPLORATION_REPLAY_GATE_VERSION = "1";
+export const WEB_EXPLORATION_REPLAY_GATE_VERSION = "2";
 
 function failureCode(failure) {
   return failure?.code ?? failure?.property ?? failure?.failureClass ?? null;
@@ -10,15 +11,24 @@ function failureCode(failure) {
 async function replayCandidate(driver, candidate) {
   const trace = candidate?.trace ?? [];
   if (!Array.isArray(trace) || trace.length === 0) return false;
-  const code = failureCode(candidate);
-  if (!code) return false;
+  if (!failureCode(candidate)) return false;
+  const targetFinding = classifyWebFinding(candidate);
+  const replayedTrace = [];
   await driver.reset();
   for (const actionId of trace) {
     const inventory = await driver.actions();
     const action = inventory.actions.find((item) => item.id === actionId);
     if (!action) return false;
     const result = await driver.execute(action);
-    if ((result.violations ?? []).some((violation) => failureCode(violation) === code)) return true;
+    replayedTrace.push(actionId);
+    for (const violation of result.violations ?? []) {
+      const observedFinding = classifyWebFinding({
+        ...violation,
+        trace: violation?.trace ?? replayedTrace,
+        route: violation?.route ?? violation?.url ?? result.snapshot?.url ?? null,
+      });
+      if (observedFinding.id === targetFinding.id) return true;
+    }
   }
   return false;
 }
@@ -27,17 +37,20 @@ export async function replayWebExplorationFailureCampaign(driver, failures = [])
   const reproduced = [];
   const diagnostics = [];
   for (const candidate of failures) {
+    const finding = classifyWebFinding(candidate);
     const ok = await replayCandidate(driver, candidate);
     if (ok) reproduced.push(candidate);
     else diagnostics.push({
       code: "exploration_failure_not_reproduced",
       failureCode: failureCode(candidate),
+      findingGroupId: finding.id,
       trace: candidate?.trace ?? [],
     });
   }
   const stable = {
     version: WEB_EXPLORATION_REPLAY_GATE_VERSION,
     reproducedFailureCodes: reproduced.map(failureCode).filter(Boolean).sort(),
+    reproducedFindingGroupIds: reproduced.map((failure) => classifyWebFinding(failure).id).sort(),
     diagnostics,
   };
   return {

@@ -4,7 +4,7 @@ import { semanticHash } from "../protocol/ui-driver-v1.mjs";
 import { exploreWebCoverageGuided } from "../protocol/web-coverage-guided-exploration.mjs";
 
 class SyntheticCoverageDriver {
-  constructor() { this.state = "home"; }
+  constructor() { this.state = "home"; this.resetCount = 0; }
   snapshot() {
     const route = this.state === "admin" || this.state === "crashed" ? "/admin" : "/";
     return {
@@ -14,7 +14,7 @@ class SyntheticCoverageDriver {
       applicationState: null,
     };
   }
-  async reset() { this.state = "home"; return this.snapshot(); }
+  async reset() { this.resetCount += 1; this.state = "home"; return this.snapshot(); }
   async actions() {
     const action = (id, kind, role, name) => ({ id, kind, target: { role, name, within: [] } });
     const actions = {
@@ -41,7 +41,8 @@ class SyntheticCoverageDriver {
   }
 }
 
-const first = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
+const firstDriver = new SyntheticCoverageDriver();
+const first = await exploreWebCoverageGuided(firstDriver, { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
 assert.equal(first.states, 3);
 assert.equal(first.transitions, 3);
 assert.deepEqual(first.transitionGraph.map((edge) => edge.actionId), ["a-noise", "z-admin", "m-crash"]);
@@ -50,6 +51,7 @@ assert.equal(first.failureCount, 1);
 assert.equal(first.failures[0].property, "browser_uncaught_exception");
 assert.equal(first.frontierExhausted, false);
 assert.equal(first.truncatedByTransitionLimit, true);
+assert.equal(firstDriver.resetCount, 2, "the initial frontier and directly reached admin frontier must reuse the live trace instead of resetting again");
 
 const second = await exploreWebCoverageGuided(new SyntheticCoverageDriver(), { maxStates: 10, maxTransitions: 3, maxDepth: 4 });
 assert.equal(second.semanticHash, first.semanticHash);
@@ -108,5 +110,6 @@ console.log(JSON.stringify({
   deterministic: second.semanticHash === first.semanticHash,
   failureProperty: first.failures[0].property,
   destructiveFiltered: safety.transitionGraph.every((edge) => edge.actionId !== "delete-account"),
+  liveFrontierResetCount: firstDriver.resetCount,
   executionFailureDiagnostic: executionFailure.diagnostics.find((item) => item.code === "frontier_action_execution_failed")?.code ?? null,
 }));

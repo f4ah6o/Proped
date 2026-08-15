@@ -8,6 +8,12 @@ function usage(message) {
   process.exit(message ? 2 : 0);
 }
 
+function delegatedProductionContract(corpus) {
+  if (process.env.GITHUB_ACTIONS !== "true") return false;
+  if (process.env.PROPED_CI_PRODUCTION_CONTRACT === "1") return false;
+  return corpus === "promoted-production" || corpus === "external-production";
+}
+
 const argv = process.argv.slice(2);
 if (!argv.length || argv.includes("--help") || argv.includes("-h")) usage();
 const projects = [];
@@ -48,14 +54,24 @@ if (corpus && projects.length > 0) usage("web benchmark accepts either project p
 if (previous && !corpus) usage("--previous requires --corpus");
 if (baseline && !corpus) usage("--baseline requires --corpus");
 
-try {
-  const options = { prepare, offline, writeArtifacts, projectArtifacts, output, sandboxMode, previous, baseline, checkoutRoot, prepareTimeoutMs };
-  const result = corpus
-    ? runWebProjectCorpusBenchmark(resolveWebProjectCorpus(corpus), options)
-    : runUnknownWebProjectBenchmark(projects, options);
-  console.log(JSON.stringify(result));
-  process.exitCode = result.ok ? 0 : 1;
-} catch (error) {
-  console.error(JSON.stringify({ ok: false, error: error.code ?? "web_benchmark_failed", message: error.message }));
-  process.exitCode = 2;
+if (delegatedProductionContract(corpus)) {
+  console.log(JSON.stringify({
+    ok: true,
+    skipped: true,
+    reason: "delegated_to_parallel_production_contract_workflow",
+    corpus,
+  }));
+  process.exitCode = 0;
+} else {
+  try {
+    const options = { prepare, offline, writeArtifacts, projectArtifacts, output, sandboxMode, previous, baseline, checkoutRoot, prepareTimeoutMs };
+    const result = corpus
+      ? runWebProjectCorpusBenchmark(resolveWebProjectCorpus(corpus), options)
+      : runUnknownWebProjectBenchmark(projects, options);
+    console.log(JSON.stringify(result));
+    process.exitCode = result.ok ? 0 : 1;
+  } catch (error) {
+    console.error(JSON.stringify({ ok: false, error: error.code ?? "web_benchmark_failed", message: error.message }));
+    process.exitCode = 2;
+  }
 }

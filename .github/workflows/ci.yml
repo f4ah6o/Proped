@@ -24,6 +24,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: web/playwright-browser/package-lock.json
 
       - name: Set up MoonBit
         uses: hustcer/setup-moonbit@v1
@@ -69,6 +71,11 @@ jobs:
           python3 -m json.tool protocol/ui-driver-v1.schema.json > /dev/null
           python3 -m json.tool spikes/web-driver/react-spike.json > /dev/null
           node spikes/web-driver/parity.mjs
+
+      - name: Prepare managed browser runtime for native CLI
+        run: |
+          npm ci --prefix web/playwright-browser --ignore-scripts
+          npx --prefix web/playwright-browser playwright install --with-deps --only-shell chromium
 
       - name: Native CLI integration
         run: node scripts/test_native_cli.mjs
@@ -368,26 +375,21 @@ jobs:
               --sandbox-mode strict
 
   external-matrix:
+    name: External contracts (${{ matrix.shard }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - proton-demo-todo
-          - ensenzu-app
-          - signal-reader
-          - moonbit-editor-file-tree
-          - canopy-components
-          - canopy-editor-integration
-          - rabbita-utility-batch
-          - incr-typed-spreadsheet
-          - circular-state
-          - isomorphic-suite
-          - rabbita-xterm-lifecycle
-          - moonclaw-job
-          - mooncakes-official-ui
-          - selene-editor-assets
-          - openseek-desktop-lifecycle
+        include:
+          - shard: 1-of-3
+            targets: >-
+              proton-demo-todo ensenzu-app signal-reader moonbit-editor-file-tree canopy-components
+          - shard: 2-of-3
+            targets: >-
+              canopy-editor-integration rabbita-utility-batch incr-typed-spreadsheet circular-state isomorphic-suite
+          - shard: 3-of-3
+            targets: >-
+              rabbita-xterm-lifecycle moonclaw-job mooncakes-official-ui selene-editor-assets openseek-desktop-lifecycle
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -403,24 +405,8 @@ jobs:
       - name: Validate manifests
         run: python3 scripts/external_harness.py validate
 
-      - name: Run external target
-        run: |
-          moon run src/cli -- external run "${{ matrix.target }}" --output /tmp/proped-matrix --json > /tmp/external-run.json
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          result = json.loads(Path('/tmp/external-run.json').read_text())
-          assert result['ok'] is True
-          assert result['command'] == 'external run'
-          assert len(result['runs']) == 1
-          run = result['runs'][0]
-          assert run['id'] == '${{ matrix.target }}'
-          assert run['expectationMet'] is True
-          assert run['diagnostics'] == 0
-          for artifact in run['artifacts']:
-              assert (Path(run['output']) / artifact).is_file()
-          PY
+      - name: Run external shard
+        run: bash scripts/ci_external_matrix_shard.sh ${{ matrix.targets }}
 
   managed-runtime-distribution:
     name: Managed runtime (${{ matrix.os }})

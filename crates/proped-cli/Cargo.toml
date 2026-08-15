@@ -10,3 +10,6 @@ repository = "https://github.com/f4ah6o/Proped"
 [[bin]]
 name = "proped"
 path = "src/main.rs"
+
+[dependencies]
+noflate = "0.1.1"

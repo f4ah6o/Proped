@@ -3,5 +3,14 @@
 version = 4
 
 [[package]]
+name = "noflate"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51d9d86fb4334e807657ff3f88c4faa1d5d81bd65027e18ea1e5885710d5f78d"
+
+[[package]]
 name = "proped-cli"
 version = "2026.8.0"
+dependencies = [
+ "noflate",
+]

@@ -182,3 +182,25 @@ Do not expose raw archive contents in diagnostics.
 `curl` remains a separate decision. Replacing archive extraction with `noflate` is intentionally independent from HTTPS/TLS acquisition because removing `curl` would introduce materially different networking, certificate, proxy, and platform concerns.
 
 Close this issue by moving this file to `issues/closed/` once the native extraction path is implemented and the acceptance criteria are satisfied.
+
+## Completion
+
+Implemented on 2026-08-15.
+
+- Added `noflate` 0.1.1 as the only third-party Rust runtime dependency.
+- Added a bounded native archive boundary under `crates/proped-cli/src/archive/`.
+- `.tar.gz` extraction supports the pinned Node subset: regular files, directories, and safe relative symlinks, with executable modes preserved.
+- `.zip` extraction supports stored and DEFLATE entries, validates central/local headers, CRC-32, flags, offsets, sizes, and rejects ZIP64/encryption/symlinks/unsafe paths.
+- Removed the managed Node `tar` subprocess path from `setup.rs`; extraction failures remain `managed_node_acquisition_failed` and staging is removed on failure.
+- Added hostile archive tests for traversal, duplicate/conflicting entries, unsupported TAR types, symlink escape/follow attempts, corrupt gzip, encrypted ZIP entries, data descriptors, and CRC failures.
+- Updated third-party notices with the `noflate` MIT license.
+
+Verification:
+
+- `cargo test --workspace`: 20 passed.
+- `cargo clippy --workspace --all-targets -- -D warnings`: passed.
+- `cargo tree -p proped-cli`: `proped-cli -> noflate v0.1.1` only.
+- `git diff --check`: passed before closure bookkeeping.
+- Pinned macOS artifact `node-v22.23.2-darwin-arm64.tar.gz` SHA-256 matched metadata and extracted successfully through the native implementation in release mode. Its raw TAR entry types are exactly directory, regular file, and symlink.
+- Pinned Windows artifact `node-v22.23.2-win-x64.zip` SHA-256 matched metadata and extracted successfully through the native implementation in release mode. Its entries use only stored/DEFLATE methods; all current general-purpose flags are zero.
+

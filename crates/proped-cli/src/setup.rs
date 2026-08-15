@@ -661,26 +661,14 @@ fn ensure_managed_node(
         )
     })?;
 
-    let mut extract = safe_command(Path::new("tar"));
-    extract.arg(if metadata.artifact.format == "tar.gz" {
-        "-xzf"
-    } else {
-        "-xf"
-    });
-    extract.arg(&archive).arg("-C").arg(&staging_root);
-    let output = extract.output().map_err(|error| {
-        SetupError::new(
-            "managed_node_acquisition_failed",
-            "node-acquisition",
-            format!("failed to start tar for Node extraction: {error}"),
-        )
-    })?;
-    if !output.status.success() {
+    if let Err(error) =
+        crate::archive::extract_archive(&archive, &metadata.artifact.format, &staging_root)
+    {
         let _ = remove_any(&staging_root);
         return Err(SetupError::new(
             "managed_node_acquisition_failed",
             "node-acquisition",
-            format!("Node extraction failed: {}", output_message(&output)),
+            format!("Node archive extraction failed: {error}"),
         ));
     }
 

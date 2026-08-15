@@ -1,3 +1,4 @@
+mod archive;
 mod setup;
 
 use std::env;

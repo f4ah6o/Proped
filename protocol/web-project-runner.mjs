@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import {
   assertConstrainedSandboxCapabilities,
@@ -15,10 +16,10 @@ import {
 } from "./web-execution-sandbox.mjs";
 import { semanticHash } from "./ui-driver-v1.mjs";
 import { clusterWebFailures } from "./web-failure-classifier.mjs";
-import { spawnSyncIsolated } from "./web-process-tree.mjs";
+import { spawnIsolated, spawnSyncIsolated } from "./web-process-tree.mjs";
 
 export const WEB_PROJECT_MANIFEST_VERSION = 1;
-export const WEB_PROJECT_RUNNER_VERSION = "1";
+export const WEB_PROJECT_RUNNER_VERSION = "2";
 export const WEB_PROJECT_STAGE_KINDS = Object.freeze([
   "check",
   "component",
@@ -43,7 +44,7 @@ const SAFETY_KEYS = new Set([
   "upstreamWrites",
   "credentials",
 ]);
-const STAGE_KEYS = new Set([
+const STAGE_REQUIRED_KEYS = new Set([
   "id",
   "kind",
   "cwd",
@@ -51,6 +52,10 @@ const STAGE_KEYS = new Set([
   "timeoutMs",
   "dependsOn",
   "required",
+]);
+const STAGE_KEYS = new Set([
+  ...STAGE_REQUIRED_KEYS,
+  "exclusiveResources",
 ]);
 const ARTIFACT_KEYS = new Set(["output"]);
 
@@ -62,6 +67,12 @@ function assertExactKeys(value, keys, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail(`${label} must be an object`);
   for (const key of Object.keys(value)) if (!keys.has(key)) fail(`${label} has unknown field ${key}`);
   for (const key of keys) if (!(key in value)) fail(`${label} is missing ${key}`);
+}
+
+function assertStageKeys(stage, label) {
+  if (!stage || typeof stage !== "object" || Array.isArray(stage)) fail(`${label} must be an object`);
+  for (const key of Object.keys(stage)) if (!STAGE_KEYS.has(key)) fail(`${label} has unknown field ${key}`);
+  for (const key of STAGE_REQUIRED_KEYS) if (!(key in stage)) fail(`${label} is missing ${key}`);
 }
 
 function assertString(value, label) {
@@ -116,7 +127,7 @@ function resolveCreatableInside(root, candidate, label) {
 }
 
 function validateStage(stage, index, seenIds) {
-  assertExactKeys(stage, STAGE_KEYS, `stages[${index}]`);
+  assertStageKeys(stage, `stages[${index}]`);
   if (!/^[a-z0-9][a-z0-9-]*$/.test(stage.id)) fail(`invalid stage id ${stage.id}`);
   if (seenIds.has(stage.id)) fail(`duplicate stage id ${stage.id}`);
   if (!WEB_PROJECT_STAGE_KINDS.includes(stage.kind)) fail(`unsupported stage kind ${stage.kind}`);
@@ -130,6 +141,12 @@ function validateStage(stage, index, seenIds) {
   for (const dependency of stage.dependsOn) {
     assertString(dependency, `${stage.id}.dependsOn[]`);
     if (!seenIds.has(dependency)) fail(`${stage.id} depends on unknown or later stage ${dependency}`);
+  }
+  if (stage.exclusiveResources !== undefined) {
+    if (!Array.isArray(stage.exclusiveResources) || new Set(stage.exclusiveResources).size !== stage.exclusiveResources.length) {
+      fail(`${stage.id}.exclusiveResources must be a unique array`);
+    }
+    for (const resource of stage.exclusiveResources) assertString(resource, `${stage.id}.exclusiveResources[]`);
   }
   if (typeof stage.required !== "boolean") fail(`${stage.id}.required must be boolean`);
   seenIds.add(stage.id);
@@ -159,7 +176,12 @@ export function validateWebProjectManifest(manifest, repositoryRoot = process.cw
   resolveCreatableInside(repositoryRoot, manifest.artifacts.output, "artifacts.output");
 
   const projectRoot = resolveExistingInside(repositoryRoot, manifest.projectRoot, "projectRoot");
-  for (const stage of manifest.stages) resolveExistingInside(projectRoot, stage.cwd, `${stage.id}.cwd`);
+  for (const stage of manifest.stages) {
+    resolveExistingInside(projectRoot, stage.cwd, `${stage.id}.cwd`);
+    for (const resource of stage.exclusiveResources ?? []) {
+      resolveInside(projectRoot, resource, `${stage.id}.exclusiveResources[]`);
+    }
+  }
   return manifest;
 }
 
@@ -278,6 +300,54 @@ function stableStage(stageResult) {
   };
 }
 
+function blockedStage(stage, blockedBy) {
+  return {
+    id: stage.id,
+    kind: stage.kind,
+    required: stage.required,
+    dependsOn: stage.dependsOn,
+    status: "blocked",
+    exitCode: null,
+    signal: null,
+    durationMs: 0,
+    blockedBy,
+    payload: null,
+    stdoutTail: "",
+    stderrTail: "",
+  };
+}
+
+function finalizeWebProjectReport(repositoryRoot, manifest, options, results, sandboxMetadata) {
+  const requiredFailures = results.filter((stage) => stage.required && stage.status !== "pass");
+  const stable = {
+    schemaVersion: WEB_PROJECT_MANIFEST_VERSION,
+    runnerVersion: WEB_PROJECT_RUNNER_VERSION,
+    id: manifest.id,
+    safety: manifest.safety,
+    sandbox: sandboxMetadata,
+    stages: results.map(stableStage),
+  };
+  const report = {
+    ok: requiredFailures.length === 0,
+    ...stable,
+    stageCount: results.length,
+    passedStageCount: results.filter((stage) => stage.status === "pass").length,
+    requiredFailureCount: requiredFailures.length,
+    stages: results,
+    semanticHash: semanticHash(stable),
+  };
+
+  if (options.writeArtifacts !== false) {
+    const outputCandidate = options.output ?? manifest.artifacts.output;
+    const output = resolveCreatableInside(repositoryRoot, outputCandidate, "output");
+    writeWebProjectArtifacts(output, report);
+    report.output = output;
+  } else {
+    report.output = null;
+  }
+  return report;
+}
+
 export function runWebProject(repositoryRoot, manifest, options = {}) {
   validateWebProjectManifest(manifest, repositoryRoot);
   const projectRoot = resolveExistingInside(repositoryRoot, manifest.projectRoot, "projectRoot");
@@ -334,102 +404,50 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
   const effectiveWritablePaths = workspaceOverlay ? [] : sandboxWritablePaths;
 
   try {
-  for (const stage of manifest.stages) {
-    const blockedBy = stage.dependsOn.filter((dependency) => byId.get(dependency)?.status !== "pass");
-    if (blockedBy.length > 0) {
-      const blocked = {
-        id: stage.id,
-        kind: stage.kind,
-        required: stage.required,
-        dependsOn: stage.dependsOn,
-        status: "blocked",
-        exitCode: null,
-        signal: null,
-        durationMs: 0,
-        blockedBy,
-        payload: null,
-        stdoutTail: "",
-        stderrTail: "",
-      };
-      results.push(blocked);
-      byId.set(stage.id, blocked);
-      continue;
-    }
+    for (const stage of manifest.stages) {
+      const blockedBy = stage.dependsOn.filter((dependency) => byId.get(dependency)?.status !== "pass");
+      if (blockedBy.length > 0) {
+        const blocked = blockedStage(stage, blockedBy);
+        results.push(blocked);
+        byId.set(stage.id, blocked);
+        continue;
+      }
 
-    const cwd = resolveExistingInside(effectiveProjectRoot, stage.cwd, `${stage.id}.cwd`);
-    const started = performance.now();
-    let executable = stage.command[0];
-    let args = stage.command.slice(1);
-    let invocation = null;
-    if (sandboxMode === "strict") {
-      invocation = buildStrictSandboxInvocation({
-        command: stage.command,
-        cwd,
-        repositoryRoot: effectiveSandboxRoot,
-        writablePaths: effectiveWritablePaths,
-        credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
-        platform: sandboxPlatform,
-        backendPath: sandboxBackendPath,
-        privateWorkspace: hostWorkspaceOverlay,
-        workspaceOverlay: bubblewrapWorkspaceOverlay ? workspaceOverlay : null,
-      });
-    } else if (sandboxMode === "constrained") {
-      invocation = buildMacosConstrainedSandboxInvocation({
-        command: stage.command,
-        cwd,
-        repositoryRoot: sandboxRoot,
-        writablePaths: sandboxWritablePaths,
-        backendPath: sandboxBackendPath,
-        credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
-      });
-    }
-    if (invocation) {
-      executable = invocation.executable;
-      args = invocation.args;
-      sandboxMetadata = invocation.metadata;
-    }
-    let child;
-    try {
-      child = spawnSyncIsolated(executable, args, {
-        cwd,
-        encoding: "utf8",
-        timeout: stage.timeoutMs,
-        maxBuffer: 8 * 1024 * 1024,
-        shell: false,
-        env: {
-          ...childEnvironment({ osEnforced: osSandbox, sourceEnvironment }),
-          ...(invocation?.environment ?? {}),
-        },
-      });
-    } finally {
-      cleanupSandboxInvocation(invocation);
-    }
-    let bootstrapNetworkRetry = null;
-    const initialExitCode = child.status;
-    const initialStdout = child.stdout ?? "";
-    const initialStderr = child.stderr ?? "";
-    if (
-      sandboxMode === "strict"
-      && stage.id === "project-build"
-      && options.sandbox?.allowBuildNetworkBootstrap === true
-      && child.status !== 0
-      && buildNetworkBootstrapRequired(initialStdout, initialStderr)
-    ) {
-      const retryInvocation = buildStrictSandboxInvocation({
-        command: stage.command,
-        cwd,
-        repositoryRoot: effectiveSandboxRoot,
-        writablePaths: effectiveWritablePaths,
-        credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
-        platform: sandboxPlatform,
-        backendPath: sandboxBackendPath,
-        privateWorkspace: hostWorkspaceOverlay,
-        workspaceOverlay: bubblewrapWorkspaceOverlay ? workspaceOverlay : null,
-        networkAccess: "bootstrap-allow",
-      });
-      sandboxMetadata = retryInvocation.metadata;
+      const cwd = resolveExistingInside(effectiveProjectRoot, stage.cwd, `${stage.id}.cwd`);
+      const started = performance.now();
+      let executable = stage.command[0];
+      let args = stage.command.slice(1);
+      let invocation = null;
+      if (sandboxMode === "strict") {
+        invocation = buildStrictSandboxInvocation({
+          command: stage.command,
+          cwd,
+          repositoryRoot: effectiveSandboxRoot,
+          writablePaths: effectiveWritablePaths,
+          credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
+          platform: sandboxPlatform,
+          backendPath: sandboxBackendPath,
+          privateWorkspace: hostWorkspaceOverlay,
+          workspaceOverlay: bubblewrapWorkspaceOverlay ? workspaceOverlay : null,
+        });
+      } else if (sandboxMode === "constrained") {
+        invocation = buildMacosConstrainedSandboxInvocation({
+          command: stage.command,
+          cwd,
+          repositoryRoot: sandboxRoot,
+          writablePaths: sandboxWritablePaths,
+          backendPath: sandboxBackendPath,
+          credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
+        });
+      }
+      if (invocation) {
+        executable = invocation.executable;
+        args = invocation.args;
+        sandboxMetadata = invocation.metadata;
+      }
+      let child;
       try {
-        child = spawnSyncIsolated(retryInvocation.executable, retryInvocation.args, {
+        child = spawnSyncIsolated(executable, args, {
           cwd,
           encoding: "utf8",
           timeout: stage.timeoutMs,
@@ -437,74 +455,207 @@ export function runWebProject(repositoryRoot, manifest, options = {}) {
           shell: false,
           env: {
             ...childEnvironment({ osEnforced: osSandbox, sourceEnvironment }),
-            ...retryInvocation.environment,
+            ...(invocation?.environment ?? {}),
           },
         });
       } finally {
-        cleanupSandboxInvocation(retryInvocation);
+        cleanupSandboxInvocation(invocation);
       }
-      bootstrapNetworkRetry = {
-        attempted: true,
-        succeeded: child.status === 0,
-        initialExitCode,
-        reason: "build-network-prerequisite",
+      let bootstrapNetworkRetry = null;
+      const initialExitCode = child.status;
+      const initialStdout = child.stdout ?? "";
+      const initialStderr = child.stderr ?? "";
+      if (
+        sandboxMode === "strict"
+        && stage.id === "project-build"
+        && options.sandbox?.allowBuildNetworkBootstrap === true
+        && child.status !== 0
+        && buildNetworkBootstrapRequired(initialStdout, initialStderr)
+      ) {
+        const retryInvocation = buildStrictSandboxInvocation({
+          command: stage.command,
+          cwd,
+          repositoryRoot: effectiveSandboxRoot,
+          writablePaths: effectiveWritablePaths,
+          credentialReadDenyPaths: macosCredentialReadDenyPaths(sourceEnvironment),
+          platform: sandboxPlatform,
+          backendPath: sandboxBackendPath,
+          privateWorkspace: hostWorkspaceOverlay,
+          workspaceOverlay: bubblewrapWorkspaceOverlay ? workspaceOverlay : null,
+          networkAccess: "bootstrap-allow",
+        });
+        sandboxMetadata = retryInvocation.metadata;
+        try {
+          child = spawnSyncIsolated(retryInvocation.executable, retryInvocation.args, {
+            cwd,
+            encoding: "utf8",
+            timeout: stage.timeoutMs,
+            maxBuffer: 8 * 1024 * 1024,
+            shell: false,
+            env: {
+              ...childEnvironment({ osEnforced: osSandbox, sourceEnvironment }),
+              ...retryInvocation.environment,
+            },
+          });
+        } finally {
+          cleanupSandboxInvocation(retryInvocation);
+        }
+        bootstrapNetworkRetry = {
+          attempted: true,
+          succeeded: child.status === 0,
+          initialExitCode,
+          reason: "build-network-prerequisite",
+        };
+      }
+      const durationMs = Math.round((performance.now() - started) * 1000) / 1000;
+      const status = stageStatus(child);
+      const stdout = child.stdout ?? "";
+      const stderr = child.stderr ?? "";
+      const payload = parseJsonTail(status === "pass" ? `${stdout}\n${stderr}` : `${stderr}\n${stdout}`);
+      const result = {
+        id: stage.id,
+        kind: stage.kind,
+        required: stage.required,
+        dependsOn: stage.dependsOn,
+        status,
+        exitCode: child.status,
+        signal: child.signal ?? null,
+        durationMs,
+        blockedBy: [],
+        payload: payloadSummary(payload),
+        stdoutTail: trimTail(stdout),
+        stderrTail: trimTail(stderr),
+        ...(bootstrapNetworkRetry ? { bootstrapNetworkRetry } : {}),
       };
+      results.push(result);
+      byId.set(stage.id, result);
     }
-    const durationMs = Math.round((performance.now() - started) * 1000) / 1000;
-    const status = stageStatus(child);
-    const stdout = child.stdout ?? "";
-    const stderr = child.stderr ?? "";
-    const payload = parseJsonTail(status === "pass" ? `${stdout}\n${stderr}` : `${stderr}\n${stdout}`);
-    const result = {
-      id: stage.id,
-      kind: stage.kind,
-      required: stage.required,
-      dependsOn: stage.dependsOn,
-      status,
-      exitCode: child.status,
-      signal: child.signal ?? null,
-      durationMs,
-      blockedBy: [],
-      payload: payloadSummary(payload),
-      stdoutTail: trimTail(stdout),
-      stderrTail: trimTail(stderr),
-      ...(bootstrapNetworkRetry ? { bootstrapNetworkRetry } : {}),
-    };
-    results.push(result);
-    byId.set(stage.id, result);
-  }
   } finally {
     cleanupStrictSandboxWorkspaceOverlay(workspaceOverlay);
   }
 
-  const requiredFailures = results.filter((stage) => stage.required && stage.status !== "pass");
-  const stable = {
-    schemaVersion: WEB_PROJECT_MANIFEST_VERSION,
-    runnerVersion: WEB_PROJECT_RUNNER_VERSION,
-    id: manifest.id,
-    safety: manifest.safety,
-    sandbox: sandboxMetadata,
-    stages: results.map(stableStage),
+  return finalizeWebProjectReport(repositoryRoot, manifest, options, results, sandboxMetadata);
+}
+
+function declaredResources(stage) {
+  return stage.exclusiveResources === undefined ? ["*"] : stage.exclusiveResources;
+}
+
+function resourcesConflict(resources, activeResources, runningCount) {
+  if (resources.includes("*")) return runningCount > 0;
+  if (activeResources.has("*")) return true;
+  return resources.some((resource) => activeResources.has(resource));
+}
+
+function acquireResources(resources, activeResources) {
+  for (const resource of resources) activeResources.add(resource);
+}
+
+function releaseResources(resources, activeResources) {
+  for (const resource of resources) activeResources.delete(resource);
+}
+
+async function runCallerEnforcedStage(projectRoot, stage, sourceEnvironment) {
+  const cwd = resolveExistingInside(projectRoot, stage.cwd, `${stage.id}.cwd`);
+  const started = performance.now();
+  const child = await spawnIsolated(stage.command[0], stage.command.slice(1), {
+    cwd,
+    encoding: "utf8",
+    timeout: stage.timeoutMs,
+    maxBuffer: 8 * 1024 * 1024,
+    shell: false,
+    env: childEnvironment({ osEnforced: false, sourceEnvironment }),
+  });
+  const durationMs = Math.round((performance.now() - started) * 1000) / 1000;
+  const status = stageStatus(child);
+  const stdout = child.stdout ?? "";
+  const stderr = child.stderr ?? "";
+  const payload = parseJsonTail(status === "pass" ? `${stdout}\n${stderr}` : `${stderr}\n${stdout}`);
+  return {
+    id: stage.id,
+    kind: stage.kind,
+    required: stage.required,
+    dependsOn: stage.dependsOn,
+    status,
+    exitCode: child.status,
+    signal: child.signal ?? null,
+    durationMs,
+    blockedBy: [],
+    payload: payloadSummary(payload),
+    stdoutTail: trimTail(stdout),
+    stderrTail: trimTail(stderr),
   };
-  const report = {
-    ok: requiredFailures.length === 0,
-    ...stable,
-    stageCount: results.length,
-    passedStageCount: results.filter((stage) => stage.status === "pass").length,
-    requiredFailureCount: requiredFailures.length,
-    stages: results,
-    semanticHash: semanticHash(stable),
+}
+
+export async function runWebProjectConcurrent(repositoryRoot, manifest, options = {}) {
+  validateWebProjectManifest(manifest, repositoryRoot);
+  const sandboxMode = options.sandbox?.mode ?? "caller-enforced";
+  if (sandboxMode !== "caller-enforced" || options.parallel === false) {
+    return runWebProject(repositoryRoot, manifest, options);
+  }
+
+  const projectRoot = resolveExistingInside(repositoryRoot, manifest.projectRoot, "projectRoot");
+  const sourceEnvironment = options.sourceEnvironment ?? process.env;
+  const preflightCapabilities = sandboxCapabilitiesForMode({ mode: "caller-enforced", platform: process.platform });
+  const sandboxMetadata = {
+    mode: "caller-enforced",
+    platform: preflightCapabilities.platform,
+    backend: preflightCapabilities.backend,
+    capabilities: preflightCapabilities.capabilities,
+    requiredCapabilities: preflightCapabilities.requiredCapabilities,
+    diagnostic: preflightCapabilities.diagnostic,
   };
 
-  if (options.writeArtifacts !== false) {
-    const outputCandidate = options.output ?? manifest.artifacts.output;
-    const output = resolveCreatableInside(repositoryRoot, outputCandidate, "output");
-    writeWebProjectArtifacts(output, report);
-    report.output = output;
-  } else {
-    report.output = null;
+  const available = typeof os.availableParallelism === "function" ? os.availableParallelism() : os.cpus().length;
+  const maxConcurrency = Math.max(1, Number.isSafeInteger(options.maxConcurrency)
+    ? options.maxConcurrency
+    : Math.min(8, Math.max(2, available)));
+  const pending = new Set(manifest.stages.map((stage) => stage.id));
+  const byId = new Map();
+  const running = new Map();
+  const activeResources = new Set();
+
+  while (pending.size > 0 || running.size > 0) {
+    let progressed = false;
+
+    for (const stage of manifest.stages) {
+      if (!pending.has(stage.id)) continue;
+      if (!stage.dependsOn.every((dependency) => byId.has(dependency))) continue;
+
+      const blockedBy = stage.dependsOn.filter((dependency) => byId.get(dependency)?.status !== "pass");
+      if (blockedBy.length > 0) {
+        byId.set(stage.id, blockedStage(stage, blockedBy));
+        pending.delete(stage.id);
+        progressed = true;
+        continue;
+      }
+
+      if (running.size >= maxConcurrency) break;
+      const resources = declaredResources(stage);
+      if (resourcesConflict(resources, activeResources, running.size)) continue;
+
+      acquireResources(resources, activeResources);
+      pending.delete(stage.id);
+      const promise = runCallerEnforcedStage(projectRoot, stage, sourceEnvironment)
+        .then((result) => ({ stage, resources, result }));
+      running.set(stage.id, promise);
+      progressed = true;
+    }
+
+    if (running.size === 0) {
+      if (pending.size === 0) break;
+      if (!progressed) throw new Error("web project runner scheduler deadlock");
+      continue;
+    }
+
+    const completed = await Promise.race(running.values());
+    running.delete(completed.stage.id);
+    releaseResources(completed.resources, activeResources);
+    byId.set(completed.stage.id, completed.result);
   }
-  return report;
+
+  const results = manifest.stages.map((stage) => byId.get(stage.id));
+  return finalizeWebProjectReport(repositoryRoot, manifest, options, results, sandboxMetadata);
 }
 
 function escapeHtml(value) {

@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { classifyWebFinding, groupWebFindings } from "../protocol/web-finding-group.mjs";
+import {
+  classifyWebFinding,
+  groupWebFindings,
+  selectWebFindingRepresentative,
+} from "../protocol/web-finding-group.mjs";
 import { semanticHash } from "../protocol/ui-driver-v1.mjs";
 import {
   replayWebExplorationFailureCampaign,
@@ -110,6 +114,12 @@ assert.equal(grouped.groupCount, 2);
 assert.equal(grouped.strongGroupCount, 2);
 assert.equal(grouped.singletonGroupCount, 0);
 assert.equal(grouped.groups.find((group) => group.id === strongA.id).count, 2);
+assert.deepEqual(grouped.groups.find((group) => group.id === strongA.id).representative.trace, ["crash"]);
+
+const representative = selectWebFindingRepresentative([strongFailure, equivalentFinding]);
+assert.equal(representative.findingGroupId, strongA.id);
+assert.deepEqual(representative.trace, ["crash"]);
+assert.equal(representative.traceLength, 1);
 
 const unownedFrame = classifyWebFinding({
   ...strongFailure,
@@ -169,6 +179,7 @@ console.log(JSON.stringify({
   flakyPromoted: flaky.stableFailureCount,
   attempts: stable.attempts,
   findingGroupCount: grouped.groupCount,
+  representativeTraceLength: representative.traceLength,
   sameFindingReplay: sameFindingReplay.failures.length,
   differentFindingReplay: differentFindingReplay.failures.length,
   minimizedTraceLength: shrunk.length,

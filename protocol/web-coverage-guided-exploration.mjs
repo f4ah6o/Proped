@@ -130,12 +130,25 @@ export async function exploreWebCoverageGuided(driver, {
     executedEdges.add(edgeKey(source.snapshot.fingerprint, action.id));
     executedActionSignatures.add(actionSignature(action));
 
-    let replay;
-    let replayInventory;
-    if (sameTrace(currentTrace, source.trace) && currentFingerprint === source.snapshot.fingerprint && currentInventory) {
-      replay = { ok: true, snapshot: source.snapshot };
-      replayInventory = currentInventory;
-    } else {
+    let replay = null;
+    let replayInventory = null;
+    const reuseCandidate = sameTrace(currentTrace, source.trace)
+      && currentFingerprint === source.snapshot.fingerprint
+      && currentInventory
+      && typeof driver.snapshot === "function";
+    if (reuseCandidate) {
+      try {
+        const liveSnapshot = await driver.snapshot();
+        currentFingerprint = liveSnapshot.fingerprint;
+        if (liveSnapshot.fingerprint === source.snapshot.fingerprint) {
+          replay = { ok: true, snapshot: liveSnapshot };
+          replayInventory = currentInventory;
+        }
+      } catch {
+        currentFingerprint = null;
+      }
+    }
+    if (!replay) {
       replay = await replayTrace(driver, source.trace);
       currentTrace = replay.ok ? [...source.trace] : null;
       currentFingerprint = replay.ok ? replay.snapshot.fingerprint : null;

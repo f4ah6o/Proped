@@ -119,6 +119,7 @@ export async function exploreWebCoverageGuided(driver, {
   stateByFingerprint.set(initialSnapshot.fingerprint, initialNode);
   routeFamilies.add(webRouteFamily(initialSnapshot.url));
   let currentTrace = [];
+  let currentFingerprint = initialSnapshot.fingerprint;
 
   while (transitions.length < maxTransitions && stateByFingerprint.size < maxStates) {
     const selected = selectFrontierNode([...stateByFingerprint.values()], executedEdges, executedActionSignatures, maxDepth, actionFilter);
@@ -129,11 +130,12 @@ export async function exploreWebCoverageGuided(driver, {
     executedActionSignatures.add(actionSignature(action));
 
     let replay;
-    if (sameTrace(currentTrace, source.trace)) {
+    if (sameTrace(currentTrace, source.trace) && currentFingerprint === source.snapshot.fingerprint) {
       replay = { ok: true, snapshot: source.snapshot };
     } else {
       replay = await replayTrace(driver, source.trace);
       currentTrace = replay.ok ? [...source.trace] : null;
+      currentFingerprint = replay.ok ? replay.snapshot.fingerprint : null;
     }
     if (!replay.ok) {
       diagnostics.push(replay.executionError ? {
@@ -167,6 +169,7 @@ export async function exploreWebCoverageGuided(driver, {
       result = await driver.execute(replayAction);
     } catch (error) {
       currentTrace = null;
+      currentFingerprint = null;
       diagnostics.push({
         code: "frontier_action_execution_failed",
         sourceFingerprint: source.snapshot.fingerprint,
@@ -180,6 +183,7 @@ export async function exploreWebCoverageGuided(driver, {
     const nextInventory = await driver.actions();
     const nextTrace = [...source.trace, action.id];
     currentTrace = nextTrace;
+    currentFingerprint = nextSnapshot.fingerprint;
     transitions.push({
       from: source.snapshot.fingerprint,
       actionId: action.id,

@@ -1,0 +1,622 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+moon run src/cli -- schema --json > /tmp/proped-schema.json
+moon run src/cli -- demo run all --json > /tmp/proped-run.json
+node scripts/test_atlas_interaction.mjs demo/out/rabbita-todo/atlas.html
+moon run src/cli -- external inspect-source src/vendor/proton_todo/upstream/main.mbt.txt --json > /tmp/proped-inspection.json
+moon run src/cli -- external inspect-source src/vendor/ensenzu_app/upstream/app.mbt.txt --json > /tmp/proped-ensenzu-inspection.json
+moon run src/cli -- external inspect signal-reader --json > /tmp/proped-signal-inspection.json
+moon run src/cli -- external inspect-source src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt --json > /tmp/proped-editor-inspection.json
+moon run src/cli -- external inspect canopy-components --json > /tmp/proped-canopy-inspection.json
+moon run src/cli -- external inspect canopy-editor-integration --json > /tmp/proped-canopy-editor-inspection.json
+moon run src/cli -- external inspect rabbita-utility-batch --json > /tmp/proped-utility-inspection.json
+moon run src/cli -- external inspect incr-typed-spreadsheet --json > /tmp/proped-incr-inspection.json
+moon run src/cli -- external inspect circular-state --json > /tmp/proped-circular-inspection.json
+moon run src/cli -- external inspect isomorphic-suite --json > /tmp/proped-isomorphic-inspection.json
+moon run src/cli -- external inspect rabbita-xterm-lifecycle --json > /tmp/proped-xterm-inspection.json
+moon run src/cli -- external inspect moonclaw-job --json > /tmp/proped-moonclaw-inspection.json
+moon run src/cli -- external inspect mooncakes-official-ui --json > /tmp/proped-mooncakes-inspection.json
+moon run src/cli -- external inspect selene-editor-assets --json > /tmp/proped-selene-inspection.json
+moon run src/cli -- external inspect openseek-desktop-lifecycle --json > /tmp/proped-openseek-inspection.json
+moon run src/cli -- external run all --json > /tmp/proped-external.json
+moon run src/cli -- external handoff all --output /tmp/proped-handoff --json > /tmp/proped-handoff.json
+
+python3 - <<'PY'
+import hashlib
+import json
+import re
+from pathlib import Path
+
+schema = json.loads(Path('/tmp/proped-schema.json').read_text())
+result = json.loads(Path('/tmp/proped-run.json').read_text())
+inspection = json.loads(Path('/tmp/proped-inspection.json').read_text())
+ensenzu_inspection = json.loads(Path('/tmp/proped-ensenzu-inspection.json').read_text())
+signal_inspection = json.loads(Path('/tmp/proped-signal-inspection.json').read_text())
+editor_inspection = json.loads(Path('/tmp/proped-editor-inspection.json').read_text())
+canopy_inspection = json.loads(Path('/tmp/proped-canopy-inspection.json').read_text())
+canopy_editor_inspection = json.loads(Path('/tmp/proped-canopy-editor-inspection.json').read_text())
+utility_inspection = json.loads(Path('/tmp/proped-utility-inspection.json').read_text())
+incr_inspection = json.loads(Path('/tmp/proped-incr-inspection.json').read_text())
+circular_inspection = json.loads(Path('/tmp/proped-circular-inspection.json').read_text())
+isomorphic_inspection = json.loads(Path('/tmp/proped-isomorphic-inspection.json').read_text())
+xterm_inspection = json.loads(Path('/tmp/proped-xterm-inspection.json').read_text())
+moonclaw_inspection = json.loads(Path('/tmp/proped-moonclaw-inspection.json').read_text())
+mooncakes_inspection = json.loads(Path('/tmp/proped-mooncakes-inspection.json').read_text())
+selene_inspection = json.loads(Path('/tmp/proped-selene-inspection.json').read_text())
+openseek_inspection = json.loads(Path('/tmp/proped-openseek-inspection.json').read_text())
+external = json.loads(Path('/tmp/proped-external.json').read_text())
+handoff = json.loads(Path('/tmp/proped-handoff.json').read_text())
+
+expected_ids = [
+    'newsletter',
+    'rabbita-counter',
+    'rabbita-todo',
+    'rabbita-sokoban',
+    'rabbita-subscriptions',
+    'rabbita-websocket',
+]
+external_ids = [
+    'proton-demo-todo',
+    'ensenzu-app',
+    'signal-reader',
+    'moonbit-editor-file-tree',
+    'canopy-components',
+    'canopy-editor-integration',
+    'rabbita-utility-batch',
+    'incr-typed-spreadsheet',
+    'circular-state',
+    'isomorphic-suite',
+    'rabbita-xterm-lifecycle',
+    'moonclaw-job',
+    'mooncakes-official-ui',
+    'selene-editor-assets',
+    'openseek-desktop-lifecycle',
+]
+
+assert schema['name'] == 'proped'
+moon_mod = Path('moon.mod').read_text()
+expected_version = re.search(r'^version = "([^"]+)"$', moon_mod, re.MULTILINE).group(1)
+assert schema['version'] == expected_version
+assert schema['demoIds'] == expected_ids
+assert schema['externalIds'] == external_ids
+assert any(
+    command['argv'] == ['external', 'handoff', '<id|all>']
+    for command in schema['commands']
+)
+
+assert result['ok'] is True
+runs = {run['id']: run for run in result['runs']}
+assert list(runs) == expected_ids
+expected_failures = {
+    'rabbita-todo': (
+        'stored todo titles are not blank',
+        ['TitleChanged(" ")', 'Add'],
+    ),
+    'rabbita-sokoban': (
+        'invalid timeline input preserves cursor',
+        ['Move(Up)', 'JumpTo("not-a-number")'],
+    ),
+    'rabbita-subscriptions': (
+        'paused ticker ignores queued tick',
+        ['ToggleTicker', 'Tick'],
+    ),
+    'rabbita-websocket': (
+        'closing client rejects repeated disconnect',
+        [
+            'ClientConnectRequested',
+            'ClientDisconnectRequested',
+            'ClientDisconnectRequested',
+        ],
+    ),
+}
+for demo_id in ['newsletter', 'rabbita-counter']:
+    assert runs[demo_id]['expectedOutcome'] == 'pass'
+    assert runs[demo_id]['failures'] == 0
+for demo_id, (property_name, trace) in expected_failures.items():
+    run = runs[demo_id]
+    assert run['expectationMet'] is True
+    assert run['failures'] == 1
+    assert run['firstFailure']['property'] == property_name
+    assert run['firstFailure']['trace'] == trace
+assert runs['rabbita-sokoban']['states'] >= 200
+assert runs['rabbita-subscriptions']['states'] >= 500
+assert runs['rabbita-websocket']['transitions'] >= 4000
+for run in runs.values():
+    output = Path(run['output'])
+    for artifact in run['artifacts']:
+        assert (output / artifact).is_file(), output / artifact
+
+assert inspection['strategy'] == 'subscription-model'
+assert inspection['detected']['subscription'] is True
+assert ensenzu_inspection['strategy'] == 'effect-model'
+assert ensenzu_inspection['detected']['command'] is True
+signal_app = signal_inspection['application']
+assert signal_app['id'] == 'signal-reader'
+assert signal_app['strategy'] == 'effect-model'
+assert signal_app['findingVisibility'] == 'public-bug'
+assert signal_app['upstreamWritePolicy'] == 'read-only'
+editor_app = editor_inspection
+assert editor_app['strategy'] == 'effect-model'
+assert editor_app['detected']['model'] is True
+assert editor_app['detected']['message'] is True
+assert editor_app['detected']['update'] is True
+assert editor_app['detected']['view'] is True
+assert editor_app['detected']['command'] is True
+canopy_app = canopy_inspection['application']
+assert canopy_app['id'] == 'canopy-components'
+assert canopy_app['strategy'] == 'pure'
+assert canopy_app['effectPolicy'] == 'none'
+assert canopy_app['findingVisibility'] == 'public-bug'
+assert canopy_app['expectedFailure'] == 'ResizeNudge(dw=2147483647, dh=0)'
+assert canopy_app['upstreamWritePolicy'] == 'read-only'
+canopy_editor_app = canopy_editor_inspection['application']
+assert canopy_editor_app['id'] == 'canopy-editor-integration'
+assert canopy_editor_app['strategy'] == 'subscription-model'
+assert canopy_editor_app['effectPolicy'] == 'browser-replay'
+assert canopy_editor_app['expectedFailure'].endswith('DeliverCallback(1)')
+assert canopy_editor_app['upstreamWritePolicy'] == 'read-only'
+utility_app = utility_inspection['application']
+assert utility_app['id'] == 'rabbita-utility-batch'
+assert utility_app['strategy'] == 'effect-model'
+assert utility_app['effectPolicy'] == 'record-and-inject'
+assert utility_app['expectedFailure'] == 'FullstackSubmit'
+assert utility_app['upstreamWritePolicy'] == 'read-only'
+incr_app = incr_inspection['application']
+assert incr_app['id'] == 'incr-typed-spreadsheet'
+assert incr_app['strategy'] == 'pure'
+assert incr_app['effectPolicy'] == 'none'
+assert incr_app['findingVisibility'] == 'public-bug'
+assert incr_app['expectedFailure'] == 'UpdateDraft(A1, "2147483647") -> ApplySelected'
+assert incr_app['upstreamWritePolicy'] == 'read-only'
+assert 'Eq and no-backdate probes preserve declared semantics' in incr_app['properties']
+circular_app = circular_inspection['application']
+assert circular_app['id'] == 'circular-state'
+assert circular_app['strategy'] == 'effect-model'
+assert circular_app['effectPolicy'] == 'record-and-inject'
+assert circular_app['findingVisibility'] == 'public-bug'
+assert circular_app['expectedFailure'] == (
+    'SelectTask("TSK-1") -> '
+    'WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)'
+)
+assert circular_app['upstreamWritePolicy'] == 'read-only'
+isomorphic_app = isomorphic_inspection['application']
+assert isomorphic_app['id'] == 'isomorphic-suite'
+assert isomorphic_app['strategy'] == 'effect-model'
+assert isomorphic_app['effectPolicy'] == 'record-and-inject'
+assert isomorphic_app['findingVisibility'] == 'public-bug'
+assert isomorphic_app['expectedFailure'] == (
+    'KanbanSelectCardToMove(1) -> KanbanMoveCardTo(column=99, index=0)'
+)
+assert isomorphic_app['upstreamWritePolicy'] == 'read-only'
+xterm_app = xterm_inspection['application']
+assert xterm_app['id'] == 'rabbita-xterm-lifecycle'
+assert xterm_app['strategy'] == 'subscription-model'
+assert xterm_app['effectPolicy'] == 'record-and-inject'
+assert xterm_app['findingVisibility'] == 'public-bug'
+assert xterm_app['expectedFailure'] == 'Resize(cols=0, rows=24)'
+assert xterm_app['upstreamWritePolicy'] == 'read-only'
+moonclaw_app = moonclaw_inspection['application']
+assert moonclaw_app['id'] == 'moonclaw-job'
+assert moonclaw_app['strategy'] == 'subscription-model'
+assert moonclaw_app['effectPolicy'] == 'record-and-inject'
+assert moonclaw_app['findingVisibility'] == 'public-bug'
+assert moonclaw_app['expectedFailure'].startswith('StreamClosed')
+assert moonclaw_app['upstreamWritePolicy'] == 'read-only'
+mooncakes_app = mooncakes_inspection['application']
+assert mooncakes_app['id'] == 'mooncakes-official-ui'
+assert mooncakes_app['strategy'] == 'effect-model'
+assert mooncakes_app['effectPolicy'] == 'record-and-inject'
+assert mooncakes_app['findingVisibility'] == 'public-bug'
+assert mooncakes_app['expectedFailure'] == (
+    'ReloadBuilds -> BuildsDecodeFailed(request=2, corpus=missing-collections) -> '
+    'BuildsLoaded(request=1, fixture=older)'
+)
+assert mooncakes_app['upstreamWritePolicy'] == 'read-only'
+selene_app = selene_inspection['application']
+assert selene_app['id'] == 'selene-editor-assets'
+assert selene_app['strategy'] == 'subscription-model'
+assert selene_app['effectPolicy'] == 'record-and-inject'
+assert selene_app['findingVisibility'] == 'public-bug'
+assert selene_app['expectedFailure'].startswith('Initialize -> Initialize')
+assert selene_app['upstreamWritePolicy'] == 'read-only'
+openseek_app = openseek_inspection['application']
+assert openseek_app['id'] == 'openseek-desktop-lifecycle'
+assert openseek_app['strategy'] == 'effect-model'
+assert openseek_app['effectPolicy'] == 'record-and-inject'
+assert openseek_app['findingVisibility'] == 'public-bug'
+assert openseek_app['expectedFailure'] == (
+    'ProviderChanged(staging) -> '
+    'UpdateCheckFinished(request=1, channel=production, result=found, explicit=false)'
+)
+assert openseek_app['upstreamWritePolicy'] == 'read-only'
+
+assert external['ok'] is True
+assert external['command'] == 'external run'
+external_runs = {run['id']: run for run in external['runs']}
+assert list(external_runs) == external_ids
+
+proton = external_runs['proton-demo-todo']
+assert proton['expectationMet'] is True
+assert proton['diagnostics'] == 0
+assert proton['states'] == 320
+assert proton['firstFailure']['trace'] == [
+    'SnapshotReceived(version=1)',
+    'SnapshotReceived(version=0)',
+]
+
+ensenzu = external_runs['ensenzu-app']
+assert ensenzu['expectationMet'] is True
+assert ensenzu['diagnostics'] == 0
+assert ensenzu['states'] == 834
+assert ensenzu['transitions'] == 1900
+assert ensenzu['firstFailure']['trace'] == ['Change(Frequency, "Infinity")']
+
+signal = external_runs['signal-reader']
+assert signal['expectationMet'] is True
+assert signal['states'] == 720
+assert signal['transitions'] == 1265
+assert signal['failures'] == 3
+assert signal['diagnostics'] == 0
+assert signal['firstFailure']['trace'] == [
+    'SelectSubscription(2)',
+    'SelectSubscription(1)',
+    'ItemsLoaded(request=1, subscription=2)',
+]
+signal_atlas = json.loads((Path(signal['output']) / 'atlas.json').read_text())
+signal_failures = {failure['property']: failure['trace'] for failure in signal_atlas['failures']}
+assert signal_failures == {
+    'feed responses match the current subscription': [
+        'SelectSubscription(2)',
+        'SelectSubscription(1)',
+        'ItemsLoaded(request=1, subscription=2)',
+    ],
+    'latest saved intent wins': [
+        'ToggleItemSaved(1, true)',
+        'ToggleItemSaved(1, false)',
+        'ItemSavedSet(request=1, item=1, saved=true, success=true)',
+    ],
+    'search responses match the current query': [
+        'OpenSearchModal',
+        'UpdateSearchQuery("alpha")',
+        'UpdateSearchQuery("beta")',
+        'SearchLoaded(request=1, query="alpha")',
+    ],
+}
+
+editor = external_runs['moonbit-editor-file-tree']
+assert editor['expectationMet'] is True
+assert editor['states'] == 1600
+assert editor['transitions'] == 2646
+assert editor['failures'] == 2
+assert editor['diagnostics'] == 0
+assert editor['firstFailure']['property'] == 'asynchronous resolve responses preserve newer tree intent'
+assert editor['firstFailure']['trace'] == [
+    'ToggleDirectory("readonly-remote://workspace/tests")',
+    'SetActive("readonly-remote://workspace/src/lib/util.mbt")',
+    'DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")',
+]
+editor_atlas = json.loads((Path(editor['output']) / 'atlas.json').read_text())
+editor_failures = {failure['property']: failure['trace'] for failure in editor_atlas['failures']}
+assert editor_failures == {
+    'asynchronous resolve responses preserve newer tree intent': [
+        'ToggleDirectory("readonly-remote://workspace/tests")',
+        'SetActive("readonly-remote://workspace/src/lib/util.mbt")',
+        'DirectoryResolveFailed(request=1, uri="readonly-remote://workspace/tests")',
+    ],
+    'late resolve does not re-expand a collapsed directory': [
+        'SetActive("readonly-remote://workspace/tests/spec.mbt")',
+        'ToggleDirectory("readonly-remote://workspace/tests")',
+        'DirectoryResolveSucceeded(request=1, uri="readonly-remote://workspace/tests", fixture=1)',
+    ],
+}
+
+canopy = external_runs['canopy-components']
+assert canopy['expectationMet'] is True
+assert canopy['states'] == 720
+assert canopy['transitions'] == 2618
+assert canopy['failures'] == 1
+assert canopy['diagnostics'] == 0
+assert canopy['firstFailure']['property'] == 'positive resize nudges do not decrease width'
+assert canopy['firstFailure']['trace'] == ['ResizeNudge(dw=2147483647, dh=0)']
+assert canopy['firstFailure']['actionIds'] == ['resize-nudge:2147483647:0']
+
+canopy_editor = external_runs['canopy-editor-integration']
+assert canopy_editor['expectationMet'] is True
+assert canopy_editor['states'] == 900
+assert canopy_editor['transitions'] == 1633
+assert canopy_editor['failures'] == 2
+assert canopy_editor['diagnostics'] == 0
+assert canopy_editor['firstFailure']['property'] == 'older document callbacks do not replace newer accepted revisions'
+assert canopy_editor['firstFailure']['trace'] == [
+    'MountCompleted(generation=1)',
+    'BrowserDocumentChanged("draft")',
+    'BrowserDocumentChanged("draft")',
+    'DeliverCallback(id=2)',
+    'DeliverCallback(id=1)',
+]
+
+utility = external_runs['rabbita-utility-batch']
+assert utility['expectationMet'] is True
+assert utility['states'] == 3400
+assert utility['transitions'] == 7646
+assert utility['failures'] == 3
+assert utility['diagnostics'] == 0
+assert utility['firstFailure']['property'] == 'Fullstack invalid titles are not submitted'
+assert utility['firstFailure']['trace'] == ['FullstackSubmit']
+assert utility['firstFailure']['actionIds'] == ['fullstack-submit']
+utility_atlas = json.loads((Path(utility['output']) / 'atlas.json').read_text())
+utility_failures = {failure['property']: failure['trace'] for failure in utility_atlas['failures']}
+assert utility_failures['Issues Dashboard older save replies do not roll back graph revision'] == [
+    'IssuesSave',
+    'IssuesSave',
+    'IssuesDeliver(id=2)',
+    'IssuesDeliver(id=1)',
+]
+
+incr = external_runs['incr-typed-spreadsheet']
+assert incr['expectationMet'] is True
+assert incr['states'] == 900
+assert incr['transitions'] == 1347
+assert incr['failures'] == 1
+assert incr['diagnostics'] == 0
+assert incr['firstFailure']['property'] == 'positive formula addition does not wrap backward'
+assert incr['firstFailure']['trace'] == [
+    'UpdateDraft(A1, "2147483647")',
+    'ApplySelected',
+]
+assert incr['firstFailure']['actionIds'] == ['draft:A1:10:2147483647', 'apply-selected']
+incr_atlas = json.loads((Path(incr['output']) / 'atlas.json').read_text())
+assert len(incr_atlas['failures']) == 1
+
+circular = external_runs['circular-state']
+assert circular['expectationMet'] is True
+assert circular['states'] == 580
+assert circular['transitions'] == 2456
+assert circular['failures'] == 1
+assert circular['diagnostics'] == 0
+assert circular['firstFailure']['property'] == 'task modals retain an existing selected task'
+assert circular['firstFailure']['trace'] == [
+    'SelectTask("TSK-1")',
+    'WorkspaceMutated(kind=TaskQuickMutation, revision=1, tasks=1)',
+]
+assert circular['firstFailure']['actionIds'] == [
+    'select-task:5:TSK-1',
+    'workspace-mutated:TaskQuickMutation:1:1',
+]
+
+isomorphic = external_runs['isomorphic-suite']
+assert isomorphic['expectationMet'] is True
+assert isomorphic['states'] == 1400
+assert isomorphic['transitions'] == 2288
+assert isomorphic['failures'] == 4
+assert isomorphic['diagnostics'] == 0
+assert isomorphic['firstFailure']['property'] == 'kanban cards reference existing columns'
+assert isomorphic['firstFailure']['trace'] == [
+    'KanbanSelectCardToMove(1)',
+    'KanbanMoveCardTo(column=99, index=0)',
+]
+assert isomorphic['firstFailure']['actionIds'] == ['kanban-select-move:1', 'kanban-move:99:0']
+isomorphic_atlas = json.loads((Path(isomorphic['output']) / 'atlas.json').read_text())
+isomorphic_failures = {failure['property']: failure['trace'] for failure in isomorphic_atlas['failures']}
+assert isomorphic_failures == {
+    'kanban cards reference existing columns': [
+        'KanbanSelectCardToMove(1)',
+        'KanbanMoveCardTo(column=99, index=0)',
+    ],
+    'stale kanban board responses preserve newer board intent': [
+        'KanbanInit',
+        'KanbanDeleteCard(1)',
+        'KanbanBoardLoaded(request=101, fixture=0)',
+    ],
+    'selected note remains present': [
+        'SwitchApp(note)',
+        'NoteInit',
+        'NoteSelect(1)',
+        'NoteListLoaded(request=301, fixture=1)',
+    ],
+    'stale todo list responses preserve newer todo mutations': [
+        'SwitchApp(todo)',
+        'TodoDelete(1)',
+        'TodoInit',
+        'TodoDeleted(request=2301, todo=1, success=true)',
+        'TodoListLoaded(request=201, fixture=0)',
+    ],
+}
+
+xterm = external_runs['rabbita-xterm-lifecycle']
+assert xterm['expectationMet'] is True
+assert xterm['states'] == 133
+assert xterm['transitions'] == 2295
+assert xterm['failures'] == 1
+assert xterm['diagnostics'] == 0
+assert xterm['firstFailure']['property'] == 'terminal dimensions remain positive'
+assert xterm['firstFailure']['trace'] == ['Resize(cols=0, rows=24)']
+assert xterm['firstFailure']['actionIds'] == ['resize:0:24']
+
+moonclaw = external_runs['moonclaw-job']
+assert moonclaw['expectationMet'] is True
+assert moonclaw['states'] == 720
+assert moonclaw['transitions'] == 2269
+assert moonclaw['failures'] == 1
+assert moonclaw['diagnostics'] == 0
+assert moonclaw['firstFailure']['property'] == 'older snapshot responses do not revive terminal runs'
+assert moonclaw['firstFailure']['trace'] == [
+    'StreamClosed("run-1")',
+    'StreamClosed("run-1")',
+    'SnapshotLoaded(request=2, run="run-1", status=Succeeded)',
+    'SnapshotLoaded(request=1, run="run-1", status=Running)',
+]
+assert moonclaw['firstFailure']['actionIds'] == [
+    'stream-closed:5:run-1',
+    'stream-closed:5:run-1',
+    'snapshot-loaded:2:5:run-1:Succeeded',
+    'snapshot-loaded:1:5:run-1:Running',
+]
+
+mooncakes = external_runs['mooncakes-official-ui']
+assert mooncakes['expectationMet'] is True
+assert mooncakes['states'] == 780
+assert mooncakes['transitions'] == 4856
+assert mooncakes['failures'] == 2
+assert mooncakes['diagnostics'] == 0
+assert mooncakes['firstFailure']['property'] == 'older build responses do not replace newer Build Queue results'
+assert mooncakes['firstFailure']['trace'] == [
+    'ReloadBuilds',
+    'BuildsDecodeFailed(request=2, corpus=missing-collections)',
+    'BuildsLoaded(request=1, fixture=older)',
+]
+assert mooncakes['firstFailure']['actionIds'] == [
+    'reload-builds',
+    'builds-decode-failed:2:missing-collections',
+    'builds-loaded:1:older',
+]
+mooncakes_atlas = json.loads((Path(mooncakes['output']) / 'atlas.json').read_text())
+mooncakes_failures = {failure['property']: failure for failure in mooncakes_atlas['failures']}
+assert mooncakes_failures['tutorial replies match the current edited title']['trace'] == [
+    'ShowSurface(tutorial)',
+    'EditTitle("alpha")',
+    'SubmitTitle',
+    'EditTitle("beta")',
+    'TutorialReply(request=2, title="alpha", success=false)',
+]
+
+selene = external_runs['selene-editor-assets']
+assert selene['expectationMet'] is True
+assert selene['states'] == 920
+assert selene['transitions'] == 2098
+assert selene['failures'] == 2
+assert selene['diagnostics'] == 0
+assert selene['firstFailure']['property'] == 'initialization installs each subscription once'
+assert selene['firstFailure']['trace'] == ['Initialize', 'Initialize']
+assert selene['firstFailure']['actionIds'] == ['initialize', 'initialize']
+selene_atlas = json.loads((Path(selene['output']) / 'atlas.json').read_text())
+selene_failures = {failure['property']: failure for failure in selene_atlas['failures']}
+assert selene_failures['older asset responses do not replace newer asset lists']['trace'] == [
+    'AssetFileChanged',
+    'AssetsLoaded(request=2, fixture=empty)',
+    'AssetsLoaded(request=1, fixture=older)',
+]
+
+openseek = external_runs['openseek-desktop-lifecycle']
+assert openseek['expectationMet'] is True
+assert openseek['states'] == 2600
+assert openseek['transitions'] == 5615
+assert openseek['failures'] == 3
+assert openseek['diagnostics'] == 0
+assert openseek['firstFailure']['property'] == 'update check replies match the active provider channel'
+assert openseek['firstFailure']['trace'] == [
+    'ProviderChanged(staging)',
+    'UpdateCheckFinished(request=1, channel=production, result=found, explicit=false)',
+]
+assert openseek['firstFailure']['actionIds'] == [
+    'provider:staging',
+    'update-check-finished:1:production:found:false',
+]
+openseek_atlas = json.loads((Path(openseek['output']) / 'atlas.json').read_text())
+openseek_failures = {failure['property']: failure for failure in openseek_atlas['failures']}
+assert openseek_failures['one opening terminal tab issues one terminal open request']['trace'] == [
+    'ToggleTerminal',
+    'EmulatorReady(key=1, cols=80, rows=24)',
+    'EmulatorReady(key=1, cols=80, rows=24)',
+]
+assert openseek_failures['older file replies do not replace newer file content']['trace'] == [
+    'FileSelected("src/main.mbt")',
+    'FileSelected("src/main.mbt")',
+    'FileLoaded(request=3, fixture=newer)',
+    'FileLoaded(request=2, fixture=older)',
+]
+
+for run in external_runs.values():
+    for artifact in run['artifacts']:
+        assert (Path(run['output']) / artifact).is_file()
+
+assert handoff['ok'] is True
+assert handoff['command'] == 'external handoff'
+assert [item['id'] for item in handoff['handoffs']] == external_ids
+for item in handoff['handoffs']:
+    assert item['visibility'] == 'public-bug'
+    assert item['detailsWithheld'] is False
+    assert item['upstreamWritePerformed'] is False
+    bundle = Path(item['output'])
+    assert sorted(path.name for path in bundle.iterdir()) == [
+        'fix-plan.md',
+        'issue.md',
+        'machine.json',
+        'pr-body.md',
+        'reproduction.md',
+    ]
+    machine = json.loads((bundle / 'machine.json').read_text())
+    assert machine['upstreamWritePerformed'] is False
+    assert 'No upstream issue' in (bundle / 'issue.md').read_text()
+
+for manifest_path in sorted(Path('external/manifests').glob('*.json')):
+    manifest = json.loads(manifest_path.read_text())
+    assert manifest['findingVisibility'] == 'public-bug'
+
+source = Path('src/vendor/proton_todo/upstream/main.mbt.txt').read_bytes()
+assert hashlib.sha256(source).hexdigest() == '69787a7a175b323ba0c6e01ea2acfc8692379ed938217bcf00c7d3a8c1f79c8b'
+ensenzu_source = Path('src/vendor/ensenzu_app/upstream/app.mbt.txt').read_bytes()
+assert hashlib.sha256(ensenzu_source).hexdigest() == 'a580832dc58cd030ee22091abf58be8a1542c0696e57eae6f223d0e1c9bfd14b'
+signal_manifest = json.loads(Path('external/manifests/signal-reader.json').read_text())
+assert signal_manifest['sourceSha256'] == 'df8dd9c5382d0acdcee335ec8cc3ba88b386b47c4ab15cd178a352e1812b617e'
+assert not Path('src/vendor/signal_reader/upstream').exists()
+editor_source = Path('src/vendor/moonbit_editor_file_tree/upstream/file_tree.mbt.txt').read_bytes()
+assert hashlib.sha256(editor_source).hexdigest() == 'ebb0b018ae049c1f182c7c74d0361aaee0c439761d00a8ead5f20e94e1968547'
+canopy_source = Path('src/vendor/canopy_components/upstream/resizable_update.mbt.txt').read_bytes()
+assert hashlib.sha256(canopy_source).hexdigest() == 'ac88ca22d332ea66853e7ad34f07492f97d150e11155ff66bd821b8413ae55cb'
+canopy_editor_manifest = json.loads(Path('external/manifests/canopy-editor-integration.json').read_text())
+assert canopy_editor_manifest['sourceSha256'] == '98722c622fe4d2026c82e4f9ad8647735a85c2d4f2b6ee16f903a983535cc0e8'
+utility_manifest = json.loads(Path('external/manifests/rabbita-utility-batch.json').read_text())
+assert utility_manifest['sourceSha256'] == '25ab15a6554c1558d2942ef78252872d98d4886adc88f41dda540cfcded68871'
+utility_report = json.loads(Path('external/utility-apps.json').read_text())
+assert len(utility_report['entries']) == 10
+assert sum(entry['classification'] == 'supported' for entry in utility_report['entries']) == 4
+assert all(
+    not entry['sourceVendored']
+    for entry in utility_report['entries']
+    if entry['license'] == 'unknown'
+)
+incr_formula = Path('src/vendor/incr_typed_spreadsheet_core/formula.mbt').read_bytes()
+assert hashlib.sha256(incr_formula).hexdigest() == '6b4c85f453e8bd0622e10f5c5b41025e0d4f9c8d9a246eb93f661365e3182391'
+circular_manifest = json.loads(Path('external/manifests/circular-state.json').read_text())
+assert circular_manifest['sourceSha256'] == 'dafc8ae49184ffa6793d6a301d62429a8d4446f5bb7669c323e32165bce01e35'
+assert not Path('src/vendor/circular_state/upstream').exists()
+isomorphic_manifest = json.loads(Path('external/manifests/isomorphic-suite.json').read_text())
+assert isomorphic_manifest['sourceSha256'] == 'feb28cfc1d26aeecff44fdbe6b12335dbfe0ac0cc534a3b6018ca8686d1f8bed'
+assert not Path('src/vendor/isomorphic_suite/upstream').exists()
+xterm_source = Path('src/vendor/rabbita_xterm_lifecycle/upstream/xterm.mbt.txt').read_bytes()
+assert hashlib.sha256(xterm_source).hexdigest() == '4b1b32a105a5c7cb4b58b24684a546ba3a98d3acea75209ca9b26acc10068c02'
+moonclaw_source = Path('src/vendor/moonclaw_job/upstream/update.mbt.txt').read_bytes()
+assert hashlib.sha256(moonclaw_source).hexdigest() == '15b8300dce13d0ce57d9c0b7f5076c38a8135fe7659a582cef597e230c27fb04'
+mooncakes_sources = [
+    ('build_queue_state.mbt.txt', '5d29edd1b217e531267cb7204c298a6b00bc7c8a1484f022fa99cc856d0fc9e3'),
+    ('build_queue_view.mbt.txt', '36ee6aa27c98d528ae80e91c7e67965e64d6981d76e67b7c725bec50b34ad4f0'),
+    ('website_home_main.mbt.txt', 'd6aabd76c9054b3f47a2d84688a576d88f07a04c1fc64d1ae68587665a973891'),
+    ('tutorial_frontend_main.mbt.txt', 'b1d0d909359d9fcfff399799723e468b1cdf19561f057763c4dd03865cbfa809'),
+]
+for filename, expected_hash in mooncakes_sources:
+    source = Path('src/vendor/mooncakes_official_ui/upstream') / filename
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == expected_hash
+mooncakes_manifest = json.loads(Path('external/manifests/mooncakes-official-ui.json').read_text())
+assert mooncakes_manifest['sourceSha256'] == 'ace1fe509cb2135d18f96eb2274a148be6d7324046491b24d1fb0cd03cdf0581'
+docs_license = Path('src/vendor/mooncakes_official_ui/LICENSE.moonbit-docs.md').read_bytes()
+assert hashlib.sha256(docs_license).hexdigest() == 'f5e69ee4ed4842311a35db244c4c0835ffee0e84b334c96a837e90f897fb8c01'
+selene_sources = b''.join(
+    path.read_bytes()
+    for path in sorted(Path('src/vendor/selene_editor_assets/upstream').glob('*.txt'))
+)
+assert hashlib.sha256(selene_sources).hexdigest() == '00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2'
+selene_manifest = json.loads(Path('external/manifests/selene-editor-assets.json').read_text())
+assert selene_manifest['sourceSha256'] == '00a4443e3c035b2b089771584d7efe0ecbf42ff469eb2153f82880091804fbd2'
+openseek_sources = b''.join(
+    path.read_bytes()
+    for path in sorted(
+        Path('src/vendor/openseek_desktop_lifecycle/upstream').glob('*.txt'),
+        key=lambda path: path.name.encode(),
+    )
+)
+assert hashlib.sha256(openseek_sources).hexdigest() == 'f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b'
+openseek_manifest = json.loads(Path('external/manifests/openseek-desktop-lifecycle.json').read_text())
+assert openseek_manifest['sourceSha256'] == 'f649bdad2293cacc60f752eb422d4c744e54fad58027d4e903dc6b0316bc214b'
+PY

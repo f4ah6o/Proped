@@ -5,6 +5,7 @@ import { semanticHash } from "../protocol/ui-driver-v1.mjs";
 import {
   replayWebExplorationFailureCampaign,
   runWebExplorationReplayGate,
+  shrinkWebExplorationFailureTrace,
 } from "../protocol/web-exploration-replay-gate.mjs";
 
 class ReplayDriver {
@@ -29,7 +30,7 @@ class ReplayDriver {
     ] };
   }
   async execute(action) {
-    if (action.id === "open") this.state = "open";
+    if (action.id === "open" || action.id === "crash") this.state = "open";
     const violations = [];
     if (action.id === "crash" && (!this.flaky || this.run % 2 === 1)) {
       violations.push({
@@ -132,6 +133,26 @@ const differentFindingReplay = await replayWebExplorationFailureCampaign(
 assert.equal(differentFindingReplay.failures.length, 0);
 assert.equal(differentFindingReplay.diagnostics[0].findingGroupId, strongA.id);
 
+const shrunk = await shrinkWebExplorationFailureTrace(
+  new ReplayDriver({ diagnosticProvenance: equivalentProvenance, violationCode: "unhandled_exception" }),
+  strongFailure,
+  { budget: 16 },
+);
+assert.deepEqual(shrunk.trace, ["crash"]);
+assert.equal(shrunk.originalLength, 2);
+assert.equal(shrunk.length, 1);
+assert.equal(shrunk.minimality, "one-minimal");
+assert.equal(shrunk.findingGroupId, strongA.id);
+
+const exhaustedShrink = await shrinkWebExplorationFailureTrace(
+  new ReplayDriver({ diagnosticProvenance: equivalentProvenance, violationCode: "unhandled_exception" }),
+  strongFailure,
+  { budget: 1 },
+);
+assert.deepEqual(exhaustedShrink.trace, ["crash"]);
+assert.equal(exhaustedShrink.minimality, "budget-exhausted");
+assert.equal(exhaustedShrink.evaluations, 1);
+
 console.log(JSON.stringify({
   ok: true,
   runtime: "web-exploration-replay-gate-test",
@@ -141,4 +162,6 @@ console.log(JSON.stringify({
   findingGroupCount: grouped.groupCount,
   sameFindingReplay: sameFindingReplay.failures.length,
   differentFindingReplay: differentFindingReplay.failures.length,
+  minimizedTraceLength: shrunk.length,
+  minimality: shrunk.minimality,
 }));

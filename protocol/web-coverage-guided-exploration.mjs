@@ -27,6 +27,12 @@ function edgeKey(fingerprint, actionId) {
   return `${fingerprint}\u0000${actionId}`;
 }
 
+function sameTrace(left, right) {
+  return Array.isArray(left)
+    && left.length === right.length
+    && left.every((actionId, index) => actionId === right[index]);
+}
+
 function frontierScore(node, executedEdges, executedActionSignatures, actionFilter) {
   const available = node.inventory.actions.filter((action) => actionFilter(action) && !executedEdges.has(edgeKey(node.snapshot.fingerprint, action.id)));
   const globallyNew = available.filter((action) => !executedActionSignatures.has(actionSignature(action)));
@@ -112,6 +118,7 @@ export async function exploreWebCoverageGuided(driver, {
   };
   stateByFingerprint.set(initialSnapshot.fingerprint, initialNode);
   routeFamilies.add(webRouteFamily(initialSnapshot.url));
+  let currentTrace = [];
 
   while (transitions.length < maxTransitions && stateByFingerprint.size < maxStates) {
     const selected = selectFrontierNode([...stateByFingerprint.values()], executedEdges, executedActionSignatures, maxDepth, actionFilter);
@@ -121,7 +128,13 @@ export async function exploreWebCoverageGuided(driver, {
     executedEdges.add(edgeKey(source.snapshot.fingerprint, action.id));
     executedActionSignatures.add(actionSignature(action));
 
-    const replay = await replayTrace(driver, source.trace);
+    let replay;
+    if (sameTrace(currentTrace, source.trace)) {
+      replay = { ok: true, snapshot: source.snapshot };
+    } else {
+      replay = await replayTrace(driver, source.trace);
+      currentTrace = replay.ok ? [...source.trace] : null;
+    }
     if (!replay.ok) {
       diagnostics.push(replay.executionError ? {
         code: "frontier_trace_replay_execution_failed",
@@ -153,6 +166,7 @@ export async function exploreWebCoverageGuided(driver, {
     try {
       result = await driver.execute(replayAction);
     } catch (error) {
+      currentTrace = null;
       diagnostics.push({
         code: "frontier_action_execution_failed",
         sourceFingerprint: source.snapshot.fingerprint,
@@ -165,6 +179,7 @@ export async function exploreWebCoverageGuided(driver, {
     const nextSnapshot = result.snapshot;
     const nextInventory = await driver.actions();
     const nextTrace = [...source.trace, action.id];
+    currentTrace = nextTrace;
     transitions.push({
       from: source.snapshot.fingerprint,
       actionId: action.id,

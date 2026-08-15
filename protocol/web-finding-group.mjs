@@ -23,7 +23,7 @@ function normalizeMessage(value) {
 function safeRelativeSourcePath(value) {
   if (typeof value !== "string" || value.length === 0) return null;
   const normalized = value.replace(/\\/g, "/");
-  if (/^[A-Za-z]:\//.test(normalized) || normalized.startsWith("/") || normalized.startsWith("file:")) return null;
+  if (/^[A-Za-z]:\//.test(normalized) || normalized.startsWith("/") || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(normalized)) return null;
   const segments = normalized.split("/");
   if (segments.some((segment) => segment === "..")) return null;
   return normalized.replace(/^\.\//, "");
@@ -42,7 +42,7 @@ function strongBrowserExceptionProvenance(failure, canonical) {
   const diagnostic = diagnosticCandidate(failure);
   if (!diagnostic || typeof diagnostic !== "object" || Array.isArray(diagnostic)) return null;
   const frame = diagnostic.topProjectFrame ?? diagnostic.frame ?? null;
-  if (!frame || typeof frame !== "object" || Array.isArray(frame)) return null;
+  if (!frame || typeof frame !== "object" || Array.isArray(frame) || frame.projectOwned !== true) return null;
   const sourcePath = safeRelativeSourcePath(frame.sourcePath ?? frame.file ?? null);
   const exceptionName = diagnostic.name ?? diagnostic.exceptionName ?? canonical.exceptionKind ?? null;
   const rawMessage = diagnostic.message ?? failure?.message ?? null;
@@ -56,6 +56,7 @@ function strongBrowserExceptionProvenance(failure, canonical) {
     routeFamily,
     topProjectFrame: {
       sourcePath,
+      projectOwned: true,
       function: typeof frame.function === "string" && frame.function.length > 0 ? normalizeGenerated(frame.function) : null,
       line: Number.isSafeInteger(frame.line) && frame.line > 0 ? frame.line : null,
       column: Number.isSafeInteger(frame.column) && frame.column > 0 ? frame.column : null,

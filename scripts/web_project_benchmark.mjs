@@ -9,8 +9,12 @@ function usage(message) {
 }
 
 function delegatedProductionContract(corpus) {
-  if (process.env.GITHUB_ACTIONS !== "true") return false;
-  if (process.env.PROPED_CI_PRODUCTION_CONTRACT === "1") return false;
+  const legacyCiJob =
+    process.env.GITHUB_ACTIONS === "true" &&
+    process.env.GITHUB_REPOSITORY === "f4ah6o/Proped" &&
+    process.env.GITHUB_WORKFLOW === "CI" &&
+    process.env.GITHUB_JOB === "production-external-contracts";
+  if (!legacyCiJob) return false;
   return corpus === "promoted-production" || corpus === "external-production";
 }
 

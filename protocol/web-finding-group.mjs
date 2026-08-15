@@ -64,6 +64,37 @@ function strongBrowserExceptionProvenance(failure, canonical) {
   };
 }
 
+function traceIds(failure) {
+  return (failure?.trace ?? []).map((action) => {
+    if (typeof action === "string") return action;
+    if (typeof action?.id === "string" && action.id.length > 0) return action.id;
+    return semanticHash(action ?? null);
+  });
+}
+
+function failureCode(failure) {
+  return failure?.code ?? failure?.property ?? failure?.failureClass ?? "unknown_failure";
+}
+
+function representativeProjection(failure, finding = classifyWebFinding(failure)) {
+  const trace = traceIds(failure);
+  return {
+    findingGroupId: finding.id,
+    canonicalFailureClassId: finding.canonicalFailureClassId,
+    failureCode: failureCode(failure),
+    trace,
+    traceLength: trace.length,
+  };
+}
+
+function compareRepresentatives(left, right) {
+  if (left.traceLength !== right.traceLength) return left.traceLength - right.traceLength;
+  const leftTrace = JSON.stringify(left.trace);
+  const rightTrace = JSON.stringify(right.trace);
+  if (leftTrace !== rightTrace) return leftTrace.localeCompare(rightTrace);
+  return left.canonicalFailureClassId.localeCompare(right.canonicalFailureClassId);
+}
+
 export function classifyWebFinding(failure) {
   const canonical = classifyWebFailure(failure);
   const provenance = strongBrowserExceptionProvenance(failure, canonical);
@@ -97,10 +128,24 @@ export function classifyWebFinding(failure) {
   };
 }
 
+export function selectWebFindingRepresentative(failures = []) {
+  if (!Array.isArray(failures) || failures.length === 0) throw new Error("finding representative requires at least one failure");
+  const entries = failures.map((failure) => {
+    const finding = classifyWebFinding(failure);
+    return { finding, representative: representativeProjection(failure, finding) };
+  });
+  const findingGroupId = entries[0].finding.id;
+  if (entries.some((entry) => entry.finding.id !== findingGroupId)) {
+    throw new Error("finding representative requires failures from one finding group");
+  }
+  return entries.map((entry) => entry.representative).sort(compareRepresentatives)[0];
+}
+
 export function groupWebFindings(failures = []) {
   const groups = new Map();
   for (const failure of failures) {
     const finding = classifyWebFinding(failure);
+    const representative = representativeProjection(failure, finding);
     const current = groups.get(finding.id) ?? {
       id: finding.id,
       grouping: finding.grouping,
@@ -108,13 +153,17 @@ export function groupWebFindings(failures = []) {
       count: 0,
       canonicalFailureClassIds: [],
       failureCodes: [],
+      representative: null,
     };
     current.count += 1;
     if (!current.canonicalFailureClassIds.includes(finding.canonicalFailureClassId)) {
       current.canonicalFailureClassIds.push(finding.canonicalFailureClassId);
     }
-    const code = failure?.code ?? failure?.property ?? failure?.failureClass ?? "unknown_failure";
+    const code = failureCode(failure);
     if (!current.failureCodes.includes(code)) current.failureCodes.push(code);
+    if (!current.representative || compareRepresentatives(representative, current.representative) < 0) {
+      current.representative = representative;
+    }
     groups.set(finding.id, current);
   }
   const result = [...groups.values()]
@@ -137,6 +186,7 @@ export function groupWebFindings(failures = []) {
       count: group.count,
       canonicalFailureClassIds: group.canonicalFailureClassIds,
       failureCodes: group.failureCodes,
+      representative: group.representative,
     }))),
   };
 }

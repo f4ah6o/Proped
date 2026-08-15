@@ -53,6 +53,10 @@ function cli(args) {
   });
 }
 
+function overlapProbe(marker, peer, hash) {
+  return `const fs=require('node:fs');const marker=${JSON.stringify(marker)};const peer=${JSON.stringify(peer)};fs.writeFileSync(marker,'ready');const deadline=Date.now()+3000;(function wait(){if(fs.existsSync(peer)){console.log(JSON.stringify({ok:true,semanticHash:${JSON.stringify(hash)}}));return;}if(Date.now()>deadline){process.exit(12);return;}setTimeout(wait,10);})();`;
+}
+
 const sample = loadWebProjectManifest(ROOT, SAMPLE);
 assert.equal(sample.id, "proped-web-quality");
 assert.equal(sample.stages.length, 13);
@@ -123,29 +127,31 @@ try {
   assert.equal(success.requiredFailureCount, 0);
   assert.equal(success.stages[1].payload.semanticHash, "bbb");
 
+  const markerA = path.join(TMP, "parallel-a.ready");
+  const markerB = path.join(TMP, "parallel-b.ready");
   const parallelStages = [
-    stage("parallel-a", [process.execPath, "-e", "setTimeout(()=>console.log(JSON.stringify({ok:true,semanticHash:'pa'})),300)"], { exclusiveResources: [] }),
-    stage("parallel-b", [process.execPath, "-e", "setTimeout(()=>console.log(JSON.stringify({ok:true,semanticHash:'pb'})),300)"], { exclusiveResources: [] }),
+    stage("parallel-a", [process.execPath, "-e", overlapProbe(markerA, markerB, "pa")], { exclusiveResources: [] }),
+    stage("parallel-b", [process.execPath, "-e", overlapProbe(markerB, markerA, "pb")], { exclusiveResources: [] }),
     stage("parallel-join", [process.execPath, "-e", "console.log(JSON.stringify({ok:true,semanticHash:'pj'}))"], {
       dependsOn: ["parallel-a", "parallel-b"],
       exclusiveResources: [],
     }),
   ];
-  const parallelStarted = performance.now();
   const parallel = await runWebProjectConcurrent(
     ROOT,
     manifest(parallelStages, ".tmp/web-project-runner-test/parallel"),
     { writeArtifacts: false, maxConcurrency: 4 },
   );
-  const parallelElapsed = performance.now() - parallelStarted;
-  assert.equal(parallel.ok, true);
+  assert.equal(parallel.ok, true, "safe independent stages must overlap to satisfy the synchronization probe");
   assert.deepEqual(parallel.stages.map((item) => item.id), ["parallel-a", "parallel-b", "parallel-join"]);
-  assert.ok(parallelElapsed < 560, `safe independent stages should overlap, observed ${parallelElapsed}ms`);
+  fs.rmSync(markerA, { force: true });
+  fs.rmSync(markerB, { force: true });
   const parallelReplay = await runWebProjectConcurrent(
     ROOT,
     manifest(parallelStages, ".tmp/web-project-runner-test/parallel-replay"),
     { writeArtifacts: false, maxConcurrency: 4 },
   );
+  assert.equal(parallelReplay.ok, true);
   assert.equal(parallelReplay.semanticHash, parallel.semanticHash);
 
   const resourceLock = path.join(TMP, "resource.lock");
@@ -159,6 +165,29 @@ try {
     { writeArtifacts: false, maxConcurrency: 4 },
   );
   assert.equal(locked.ok, true, "stages sharing an exclusive resource must be serialized");
+
+  const nestedRoot = path.join(TMP, "nested");
+  const nestedChild = path.join(nestedRoot, "child");
+  fs.mkdirSync(nestedChild, { recursive: true });
+  const nestedResourceLock = path.join(nestedChild, "resource.lock");
+  const nestedLockProgram = `const fs=require('node:fs');const p=${JSON.stringify(nestedResourceLock)};try{fs.writeFileSync(p,'locked',{flag:'wx'});}catch{process.exit(9);}setTimeout(()=>{fs.rmSync(p,{force:true});console.log(JSON.stringify({ok:true,semanticHash:'nested-lock'}));},120);`;
+  const nestedLocked = await runWebProjectConcurrent(
+    ROOT,
+    manifest([
+      stage("nested-parent", [process.execPath, "-e", nestedLockProgram], {
+        exclusiveResources: [".tmp/web-project-runner-test/nested"],
+      }),
+      stage("nested-child", [process.execPath, "-e", nestedLockProgram], {
+        exclusiveResources: [".tmp/web-project-runner-test/nested/child/../child"],
+      }),
+    ], ".tmp/web-project-runner-test/nested-locked"),
+    { writeArtifacts: false, maxConcurrency: 4 },
+  );
+  assert.equal(
+    nestedLocked.ok,
+    true,
+    "ancestor/descendant resource paths, including normalized equivalents, must be serialized",
+  );
 
   const unknownLock = path.join(TMP, "unknown-resource.lock");
   const unknownLockProgram = `const fs=require('node:fs');const p=${JSON.stringify(unknownLock)};try{fs.writeFileSync(p,'locked',{flag:'wx'});}catch{process.exit(9);}setTimeout(()=>{fs.rmSync(p,{force:true});console.log(JSON.stringify({ok:true,semanticHash:'unknown'}));},80);`;
@@ -334,4 +363,6 @@ console.log(JSON.stringify({
   isolatedProcessTreeCleanup: process.platform !== "win32",
   concurrentScheduler: true,
   explicitResourceLocks: true,
+  nestedResourceLocks: true,
+  synchronizationProbe: true,
 }));

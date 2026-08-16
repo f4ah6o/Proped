@@ -24,6 +24,8 @@
         "actions",
         "execute",
         "replay",
+        "checkpoint",
+        "restoreCheckpoint",
         "dispose",
         "shutdown"
       ]

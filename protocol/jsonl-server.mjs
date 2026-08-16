@@ -1,5 +1,25 @@
 import readline from "node:readline";
 import { ERROR_CODES, PROTOCOL_VERSION, ProtocolError, errorResponse, okResponse, validateRequest, withTimeout } from "./ui-driver-v1.mjs";
+import { ENVIRONMENT_CHECKPOINT_CAPABILITY, hasEnvironmentCheckpointCapability } from "./environment-checkpoints.mjs";
+
+const DEFAULT_CAPABILITIES = ["reset", "actions", "execute", "replay", "dispose"];
+const CHECKPOINT_CAPABILITIES = [ENVIRONMENT_CHECKPOINT_CAPABILITY, "checkpoint", "restoreCheckpoint"];
+
+function driverCapabilities(driver) {
+  const capabilities = [...(driver.capabilities ?? DEFAULT_CAPABILITIES)];
+  if (hasEnvironmentCheckpointCapability(driver)) {
+    for (const capability of CHECKPOINT_CAPABILITIES) {
+      if (!capabilities.includes(capability)) capabilities.push(capability);
+    }
+  }
+  return capabilities;
+}
+
+function requireCheckpointCapability(driver) {
+  if (!hasEnvironmentCheckpointCapability(driver)) {
+    throw new ProtocolError(ERROR_CODES.UNSUPPORTED_CAPABILITY, "driver does not support environment checkpoints");
+  }
+}
 
 export class JsonlDriverServer {
   constructor(driver, { timeoutMs = 5000 } = {}) {
@@ -25,7 +45,7 @@ export class JsonlDriverServer {
       this.negotiated = true;
       return {
         protocolVersion: PROTOCOL_VERSION,
-        capabilities: this.driver.capabilities ?? ["reset", "actions", "execute", "replay", "dispose"],
+        capabilities: driverCapabilities(this.driver),
         unsupportedEffects: this.driver.unsupportedEffects ?? ["network", "filesystem-write", "mail", "payment", "cloud-mutation", "native-bridge"],
       };
     }
@@ -33,6 +53,17 @@ export class JsonlDriverServer {
     if (method === "actions") return this.driver.actions(params.snapshot);
     if (method === "execute") return this.driver.execute(params.action);
     if (method === "replay") return this.driver.replay(params.trace, params.expectedSignature);
+    if (method === "checkpoint") {
+      requireCheckpointCapability(this.driver);
+      return this.driver.checkpoint();
+    }
+    if (method === "restoreCheckpoint") {
+      requireCheckpointCapability(this.driver);
+      if (typeof params.checkpointId !== "string" || params.checkpointId.length === 0) {
+        throw new ProtocolError(ERROR_CODES.INVALID_REQUEST, "restoreCheckpoint requires a non-empty checkpointId");
+      }
+      return this.driver.restoreCheckpoint(params.checkpointId);
+    }
     if (method === "dispose") { const result = await this.driver.dispose(); this.disposed = true; return result ?? { disposed: true }; }
     if (method === "shutdown") { if (!this.disposed) await this.driver.dispose(); this.disposed = true; return { shutdown: true }; }
     throw new ProtocolError(ERROR_CODES.UNKNOWN_METHOD, `unknown method: ${method}`);

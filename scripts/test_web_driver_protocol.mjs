@@ -12,6 +12,7 @@ assert.equal((await server.handle(request(1, "actions"))).error.code, ERROR_CODE
 const hello = await server.handle(request(2, "hello"));
 assert.equal(hello.result.protocolVersion, PROTOCOL_VERSION);
 assert.ok(hello.result.unsupportedEffects.includes("payment"));
+assert.equal(hello.result.capabilities.includes("environment-checkpoints"), false, "stateless drivers must not advertise checkpoint support");
 assert.equal((await server.handle(request(2, "hello"))).error.code, ERROR_CODES.DUPLICATE_REQUEST_ID);
 assert.equal((await server.handle({ ...request(3, "hello"), extra: true })).error.code, ERROR_CODES.INVALID_REQUEST);
 assert.equal((await server.handle({ ...request(4, "hello"), protocolVersion: "2.0" })).error.code, ERROR_CODES.VERSION_MISMATCH);
@@ -31,8 +32,40 @@ assert.equal(replay.signature.failureClass, "stale-response");
 assert.equal(replay.signature.semanticHash.length, 64);
 const replayAgain = (await server.handle(request(12, "replay", { trace, expectedSignature: replay.signature }))).result;
 assert.equal(replayAgain.signatureMatches, true);
-await server.handle(request(13, "dispose"));
-assert.equal((await server.handle(request(14, "actions"))).error.code, ERROR_CODES.DISPOSED);
+assert.equal((await server.handle(request(13, "checkpoint"))).error.code, ERROR_CODES.UNSUPPORTED_CAPABILITY);
+await server.handle(request(14, "dispose"));
+assert.equal((await server.handle(request(15, "actions"))).error.code, ERROR_CODES.DISPOSED);
+
+class CheckpointProtocolDriver extends SyntheticStaleSearchDriver {
+  constructor() {
+    super();
+    this.environment = 0;
+    this.serial = 0;
+    this.checkpoints = new Map();
+  }
+  async checkpoint() {
+    const checkpointId = `opaque:${++this.serial}`;
+    this.checkpoints.set(checkpointId, this.environment);
+    return { checkpointId, environmentStateId: `environment:${this.environment}` };
+  }
+  async restoreCheckpoint(checkpointId) {
+    if (!this.checkpoints.has(checkpointId)) throw new Error(`unknown checkpoint ${checkpointId}`);
+    this.environment = this.checkpoints.get(checkpointId);
+    return { environmentStateId: `environment:${this.environment}` };
+  }
+}
+const checkpointDriver = new CheckpointProtocolDriver();
+const checkpointServer = new JsonlDriverServer(checkpointDriver, { timeoutMs: 100 });
+const checkpointHello = (await checkpointServer.handle(request(1, "hello"))).result;
+assert.ok(checkpointHello.capabilities.includes("environment-checkpoints"));
+assert.ok(checkpointHello.capabilities.includes("checkpoint"));
+assert.ok(checkpointHello.capabilities.includes("restoreCheckpoint"));
+const checkpoint = (await checkpointServer.handle(request(2, "checkpoint"))).result;
+checkpointDriver.environment = 7;
+const restoredCheckpoint = (await checkpointServer.handle(request(3, "restoreCheckpoint", { checkpointId: checkpoint.checkpointId }))).result;
+assert.equal(restoredCheckpoint.environmentStateId, "environment:0");
+assert.equal(checkpointDriver.environment, 0);
+assert.equal((await checkpointServer.handle(request(4, "restoreCheckpoint", { checkpointId: "" }))).error.code, ERROR_CODES.INVALID_REQUEST);
 class SlowDriver extends SyntheticStaleSearchDriver { async actions() { await new Promise((resolve) => setTimeout(resolve, 30)); return []; } }
 const slow = new JsonlDriverServer(new SlowDriver(), { timeoutMs: 5 });
 await slow.handle(request(1, "hello"));
@@ -56,4 +89,6 @@ console.log(JSON.stringify({
   trace: replay.signature.trace,
   failureSignature: replay.signature,
   transcriptSemanticHash: semanticHash({ hello: hello.result, signature: replay.signature }),
+  checkpointCapability: checkpointHello.capabilities.includes("environment-checkpoints"),
+  restoredEnvironmentStateId: restoredCheckpoint.environmentStateId,
 }));

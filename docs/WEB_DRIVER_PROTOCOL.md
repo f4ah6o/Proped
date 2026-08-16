@@ -21,6 +21,14 @@ Every response echoes `id` and contains either `result` or `error`. Unknown fiel
 5. `replay` resets the fixture and verifies a complete trace.
 6. `dispose` releases timers, browser contexts, servers, and storage.
 
+## Optional environment checkpoints
+
+Drivers whose actions can read or mutate state outside the runtime/UI snapshot may opt in to the `environment-checkpoints` capability. Such drivers expose `checkpoint` and `restoreCheckpoint`. `checkpoint` returns only opaque provenance, `{ checkpointId, environmentStateId }`; persisted contents are never part of the protocol evidence. `environmentStateId` must identify the external state relevant to future behavior. When a driver cannot prove semantic equivalence between two external states, it must use distinct identities so Proped conservatively keeps the states separate.
+
+Checkpoint-aware exploration treats state identity as the runtime fingerprint plus `environmentStateId`. Before evaluating a candidate action, Proped reconstructs the parent runtime from the initial checkpoint, validates the expected extended-state transitions, then restores the exact parent environment checkpoint immediately before executing that one candidate. This prevents a mutation in one branch from contaminating a sibling branch. A checkpoint-aware `reset` resets runtime/UI state without overwriting the environment state that was just restored.
+
+Replay restores the trace's initial checkpoint before resetting/replaying runtime actions and verifies both runtime and environment identities at every transition. Stable evidence records opaque identities and the generic effect `environment_changed` or `unchanged`; checkpoint bytes and interpreted domain values are not exported. Drivers that do not advertise environment checkpoints keep the existing runtime-fingerprint identity, reset/replay behavior, and wire contract unchanged.
+
 ## Stable action identity
 
 Action identity is separate from its human label. CSS selectors, DOM addresses, translated copy, framework IDs, and list indexes are not sufficient identities. The canonical form is composed from kind, role, accessible name, ancestor scope, stable test identity when necessary, and normalized input. Ambiguous actions are not executed and become diagnostics.

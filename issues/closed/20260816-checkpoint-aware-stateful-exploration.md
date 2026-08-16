@@ -1,5 +1,8 @@
 # Checkpoint-aware stateful exploration
 
+Status: closed
+Updated: 2026-08-16
+
 ## Context
 
 Proped can deterministically explore UI state by observing actions, executing one action, fingerprinting the resulting state, and replaying paths from a reset environment. That model is insufficient when an action result depends on persistent or otherwise external mutable state that is not represented by the visible/runtime fingerprint.
@@ -127,13 +130,40 @@ Only after the opaque-version model is correct, allow a driver to provide a stab
 
 ## Acceptance criteria
 
-- [ ] Proped can explore a synthetic stateful system where identical runtime/UI states have different future behavior because external state differs.
-- [ ] Extended-state identity prevents unsound runtime-only deduplication.
-- [ ] Every candidate action can be evaluated from its parent checkpoint without sibling mutation leakage.
-- [ ] Checkpoint-aware replay restores external state and reproduces the same transition sequence deterministically.
-- [ ] The trace/evidence format exposes only generic opaque identities/effects, not external-state contents.
-- [ ] Existing stateless and Browser/Web exploration behavior remains green and requires no domain-specific checkpoint implementation.
-- [ ] Public code, docs, tests, and fixtures contain no private product identifiers or product-specific persistence implementation details.
+- [x] Proped can explore a synthetic stateful system where identical runtime/UI states have different future behavior because external state differs.
+- [x] Extended-state identity prevents unsound runtime-only deduplication.
+- [x] Every candidate action can be evaluated from its parent checkpoint without sibling mutation leakage.
+- [x] Checkpoint-aware replay restores external state and reproduces the same transition sequence deterministically.
+- [x] The trace/evidence format exposes only generic opaque identities/effects, not external-state contents.
+- [x] Existing stateless and Browser/Web exploration behavior remains green and requires no domain-specific checkpoint implementation.
+- [x] Public code, docs, tests, and fixtures contain no private product identifiers or product-specific persistence implementation details.
+
+## Completion evidence
+
+Implemented the P0 checkpoint-aware state model as an optional, domain-neutral driver capability. Stateless drivers retain runtime-fingerprint identity and the existing exploration/replay behavior.
+
+- `protocol/environment-checkpoints.mjs` defines capability detection, opaque checkpoint validation, restore verification, extended-state identity, and generic `environment_changed` / `unchanged` effects.
+- `protocol/web-coverage-guided-exploration.mjs` deduplicates checkpoint-capable nodes by runtime plus environment identity, reconstructs the parent trace from the baseline checkpoint, restores the exact parent environment before each speculative action, and records checkpoint-aware replay provenance without hashing opaque checkpoint handles.
+- `protocol/web-exploration-replay-gate.mjs` restores the required initial checkpoint and validates the expected extended-state transition sequence; replay projection determinism is wired through the existing replay gate.
+- UI driver protocol v1 accepts optional `checkpoint` / `restoreCheckpoint` methods and advertises `environment-checkpoints` only for capable drivers; unsupported calls fail closed.
+- The synthetic coverage-guided fixture proves identical-runtime/different-environment non-merge, same-action/different-successor behavior, sibling isolation after mutation, recovery to a known earlier runtime state, fresh deterministic checkpoint replay, opaque-handle-independent semantic hashing, and unchanged stateless behavior.
+- Evidence privacy is asserted directly: exported checkpoint provenance, state traces, and transitions contain identities/effects but not the synthetic external-state contents.
+
+Validation completed successfully:
+
+- `node scripts/test_web_driver_protocol.mjs`
+- `node scripts/test_web_coverage_guided_exploration.mjs`
+- `node scripts/test_web_exploration_replay_gate.mjs`
+- `node scripts/test_web_replay_gate.mjs`
+- `node web/playwright-browser/test-generic-browser-driver.mjs`
+- `node scripts/test_web_exploration_stage_quality.mjs`
+- `node scripts/test_web_project_onboarding_v2.mjs`
+- `node scripts/test_web_stateful_server_pack.mjs`
+- `node scripts/test_web_project_campaign.mjs`
+- `node scripts/test_web_generic_property_packs.mjs`
+- `python3 -m json.tool protocol/ui-driver-v1.schema.json`
+- `python3 scripts/check_public_disclosure.py`
+- `git diff --check`
 
 ## Non-goals
 

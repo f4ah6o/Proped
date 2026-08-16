@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 
 export const PROTOCOL_VERSION = "1.0";
-export const METHODS = Object.freeze(["hello", "reset", "actions", "execute", "replay", "dispose", "shutdown"]);
+export const METHODS = Object.freeze(["hello", "reset", "actions", "execute", "replay", "checkpoint", "restoreCheckpoint", "dispose", "shutdown"]);
 export const ERROR_CODES = Object.freeze({
   INVALID_REQUEST: "invalid_request",
   VERSION_MISMATCH: "version_mismatch",
@@ -11,6 +11,7 @@ export const ERROR_CODES = Object.freeze({
   TIMEOUT: "timeout",
   DISPOSED: "disposed",
   UNSUPPORTED_EFFECT: "unsupported_effect",
+  UNSUPPORTED_CAPABILITY: "unsupported_capability",
   INTERNAL_ERROR: "internal_error",
 });
 const REQUEST_KEYS = new Set(["protocolVersion", "id", "method", "params"]);

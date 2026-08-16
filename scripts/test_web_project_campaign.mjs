@@ -180,6 +180,26 @@ exit 0
   assert.ok(actionableArtifactFinding, JSON.stringify(actionableArtifact.actionableFindings));
   assert.equal(actionableArtifactFinding.representativeReplay.minimality, "one-minimal");
   assert.doesNotMatch(JSON.stringify(actionableArtifactFinding), /secret-123|127\.0\.0\.1:\d+/);
+  const incident = actionableFresh.actionableFindingIncidents.find((item) => item.findingGroupId === actionableFinding.findingGroupId);
+  assert.ok(incident, JSON.stringify(actionableFresh.findingIncidents));
+  assert.equal(incident.grouping, "strong");
+  assert.equal(incident.minimalReplay.minimality, "one-minimal");
+  assert.deepEqual(incident.minimalReplay.actions, actionableFinding.representativeReplay.trace);
+  assert.equal(incident.provenance.topProjectFrame.sourcePath, "app.js");
+  const humanArtifact = fs.readFileSync(actionableFresh.artifacts.incidents, "utf8");
+  assert.match(humanArtifact, new RegExp(actionableFinding.findingGroupId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(humanArtifact, /unhandled_exception/);
+  assert.match(humanArtifact, /1 -> 1 actions; one-minimal/);
+  assert.doesNotMatch(humanArtifact, /secret-123|127\.0\.0\.1:\d+/);
+  const humanCli = spawnSync(process.execPath, [CLI, "web", "campaign", ACTIONABLE_PROJECT, "--sandbox-mode", "caller-enforced", "--no-artifacts", "--format", "human"], {
+    cwd: ROOT,
+    encoding: "utf8",
+    timeout: 120_000,
+  });
+  assert.equal(humanCli.status, 0, humanCli.stderr);
+  assert.match(humanCli.stdout, /Incident finding@/);
+  assert.match(humanCli.stdout, /status: actionable/);
+  assert.doesNotMatch(humanCli.stdout, /secret-123|127\.0\.0\.1:\d+/);
 
   const result = runUnknownWebProjectCampaign(PROJECT, {
     writeArtifacts: false,

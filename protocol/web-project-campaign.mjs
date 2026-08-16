@@ -22,6 +22,7 @@ import { runWebProject } from "./web-project-runner.mjs";
 import { safeExecutionEnvironment } from "./web-execution-sandbox.mjs";
 import { spawnSyncIsolated } from "./web-process-tree.mjs";
 import { discoverWebProjectWorkspacePrebuild, prepareWebProjectWorkspace } from "./web-project-workspace-prebuild.mjs";
+import { projectWebFindingIncidents, renderWebFindingIncidents } from "./web-finding-incident.mjs";
 
 export const WEB_PROJECT_CAMPAIGN_VERSION = 2;
 
@@ -287,10 +288,12 @@ function writeCampaignArtifacts(projectRoot, result, manifest) {
   const output = path.join(projectRoot, ".proped", "campaign");
   fs.mkdirSync(output, { recursive: true });
   fs.writeFileSync(path.join(output, "summary.json"), `${JSON.stringify(result, null, 2)}\n`);
+  fs.writeFileSync(path.join(output, "incidents.txt"), renderWebFindingIncidents(result.findingIncidentProjection));
   if (manifest) fs.writeFileSync(path.join(output, "inferred-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   return {
     directory: output,
     summary: path.join(output, "summary.json"),
+    incidents: path.join(output, "incidents.txt"),
     inferredManifest: manifest ? path.join(output, "inferred-manifest.json") : null,
     run: result.runOutput ?? null,
   };
@@ -324,6 +327,9 @@ function baseResult(projectRoot, manifest, inspection) {
     findingQuality: emptyFindingQuality(),
     findings: [],
     actionableFindings: [],
+    findingIncidentProjection: projectWebFindingIncidents([]),
+    findingIncidents: [],
+    actionableFindingIncidents: [],
     runtimeProfile: campaignRuntimeProfile(manifest, inspection),
     stages: [],
     preparation: null,
@@ -745,6 +751,9 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     ? { eligibleFindingGroupCount: findingAnalysis.eligibleFindingGroupCount ?? findings.length, ...(findingAnalysis.metrics ?? {}) }
     : emptyFindingQuality();
   const actionableFindings = findings.filter((finding) => finding?.actionable === true);
+  const findingIncidentProjection = projectWebFindingIncidents(findings);
+  const findingIncidents = findingIncidentProjection.incidents;
+  const actionableFindingIncidents = findingIncidents.filter((incident) => incident.actionable);
   const failedStages = stableStages(report).filter((stage) => stage.required && !COMPLETED_STAGE_STATUSES.has(stage.status));
   const classifiedIntervention = classifyCampaignStageIntervention(failedStages);
   const executionInterventions = executionCompleted
@@ -772,6 +781,9 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     findingQuality,
     findings,
     actionableFindings,
+    findingIncidentProjection,
+    findingIncidents,
+    actionableFindingIncidents,
     runtimeProfile: campaignRuntimeProfile(manifest, inspection),
     viability: classifyCampaignTargetViability({
       autoOnboarded: executionCompleted,

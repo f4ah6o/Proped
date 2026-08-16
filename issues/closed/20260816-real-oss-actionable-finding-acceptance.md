@@ -1,6 +1,6 @@
 # Prove actionable minimal findings on real OSS and human-facing output
 
-Status: open
+Status: closed
 Model: GPT-5.6 Sol
 Created: 2026-08-16
 Updated: 2026-08-16
@@ -170,3 +170,30 @@ This issue is complete when the product claim below is backed by both controlled
 > Give Proped an unknown supported Web project. If generic exploration discovers a deterministic browser-safety defect, Proped can return one stable, privacy-safe incident with a deterministic minimal reproduction, without project-specific executable adapter code.
 
 At that point the parent `project -> actionable minimal finding` milestone can be evaluated for closure rather than remaining an aspirational acceptance definition.
+
+
+## Completion
+
+Implemented on 2026-08-16 from baseline `14c146908a93827fc0d661b8764101cb78ad202f`.
+
+- Added a versioned human-facing incident projection derived directly from the actionable-finding contract; it preserves `findingGroupId`, grouping, safe provenance, occurrence count, deterministic minimal replay, before/after action counts, minimality, replay/determinism status, and explicit non-actionable reasons.
+- `proped web campaign` keeps JSON as the default and adds `--format human`; normal campaign artifacts now include `.proped/campaign/incidents.txt` alongside `summary.json`.
+- Promoted the controlled actionable-finding fixtures into an explicit CI gate covering same/different finding grouping, same-finding replay, shrinking, one-minimality, weak provenance, budget exhaustion, flakiness, privacy redaction, and repeated fresh execution.
+- Added pinned real OSS acceptance for `yarnpkg/berry@57081c05a398f25c92df1dc78752f2053576cec0`, project `packages/docusaurus`, through the ordinary `proped web campaign` path and Generic Browser.
+- The pinned real finding `finding@250bb43b5436` (`unhandled_exception`) reproduced across two fresh campaigns with the same representative replay, `minimality=one-minimal`, project-owned privacy-safe provenance, `adapterLoc=0`, and clean checkout restoration.
+- Production-contract CI runs the pinned real OSS acceptance in the promoted-production shard that contains `yarn-berry-docusaurus`; the recurring OSS campaign summary now publishes finding-quality KPI and gained/lost actionable-finding deltas without turning broad-corpus observations into new hard thresholds.
+- Canonical failure-class identities and exploration/replay bounds were not changed. No project/framework-specific executable adapter or grouping rule was added.
+
+Verification:
+
+- `node scripts/test_web_exploration_replay_gate.mjs`: passed.
+- `node scripts/test_web_finding_incident.mjs`: passed.
+- `node scripts/test_web_project_campaign.mjs`: passed.
+- `node scripts/test_web_project_benchmark.mjs`: passed.
+- `node scripts/test_web_project_baseline.mjs`: passed.
+- `node scripts/test_web_failure_classifier.mjs`: passed.
+- `node scripts/test_production_contract_delegation.mjs`: passed.
+- `node scripts/test_production_contract_sharding.mjs`: passed.
+- `node scripts/test_github_actions_workflow.mjs`: passed.
+- `node scripts/test_proped_web_cli.mjs`: passed.
+- Local pinned real OSS acceptance with the existing verified checkout: passed twice fresh, `finding@250bb43b5436`, occurrence count 7, one-action one-minimal replay, privacy-safe output, and checkout cleanup clean.

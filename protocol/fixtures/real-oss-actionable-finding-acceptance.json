@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "corpus": "promoted-production",
+  "targetId": "yarn-berry-docusaurus",
+  "repository": "yarnpkg/berry",
+  "revision": "57081c05a398f25c92df1dc78752f2053576cec0",
+  "project": "packages/docusaurus",
+  "expectedFindingGroupId": "finding@250bb43b5436",
+  "expectedFailureCode": "unhandled_exception",
+  "expectedMinimality": "one-minimal",
+  "maxShrinkBudget": 32,
+  "adapterLoc": 0
+}

@@ -147,6 +147,8 @@ jobs:
           const shortSha = (value) => typeof value === "string" ? value.slice(0, 12) : "n/a";
           const diff = summary.qualityGate?.diff ?? null;
           const frontier = summary.frontierScore ?? null;
+          const finding = summary.findingQuality ?? {};
+          const findingDelta = summary.findingQualityRegression ?? null;
 
           const metadata = {
             schemaVersion: 1,
@@ -169,6 +171,13 @@ jobs:
             `| Intervention projects | ${summary.interventionProjectCount}/${summary.projectCount} |`,
             `| Deterministic replay | ${summary.deterministicReplayProjectCount}/${summary.replayObservedProjectCount} (${percent(summary.deterministicReplayRate)}) |`,
             `| Project-specific adapter LOC | ${summary.projectSpecificAdapterLoc} |`,
+            `| Deterministic finding groups | ${finding.deterministicFindingGroups ?? 0} |`,
+            `| Replayable finding groups | ${finding.replayableFindingGroups ?? 0} |`,
+            `| Actionable finding groups | ${finding.actionableFindingGroups ?? 0} (${percent(finding.actionableFindingRate)}) |`,
+            `| One-minimal finding groups | ${finding.oneMinimalFindingGroups ?? 0} (${percent(finding.oneMinimalRateAmongReplayable)}) |`,
+            `| Strong / singleton findings | ${finding.strongFindingGroups ?? 0} / ${finding.singletonFindingGroups ?? 0} |`,
+            `| Representative actions | ${finding.representativeActionsBefore ?? 0} -> ${finding.representativeActionsAfter ?? 0} |`,
+            `| Provenance rejections | ${Object.entries(finding.privacyProvenanceRejections ?? {}).map(([reason, count]) => `${reason}:${count}`).join(", ") || "none"} |`,
             `| States explored | ${summary.metrics?.states ?? 0} |`,
             `| Transitions explored | ${summary.metrics?.transitions ?? 0} |`,
             `| Actions explored | ${summary.metrics?.actions ?? 0} |`,
@@ -182,15 +191,19 @@ jobs:
             );
           }
 
-          if (diff) {
+          if (diff || findingDelta) {
             lines.push(
               "",
               "### Delta from previous campaign",
               "",
-              `- Absorbed: ${diff.improved?.length ? diff.improved.map((id) => `\`${id}\``).join(", ") : "none"}`,
-              `- Regressed: ${diff.regressed?.length ? diff.regressed.map((id) => `\`${id}\``).join(", ") : "none"}`,
-              `- Added: ${diff.added?.length ? diff.added.map((id) => `\`${id}\``).join(", ") : "none"}`,
-              `- Removed: ${diff.removed?.length ? diff.removed.map((id) => `\`${id}\``).join(", ") : "none"}`,
+              `- Absorbed: ${diff?.improved?.length ? diff.improved.map((id) => `\`${id}\``).join(", ") : "none"}`,
+              `- Regressed: ${diff?.regressed?.length ? diff.regressed.map((id) => `\`${id}\``).join(", ") : "none"}`,
+              `- Added: ${diff?.added?.length ? diff.added.map((id) => `\`${id}\``).join(", ") : "none"}`,
+              `- Removed: ${diff?.removed?.length ? diff.removed.map((id) => `\`${id}\``).join(", ") : "none"}`,
+              `- Actionable finding rate delta: ${typeof findingDelta?.actionableFindingRateDelta === "number" ? findingDelta.actionableFindingRateDelta.toFixed(4) : "n/a"}`,
+              `- One-minimal rate delta: ${typeof findingDelta?.oneMinimalRateDelta === "number" ? findingDelta.oneMinimalRateDelta.toFixed(4) : "n/a"}`,
+              `- Actionable findings gained: ${findingDelta?.gainedActionableFindingGroupIds?.length ? findingDelta.gainedActionableFindingGroupIds.map((id) => `\`${id}\``).join(", ") : "none"}`,
+              `- Actionable findings lost: ${findingDelta?.lostActionableFindingGroupIds?.length ? findingDelta.lostActionableFindingGroupIds.map((id) => `\`${id}\``).join(", ") : "none"}`,
             );
           }
 

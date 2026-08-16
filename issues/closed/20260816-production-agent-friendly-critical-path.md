@@ -36,3 +36,18 @@ Coverage-guided exploration reconstructs a selected frontier source by resetting
 - production aggregate gate and promoted baseline remain green
 - no reduction in exploration bounds, replay attempts, property packs, states, transitions, or target coverage
 - measurable reduction in `agent-friendly-code` wall time
+
+## Completion / supersession evidence
+
+Status: closed / superseded
+
+The agent-friendly campaign optimization landed before the current production measurement:
+
+- `014fa08` reused the live exploration frontier state.
+- `9ea5170` verified the live frontier fingerprint before reuse.
+- `2ab40f4` reused the live frontier action inventory.
+- `9063720` / `b822f04` hardened the reuse path against live-frontier drift.
+
+The current `Production contracts` critical path has since shifted. The observed workflow is about 26m48s; the Yarn Berry production shard is about 8m29s, followed by about 16m41s in the real-OSS actionable-finding acceptance. Therefore the premise that `frontier-agent-friendly-code` is the dominant production bottleneck is no longer current.
+
+Further optimization is tracked by `issues/open/20260816-production-runtime-actionable-acceptance-critical-path.md`.

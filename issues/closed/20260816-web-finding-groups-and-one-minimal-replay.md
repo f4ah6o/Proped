@@ -1,6 +1,6 @@
 # Consolidate deterministic Web findings and produce 1-minimal replays
 
-Status: open
+Status: closed
 Model: GPT-5.6 Sol
 Created: 2026-08-16
 Updated: 2026-08-16
@@ -191,3 +191,17 @@ Pin at least these cases:
 ## Follow-up
 
 After the identity/replay/minimality contract is stable, add likely-cause explanation, severity calibration, source ownership projection, and optional LLM summaries as annotations on `findingGroupId`. These annotations must never decide stable identity or quality-gate outcomes.
+
+## Completion evidence
+
+Completed on `main` and frozen at the finding-contract boundary. No further feature work belongs in this issue.
+
+- `1245edb` introduced conservative versioned `findingGroupId` identity without changing canonical failure-class identity.
+- `7fba422` changed exploration replay qualification from same-code to same-finding identity.
+- `2648855` / `0f7ed37` require explicit project-owned, privacy-safe provenance before strong grouping.
+- `26a854b` / `f15b34b` implemented bounded deletion shrinking and pinned `one-minimal` behavior.
+- `7d7c1bb` / `4c343aa` made representative selection deterministic and regression-tested.
+- `c5fd814` carried finding analysis and KPI through the normal Generic Browser campaign path.
+- The promoted-production Yarn Berry target reproduces the expected strong finding `finding@250bb43b5436`, with same-finding replay, deterministic one-minimal replay, privacy-safe provenance, and adapter LOC = 0.
+
+Acceptance is satisfied for identity, same-finding replay, privacy, one-minimal proof, KPI projection, backward-compatible canonical failure classes, and zero project-specific executable adapter LOC.

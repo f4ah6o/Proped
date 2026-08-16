@@ -4,12 +4,28 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { performance } from "node:perf_hooks";
 import { resolveWebProjectCorpus, validateWebProjectCorpus, corpusProjectPaths } from "../protocol/web-project-corpus.mjs";
 import { captureMaterializedWebProjectCorpusState, restoreMaterializedWebProjectCorpus, verifyMaterializedWebProjectCorpus } from "../protocol/web-project-corpus-materialize.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PROPED = path.join(ROOT, "scripts", "proped.mjs");
 const ACCEPTANCE_FILE = path.join(ROOT, "protocol", "fixtures", "real-oss-actionable-finding-acceptance.json");
+const acceptanceStartedAt = performance.now();
+const phaseTimings = [];
+
+function roundMs(value) {
+  return Math.round(value * 1000) / 1000;
+}
+
+function measurePhase(phase, operation) {
+  const startedAt = performance.now();
+  try {
+    return operation();
+  } finally {
+    phaseTimings.push({ phase, durationMs: roundMs(performance.now() - startedAt) });
+  }
+}
 
 function usage(message) {
   if (message) console.error(JSON.stringify({ ok: false, error: "invalid_arguments", message }));
@@ -59,7 +75,7 @@ const corpus = validateWebProjectCorpus({
   },
   targets: [target],
 });
-const verification = verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot });
+const verification = measurePhase("initial-checkout-verification", () => verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot }));
 assert.equal(verification.ok, true, JSON.stringify(verification));
 const project = corpusProjectPaths(corpus, { checkoutRoot })[0];
 
@@ -85,7 +101,8 @@ function assertPrivateSafe(value, projectRoot) {
   assert.equal(serialized.includes(projectRoot), false, "absolute project path must not appear in finding incident output");
 }
 
-function runCampaign() {
+function runCampaign(campaign) {
+  const startedAt = performance.now();
   const args = [PROPED, "web", "campaign", project, "--sandbox-mode", sandboxMode, "--prepare-timeout-ms", String(prepareTimeoutMs)];
   if (offline) args.push("--offline");
   const child = spawnSync(process.execPath, args, {
@@ -115,34 +132,50 @@ function runCampaign() {
   assertPrivateSafe(finding, project);
   assertPrivateSafe(incident, project);
   assertPrivateSafe(human, project);
-  return { result, finding, incident, human };
+  const totalMs = roundMs(performance.now() - startedAt);
+  const stageTimings = (result.stages ?? []).map((stage) => ({
+    id: stage.id,
+    kind: stage.kind,
+    durationMs: typeof stage.durationMs === "number" ? stage.durationMs : null,
+  }));
+  const measuredStageMs = roundMs(stageTimings.reduce((total, stage) => total + (stage.durationMs ?? 0), 0));
+  const timing = {
+    campaign,
+    totalMs,
+    measuredStageMs,
+    outsideMeasuredStagesMs: roundMs(Math.max(0, totalMs - measuredStageMs)),
+    campaignPhases: result.timing?.phases ?? [],
+    stages: stageTimings,
+  };
+  phaseTimings.push({ phase: campaign, durationMs: totalMs });
+  return { result, finding, incident, human, timing };
 }
 
-const baselineState = captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot });
+const baselineState = measurePhase("capture-first-baseline", () => captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot }));
 let first;
 let second;
 let firstCleanup;
 let secondCleanup;
 try {
-  first = runCampaign();
+  first = runCampaign("first-fresh-campaign");
 } finally {
-  firstCleanup = restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot, baselineState });
+  firstCleanup = measurePhase("first-checkout-cleanup", () => restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot, baselineState }));
 }
 assert.equal(firstCleanup.ok, true, JSON.stringify(firstCleanup));
-const freshVerification = verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot });
+const freshVerification = measurePhase("fresh-boundary-verification", () => verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot }));
 assert.equal(freshVerification.ok, true, JSON.stringify(freshVerification));
-const secondBaselineState = captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot });
+const secondBaselineState = measurePhase("capture-second-baseline", () => captureMaterializedWebProjectCorpusState(corpus, { checkoutRoot }));
 try {
-  second = runCampaign();
+  second = runCampaign("second-fresh-campaign");
 } finally {
-  secondCleanup = restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot, baselineState: secondBaselineState });
+  secondCleanup = measurePhase("second-checkout-cleanup", () => restoreMaterializedWebProjectCorpus(corpus, { checkoutRoot, baselineState: secondBaselineState }));
 }
 assert.equal(secondCleanup.ok, true, JSON.stringify(secondCleanup));
 assert.equal(second.finding.findingGroupId, first.finding.findingGroupId);
 assert.deepEqual(second.finding.representativeReplay.trace, first.finding.representativeReplay.trace);
 assert.deepEqual(second.incident.minimalReplay.actions, first.incident.minimalReplay.actions);
 assert.equal(second.finding.representativeReplay.minimality, "one-minimal");
-const finalVerification = verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot });
+const finalVerification = measurePhase("final-checkout-verification", () => verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot }));
 assert.equal(finalVerification.ok, true, JSON.stringify(finalVerification));
 
 console.log(JSON.stringify({
@@ -161,4 +194,9 @@ console.log(JSON.stringify({
   repeatStable: true,
   privacySafe: true,
   checkoutCleanup: firstCleanup.ok && secondCleanup.ok,
+  timing: {
+    totalMs: roundMs(performance.now() - acceptanceStartedAt),
+    phases: phaseTimings,
+    campaigns: [first.timing, second.timing],
+  },
 }));

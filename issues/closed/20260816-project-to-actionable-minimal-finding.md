@@ -1,6 +1,6 @@
 # Make project-to-actionable-minimal-finding the end-to-end quality milestone
 
-Status: open
+Status: closed
 Model: GPT-5.6 Sol
 Created: 2026-08-16
 Updated: 2026-08-16
@@ -206,3 +206,14 @@ This issue is complete when Proped can make a defensible end-to-end claim of the
 > Give Proped an unknown supported Web project. If generic exploration discovers a deterministic defect, Proped can return a stable, privacy-safe finding with a deterministic minimal reproduction, without project-specific executable adapter code.
 
 That claim must be backed by required controlled acceptance evidence plus recurring pinned real-project observation, not by documentation alone.
+
+## Completion evidence
+
+Completed on `main`. The project-to-actionable-minimal-finding product milestone is now covered end to end; further work should optimize production runtime rather than expand this finding contract.
+
+- `c5fd814` added machine-readable actionable qualification, campaign projection, controlled end-to-end fixtures, finding KPI, and deterministic one-minimal replay through the ordinary `proped web campaign` path.
+- `5e0b93b` added the pinned real-OSS acceptance target, privacy-safe human incident output, production/scheduled integration, checkout cleanup checks, and two-fresh-campaign stability checks.
+- `ca9ab09` fixed the CI browser-path wiring for that real-OSS acceptance.
+- Current production validation passes the Yarn Berry / Docusaurus real-OSS path with two fresh campaigns producing the same `findingGroupId`, the same one-minimal replay, successful checkout cleanup, privacy-safe machine/human output, and project-specific adapter LOC = 0.
+
+The exit claim in this issue is therefore backed by both controlled acceptance and pinned real-OSS production validation.

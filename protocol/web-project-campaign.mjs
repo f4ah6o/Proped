@@ -203,6 +203,7 @@ function stableStages(report) {
       required: stage.required,
       status: stage.status,
       exitCode: stage.exitCode,
+      durationMs: typeof stage.durationMs === "number" ? stage.durationMs : null,
       diagnostic: payloadDiagnostic ?? stderrDiagnostic,
       failureClasses: stageFailureClasses(stage),
       ...(stage.bootstrapNetworkRetry ? { bootstrapNetworkRetry: stage.bootstrapNetworkRetry } : {}),
@@ -371,7 +372,17 @@ export function resolveCampaignSandboxMode(requestedMode, manifestMode, platform
   return manifestMode;
 }
 
+function campaignDurationMs(startedAt) {
+  return Math.round((performance.now() - startedAt) * 1000) / 1000;
+}
+
+function recordCampaignPhase(timings, phase, startedAt) {
+  timings.push({ phase, durationMs: campaignDurationMs(startedAt) });
+}
+
 export function runUnknownWebProjectCampaign(projectPath, options = {}) {
+  const campaignStartedAt = performance.now();
+  const campaignPhaseTimings = [];
   const writeArtifacts = options.writeArtifacts !== false;
   const autoPrepare = options.prepare !== false;
   const offline = options.offline === true;
@@ -394,10 +405,12 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
 
   let inspection;
   let manifest;
+  const inspectionStartedAt = performance.now();
   try {
     inspection = inspectWebProject(projectRoot);
     manifest = createWebProjectManifestV2FromInspection(inspection, { projectRoot: "." });
     manifest.artifacts.output = ".proped/campaign/run";
+    recordCampaignPhase(campaignPhaseTimings, "inspect-and-infer", inspectionStartedAt);
   } catch (error) {
     return interventionResult(
       projectRoot,
@@ -451,6 +464,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     );
   }
 
+  const runtimeResolutionStartedAt = performance.now();
   let nodeRuntime = resolveNodeRuntime(manifest.project.nodeRequirement ?? null, {
     preferredVersion: manifest.project.nodePreferredVersion ?? null,
     environment: options.sourceEnvironment ?? process.env,
@@ -475,6 +489,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
   const needsPackageRuntimePreparation = packageManagerRuntime.status === "prepare-required";
   const needsDependencyPreparation = readiness.ready === false;
   const needsPreparation = needsPackageRuntimePreparation || needsDependencyPreparation;
+  recordCampaignPhase(campaignPhaseTimings, "runtime-and-readiness", runtimeResolutionStartedAt);
 
   if (packageRuntimeRequired(manifest) && packageManagerRuntime.status === "unavailable") {
     return interventionResult(
@@ -507,6 +522,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
   }
 
   if (needsPreparation) {
+    const dependencyPreparationStartedAt = performance.now();
     let prepareEnvironment = applyNodeRuntimeToEnvironment(options.sourceEnvironment ?? process.env, nodeRuntime);
     prepareEnvironment = applyPackageManagerRuntimeEnvironment(manifest, prepareEnvironment, { allowNetwork: !offline });
     preparation = prepareWebProject(projectRoot, manifest, {
@@ -580,6 +596,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     runEnvironment = applyPackageManagerRuntimeEnvironment(manifest, runEnvironment, { allowNetwork: false });
     packageManagerRuntime = probePackageManagerRuntime(projectRoot, manifest, runEnvironment);
     readiness = webProjectDependencyReadiness(projectRoot, manifest, { forRun: true });
+    recordCampaignPhase(campaignPhaseTimings, "dependency-preparation", dependencyPreparationStartedAt);
   }
 
   if (packageRuntimeRequired(manifest) && packageManagerRuntime.status !== "ready") {
@@ -613,6 +630,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
 
   let workspacePrebuild = null;
   let workspacePreparation = null;
+  const workspacePreparationStartedAt = performance.now();
   try {
     const explicitWorkspaceRoot = options.workspaceRoot ?? null;
     const workspaceRoot = explicitWorkspaceRoot ?? inspection.target.gitRoot ?? null;
@@ -661,8 +679,10 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
       );
     }
   }
+  recordCampaignPhase(campaignPhaseTimings, "workspace-preparation", workspacePreparationStartedAt);
 
   let compiled;
+  const compileStartedAt = performance.now();
   try {
     compiled = compileWebProjectManifestV2(manifest, projectRoot);
   } catch (error) {
@@ -676,9 +696,11 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     );
   }
 
+  recordCampaignPhase(campaignPhaseTimings, "manifest-compile", compileStartedAt);
   const requestedSandboxMode = resolveCampaignSandboxMode(sandboxMode, compiled.execution.sandboxMode);
   const sandboxExecution = campaignSandboxExecutionScope(projectRoot, inspection, manifest, compiled);
   let sandboxWorkspacePreparation = null;
+  const sandboxPreparationStartedAt = performance.now();
   if (requestedSandboxMode !== "caller-enforced" && sandboxExecution.moonWorkspaceRoot) {
     if (!autoPrepare) {
       return interventionResult(
@@ -711,7 +733,9 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
       );
     }
   }
+  recordCampaignPhase(campaignPhaseTimings, "sandbox-preparation", sandboxPreparationStartedAt);
   let report;
+  const projectRunStartedAt = performance.now();
   try {
     report = runWebProject(projectRoot, compiled.manifest, {
       writeArtifacts,
@@ -725,6 +749,7 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
           },
       sourceEnvironment: runEnvironment,
     });
+    recordCampaignPhase(campaignPhaseTimings, "project-run", projectRunStartedAt);
   } catch (error) {
     return interventionResult(
       projectRoot,
@@ -799,6 +824,10 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     packageManagerRuntime,
     runOutput: report.output,
     sandboxRequested: requestedSandboxMode,
+    timing: {
+      totalMs: campaignDurationMs(campaignStartedAt),
+      phases: campaignPhaseTimings,
+    },
     semanticHash: report.semanticHash,
   };
   return finalize(projectRoot, manifest, result, writeArtifacts);

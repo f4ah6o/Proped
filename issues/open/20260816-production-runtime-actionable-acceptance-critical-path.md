@@ -111,6 +111,51 @@ Do not implement this reuse until phase timing confirms that the duplicate full 
 - retain a test proving two genuinely fresh campaigns are represented by shard campaign #1 plus acceptance campaign #2;
 - retain adapter LOC = 0.
 
+## Implemented P0: parallel independent fresh campaigns
+
+The safe first optimization is parallelism rather than treating the existing shard summary as acceptance evidence. The current shard summary remains intentionally insufficient to replace a fresh campaign.
+
+`Production contracts` now runs the two required real-OSS campaigns as two independent jobs (`fresh-a` and `fresh-b`) after the plan job and in parallel with the ordinary production shards. Each acceptance campaign has its own fresh runner and pinned Yarn Berry checkout, and independently performs:
+
+1. exact pinned checkout materialization;
+2. initial checkout verification;
+3. baseline capture;
+4. the ordinary `proped web campaign` CLI under strict sandbox;
+5. machine-readable finding and artifact finding agreement;
+6. human incident rendering validation;
+7. privacy checks;
+8. checkout restore;
+9. final checkout verification.
+
+Each job uploads acceptance-grade evidence. A separate comparison job rejects evidence unless both campaigns are bound to the current corpus semantic hash, exact repository/revision/project, adapter LOC 0, strict sandbox, campaign schema version, runner version, deterministic same-finding replay, one-minimal replay, privacy-safe incident output, and successful cleanup. It then requires distinct campaign IDs, the same `findingGroupId`, the same representative replay, and the same incident replay actions.
+
+This preserves the two-fresh-campaign contract while removing the previous serial dependency:
+
+`production shard -> fresh campaign #1 -> fresh campaign #2`
+
+and replacing it with:
+
+`production shards || fresh-a || fresh-b -> compare -> aggregate`
+
+The production shard matrix is capped at 10 concurrent shard runners so the two acceptance runners and ordinary CI partitions are less likely to be starved by hosted-runner slot contention.
+
+The expected critical path is therefore approximately one full Yarn acceptance campaign plus setup/materialization and the lightweight comparison/aggregate tail, rather than two full campaigns after the ~8m29s production shard. The target remains approximately 15 minutes or less and must be confirmed by the first hosted Production contracts run.
+
+### Regression coverage
+
+The new acceptance contract test rejects:
+
+- wrong repository/revision/project identity;
+- stale or mismatched corpus semantic hash;
+- wrong sandbox/runtime contract;
+- duplicate campaign identity;
+- cleanup failure;
+- wrong finding identity;
+- non-one-minimal evidence;
+- privacy leakage in human incident evidence.
+
+The previous sequential CLI mode remains available locally as a reference path; CI uses two single-campaign evidence runs plus deterministic comparison.
+
 ## Acceptance
 
 - production timing output identifies where the 16m41s acceptance time is spent without changing semantic hashes;

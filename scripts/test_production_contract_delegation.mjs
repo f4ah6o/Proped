@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { spawnSync } from "node:child_process";
 
 function run(corpus, env = {}) {
@@ -16,6 +17,19 @@ function run(corpus, env = {}) {
     },
   });
 }
+
+
+const workflow = fs.readFileSync(".github/workflows/production-contracts.yml", "utf8");
+assert.doesNotMatch(
+  workflow,
+  /PLAYWRIGHT_BROWSERS_PATH:\s*\$HOME\//,
+  "GitHub Actions env mappings do not shell-expand $HOME",
+);
+assert.match(
+  workflow,
+  /"PLAYWRIGHT_BROWSERS_PATH=\$HOME\/\.cache\/ms-playwright"/,
+  "real OSS acceptance must shell-expand the managed browser path",
+);
 
 const legacyCiJob = {
   GITHUB_ACTIONS: "true",

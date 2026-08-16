@@ -125,13 +125,15 @@ jobs:
 
       - name: Accept pinned real OSS actionable finding
         if: ${{ matrix.corpus == 'promoted-production' && contains(matrix.targets, 'yarn-berry-docusaurus') }}
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: $HOME/.cache/ms-playwright
         run: |
-          node scripts/web_real_oss_actionable_finding_acceptance.mjs \
-            --checkout-root "${{ matrix.checkout_root }}" \
-            --sandbox-mode strict \
-            --prepare-timeout-ms 300000
+          env \
+            "PROPED_NODE_RUNTIME_PATHS=$PROPED_NODE_RUNTIME_PATHS" \
+            "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" \
+            "MOON_HOME=$HOME/.moon" \
+            node scripts/web_real_oss_actionable_finding_acceptance.mjs \
+              --checkout-root "${{ matrix.checkout_root }}" \
+              --sandbox-mode strict \
+              --prepare-timeout-ms 300000
 
       - name: Upload shard evidence
         uses: actions/upload-artifact@v4

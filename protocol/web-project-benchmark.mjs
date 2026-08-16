@@ -12,6 +12,23 @@ function unique(values) {
   return [...new Set(values.filter((value) => typeof value === "string" && value.length > 0))].sort();
 }
 
+function emptyFindingQuality() {
+  return {
+    eligibleFindingGroupCount: 0,
+    deterministicFindingGroups: 0,
+    replayableFindingGroups: 0,
+    actionableFindingGroups: 0,
+    actionableFindingRate: null,
+    oneMinimalFindingGroups: 0,
+    oneMinimalRateAmongReplayable: null,
+    strongFindingGroups: 0,
+    singletonFindingGroups: 0,
+    representativeActionsBefore: 0,
+    representativeActionsAfter: 0,
+    privacyProvenanceRejections: {},
+  };
+}
+
 function stableProjectResult(result, index) {
   const entry = result.benchmarkEntry ?? null;
   const failureDiagnostics = (result.stages ?? [])
@@ -32,6 +49,10 @@ function stableProjectResult(result, index) {
     interventionReasonCodes: unique((result.interventionReasons ?? []).map((reason) => reason?.code)),
     failureClasses: unique(result.failureClasses ?? []),
     deterministicReplay: result.deterministicReplay,
+    findingQuality: { ...emptyFindingQuality(), ...(result.findingQuality ?? {}) },
+    findingGroupIds: unique(result.findingGroupIds ?? (result.findings ?? []).map((finding) => finding?.findingGroupId)),
+    actionableFindingGroupIds: unique(result.actionableFindingGroupIds ?? (result.actionableFindings ?? result.findings?.filter((finding) => finding?.actionable === true) ?? []).map((finding) => finding?.findingGroupId)),
+    oneMinimalFindingGroupIds: unique(result.oneMinimalFindingGroupIds ?? (result.findings ?? []).filter((finding) => finding?.representativeReplay?.minimality === "one-minimal").map((finding) => finding?.findingGroupId)),
     viability: result.viability ?? (result.autoOnboarded === true
       ? { status: "qualified", stage: "campaign", reason: "full_campaign_completed" }
       : { status: "unknown", stage: null, reason: "qualification_not_observed" }),
@@ -68,6 +89,34 @@ export function summarizeWebProjectBenchmark(campaignResults) {
   const replayObservedProjectCount = projects.filter((project) => typeof project.deterministicReplay === "boolean").length;
   const deterministicReplayRate = replayObservedProjectCount > 0 ? deterministicReplayProjectCount / replayObservedProjectCount : null;
   const projectSpecificAdapterLoc = projects.reduce((total, project) => total + (project.adapterLoc ?? 0), 0);
+  const findingTotals = projects.reduce((total, project) => {
+    const quality = project.findingQuality ?? emptyFindingQuality();
+    for (const key of [
+      "eligibleFindingGroupCount", "deterministicFindingGroups", "replayableFindingGroups", "actionableFindingGroups",
+      "oneMinimalFindingGroups", "strongFindingGroups", "singletonFindingGroups", "representativeActionsBefore", "representativeActionsAfter",
+    ]) total[key] += quality[key] ?? 0;
+    for (const [reason, count] of Object.entries(quality.privacyProvenanceRejections ?? {})) {
+      total.privacyProvenanceRejections[reason] = (total.privacyProvenanceRejections[reason] ?? 0) + count;
+    }
+    return total;
+  }, {
+    eligibleFindingGroupCount: 0, deterministicFindingGroups: 0, replayableFindingGroups: 0, actionableFindingGroups: 0,
+    oneMinimalFindingGroups: 0, strongFindingGroups: 0, singletonFindingGroups: 0, representativeActionsBefore: 0, representativeActionsAfter: 0,
+    privacyProvenanceRejections: {},
+  });
+  const findingQuality = {
+    ...findingTotals,
+    actionableFindingRate: findingTotals.deterministicFindingGroups > 0
+      ? findingTotals.actionableFindingGroups / findingTotals.deterministicFindingGroups
+      : null,
+    oneMinimalRateAmongReplayable: findingTotals.replayableFindingGroups > 0
+      ? findingTotals.oneMinimalFindingGroups / findingTotals.replayableFindingGroups
+      : null,
+    findingGroupIds: unique(projects.flatMap((project) => project.findingGroupIds ?? [])),
+    actionableFindingGroupIds: unique(projects.flatMap((project) => project.actionableFindingGroupIds ?? [])),
+    oneMinimalFindingGroupIds: unique(projects.flatMap((project) => project.oneMinimalFindingGroupIds ?? [])),
+    privacyProvenanceRejections: Object.fromEntries(Object.entries(findingTotals.privacyProvenanceRejections).sort(([left], [right]) => left.localeCompare(right))),
+  };
   const interventionReasonDistribution = distribution(projects.flatMap((project) => project.interventionReasonCodes));
   const viabilityDistribution = distribution(projects.map((project) => project.viability?.status ?? "unknown"));
   const viabilityFailureDistribution = distribution(projects
@@ -100,6 +149,7 @@ export function summarizeWebProjectBenchmark(campaignResults) {
     replayObservedProjectCount,
     deterministicReplayRate,
     projectSpecificAdapterLoc,
+    findingQuality,
     interventionReasonDistribution,
     viabilityDistribution,
     viabilityFailureDistribution,
@@ -194,6 +244,22 @@ function stableCheckoutCleanupEvidence(result) {
   };
 }
 
+function compareFindingQuality(current, previous) {
+  if (!previous) return null;
+  const currentActionable = new Set(current?.actionableFindingGroupIds ?? []);
+  const previousActionable = new Set(previous?.actionableFindingGroupIds ?? []);
+  return {
+    actionableFindingRateDelta: typeof current?.actionableFindingRate === "number" && typeof previous?.actionableFindingRate === "number"
+      ? current.actionableFindingRate - previous.actionableFindingRate
+      : null,
+    oneMinimalRateDelta: typeof current?.oneMinimalRateAmongReplayable === "number" && typeof previous?.oneMinimalRateAmongReplayable === "number"
+      ? current.oneMinimalRateAmongReplayable - previous.oneMinimalRateAmongReplayable
+      : null,
+    lostActionableFindingGroupIds: [...previousActionable].filter((id) => !currentActionable.has(id)).sort(),
+    gainedActionableFindingGroupIds: [...currentActionable].filter((id) => !previousActionable.has(id)).sort(),
+  };
+}
+
 export function runWebProjectCorpusBenchmark(corpus, options = {}) {
   const materialization = corpusHasExternalTargets(corpus)
     ? verifyMaterializedWebProjectCorpus(corpus, { checkoutRoot: options.checkoutRoot })
@@ -238,6 +304,7 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
   }
   const previous = readPreviousSummary(options.previous);
   const qualityGate = evaluateWebProjectBenchmarkGate(base, corpus, previous);
+  const findingQualityRegression = compareFindingQuality(base.findingQuality, previous?.findingQuality ?? null);
   const baseline = options.baseline ? loadWebProjectBenchmarkBaseline(options.baseline) : null;
   const baselineGate = baseline ? evaluateWebProjectBenchmarkBaselineGate(baseline, { ...base, corpus: { id: corpus.id, semanticHash: corpus.semanticHash } }, { maxRegressions: corpus.gate.maxRegressions }) : null;
   const corpusIdentity = {
@@ -284,6 +351,7 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
     corpus: corpusIdentity,
     qualityGate,
     baselineGate,
+    ...(findingQualityRegression ? { findingQualityRegression } : {}),
     ...(frontierScore ? { frontierScore } : {}),
     ...(materialization ? { materialization, checkoutCleanup } : {}),
   };
@@ -294,6 +362,7 @@ export function runWebProjectCorpusBenchmark(corpus, options = {}) {
       corpus: corpusIdentity,
       qualityGate,
       baselineGate,
+      ...(findingQualityRegression ? { findingQualityRegression } : {}),
       ...(frontierScore ? { frontierScore } : {}),
       ...(materialization ? {
         materialization: stableMaterializationEvidence(materialization),

@@ -11,6 +11,7 @@ const TMP = path.join(ROOT, ".tmp/web-project-campaign-test");
 const PROJECT = path.join(TMP, "unknown-static-app");
 const SINGLE_HTML_PROJECT = path.join(TMP, "single-html-static-app");
 const MULTI_HTML_PROJECT = path.join(TMP, "multi-html-static-app");
+const ACTIONABLE_PROJECT = path.join(TMP, "actionable-finding-static-app");
 const CLI = path.join(ROOT, "scripts/proped.mjs");
 
 function writeProject() {
@@ -144,6 +145,42 @@ exit 0
   assert.equal(multiHtml.autoOnboarded, false);
   assert.equal(multiHtml.interventionReasons[0].code, "server_review_required");
 
+  fs.mkdirSync(ACTIONABLE_PROJECT, { recursive: true });
+  fs.writeFileSync(path.join(ACTIONABLE_PROJECT, "index.html"), "<!doctype html><main><button>Crash</button><script src=\"./app.js\"></script></main>\n");
+  fs.writeFileSync(path.join(ACTIONABLE_PROJECT, "app.js"), "document.querySelector(\"button\").addEventListener(\"click\", function crashButton() { throw new TypeError(\"controlled defect token=secret-123 item 98765\"); });\n");
+  const actionable = runUnknownWebProjectCampaign(ACTIONABLE_PROJECT, {
+    prepare: false,
+    writeArtifacts: false,
+    sandboxMode: "caller-enforced",
+  });
+  assert.equal(actionable.ok, true, JSON.stringify(actionable));
+  assert.equal(actionable.qualityPassed, false);
+  assert.equal(actionable.findingQuality.eligibleFindingGroupCount >= 1, true, JSON.stringify(actionable.findingQuality));
+  assert.equal(actionable.findingQuality.actionableFindingGroups >= 1, true, JSON.stringify(actionable.findingQuality));
+  const actionableFinding = actionable.actionableFindings.find((finding) => finding.memberFailureCodes.includes("unhandled_exception"));
+  assert.ok(actionableFinding, JSON.stringify(actionable.findings));
+  assert.equal(actionableFinding.grouping, "strong");
+  assert.equal(actionableFinding.representativeReplay.minimality, "one-minimal");
+  assert.equal(actionableFinding.representativeReplay.minimizedActionCount, 1);
+  assert.deepEqual(actionableFinding.provenance.topProjectFrame.sourcePath, "app.js");
+  assert.doesNotMatch(JSON.stringify(actionableFinding), /secret-123|127\.0\.0\.1:\d+/);
+  assert.match(actionableFinding.provenance.messageTemplate, /token=<redacted>/);
+  const actionableFresh = runUnknownWebProjectCampaign(ACTIONABLE_PROJECT, {
+    prepare: false,
+    writeArtifacts: true,
+    sandboxMode: "caller-enforced",
+  });
+  const actionableFreshFinding = actionableFresh.actionableFindings.find((finding) => finding.memberFailureCodes.includes("unhandled_exception"));
+  assert.ok(actionableFreshFinding, JSON.stringify(actionableFresh.findings));
+  assert.equal(actionableFreshFinding.findingGroupId, actionableFinding.findingGroupId);
+  assert.deepEqual(actionableFreshFinding.representativeReplay.trace, actionableFinding.representativeReplay.trace);
+  assert.equal(actionableFreshFinding.representativeReplay.minimality, "one-minimal");
+  const actionableArtifact = JSON.parse(fs.readFileSync(actionableFresh.artifacts.summary, "utf8"));
+  const actionableArtifactFinding = actionableArtifact.actionableFindings.find((finding) => finding.findingGroupId === actionableFinding.findingGroupId);
+  assert.ok(actionableArtifactFinding, JSON.stringify(actionableArtifact.actionableFindings));
+  assert.equal(actionableArtifactFinding.representativeReplay.minimality, "one-minimal");
+  assert.doesNotMatch(JSON.stringify(actionableArtifactFinding), /secret-123|127\.0\.0\.1:\d+/);
+
   const result = runUnknownWebProjectCampaign(PROJECT, {
     writeArtifacts: false,
     sandboxMode: "caller-enforced",
@@ -208,6 +245,8 @@ exit 0
     stages: result.stages,
     singleHtmlAutoOnboarded: singleHtml.autoOnboarded,
     multiHtmlFailClosed: multiHtml.interventionReasons[0].code,
+    actionableFindingGroups: actionable.findingQuality.actionableFindingGroups,
+    actionableMinimality: actionableFinding.representativeReplay.minimality,
   }));
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });

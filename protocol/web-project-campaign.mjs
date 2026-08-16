@@ -165,6 +165,31 @@ function campaignExplorationMetrics(report) {
   };
 }
 
+function campaignFindingAnalysis(report) {
+  const analyses = (report?.stages ?? [])
+    .filter((stage) => stage.kind === "browser")
+    .map((stage) => stage?.payload?.findingAnalysis)
+    .filter((analysis) => analysis && typeof analysis === "object" && Array.isArray(analysis.findings));
+  return analyses[0] ?? null;
+}
+
+function emptyFindingQuality() {
+  return {
+    eligibleFindingGroupCount: 0,
+    deterministicFindingGroups: 0,
+    replayableFindingGroups: 0,
+    actionableFindingGroups: 0,
+    actionableFindingRate: null,
+    oneMinimalFindingGroups: 0,
+    oneMinimalRateAmongReplayable: null,
+    strongFindingGroups: 0,
+    singletonFindingGroups: 0,
+    representativeActionsBefore: 0,
+    representativeActionsAfter: 0,
+    privacyProvenanceRejections: {},
+  };
+}
+
 function stableStages(report) {
   return (report?.stages ?? []).map((stage) => {
     const payloadDiagnostic = typeof stage?.payload?.error === "string" ? stage.payload.error : null;
@@ -296,6 +321,9 @@ function baseResult(projectRoot, manifest, inspection) {
     failureClasses: [],
     deterministicReplay: null,
     metrics: { states: 0, transitions: 0, actions: 0 },
+    findingQuality: emptyFindingQuality(),
+    findings: [],
+    actionableFindings: [],
     runtimeProfile: campaignRuntimeProfile(manifest, inspection),
     stages: [],
     preparation: null,
@@ -711,6 +739,12 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
   const failureClasses = campaignFailureClasses(report);
   const replayDeterministic = campaignReplayDeterminism(report);
   const metrics = campaignExplorationMetrics(report);
+  const findingAnalysis = campaignFindingAnalysis(report);
+  const findings = findingAnalysis?.findings ?? [];
+  const findingQuality = findingAnalysis
+    ? { eligibleFindingGroupCount: findingAnalysis.eligibleFindingGroupCount ?? findings.length, ...(findingAnalysis.metrics ?? {}) }
+    : emptyFindingQuality();
+  const actionableFindings = findings.filter((finding) => finding?.actionable === true);
   const failedStages = stableStages(report).filter((stage) => stage.required && !COMPLETED_STAGE_STATUSES.has(stage.status));
   const classifiedIntervention = classifyCampaignStageIntervention(failedStages);
   const executionInterventions = executionCompleted
@@ -735,6 +769,9 @@ export function runUnknownWebProjectCampaign(projectPath, options = {}) {
     failureClasses,
     deterministicReplay: replayDeterministic,
     metrics,
+    findingQuality,
+    findings,
+    actionableFindings,
     runtimeProfile: campaignRuntimeProfile(manifest, inspection),
     viability: classifyCampaignTargetViability({
       autoOnboarded: executionCompleted,

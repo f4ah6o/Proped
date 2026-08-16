@@ -48,6 +48,69 @@ function isNavigationRace(error) {
   return /Execution context was destroyed|most likely because of a navigation|Target page, context or browser has been closed/.test(String(error?.message ?? error));
 }
 
+function safeExceptionMessageTemplate(value) {
+  return String(value ?? "")
+    .replace(/\b(password|passwd|token|secret|authorization|cookie|api[-_]?key)\s*[:=]\s*[^\s,;]+/gi, "$1=<redacted>")
+    .replace(/https?:\/\/[^\s)]+/gi, "<url>")
+    .replace(/(?:[A-Za-z]:\\|\/)(?:[^\s:]+[\\/])+[^\s:]+/g, "<path>")
+    .replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\b/g, "<timestamp>")
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, "<uuid>")
+    .replace(/\b[0-9a-f]{16,}\b/gi, "<token>")
+    .replace(/\b\d+\b/g, "<number>")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 512);
+}
+
+function safeRouteFamily(value) {
+  try {
+    const url = new URL(value, "http://proped.invalid");
+    const pathname = url.pathname
+      .split("/")
+      .map((segment) => /^\d+$/.test(segment) || /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(segment) ? ":id" : segment)
+      .join("/");
+    const keys = [...url.searchParams.keys()].sort();
+    return `${pathname}${keys.length ? `?${keys.map((key) => `${key}=:value`).join("&")}` : ""}${url.hash ? "#<fragment>" : ""}`;
+  } catch {
+    return null;
+  }
+}
+
+function safeProjectFrame(stack, projectOrigin) {
+  for (const line of String(stack ?? "").split(/\r?\n/)) {
+    const match = /(?:at\s+(.*?)\s+\()?((?:https?:\/\/)[^\s)]+?):(\d+):(\d+)\)?$/.exec(line.trim());
+    if (!match) continue;
+    try {
+      const url = new URL(match[2]);
+      if (url.origin !== projectOrigin) continue;
+      const rawPath = decodeURIComponent(url.pathname).replace(/^\/+/, "");
+      const sourcePath = rawPath || "<document>";
+      const projectOwned = !sourcePath.startsWith("@vite/") && !sourcePath.includes("node_modules/");
+      return {
+        sourcePath,
+        projectOwned,
+        function: match[1] ? safeExceptionMessageTemplate(match[1]) : null,
+        line: Number(match[3]),
+        column: Number(match[4]),
+      };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function safeExceptionProvenance(error, pageUrl, projectOrigin) {
+  const topProjectFrame = safeProjectFrame(error?.stack, projectOrigin);
+  if (!topProjectFrame) return null;
+  return {
+    name: typeof error?.name === "string" && error.name.length > 0 ? error.name : "Error",
+    messageTemplate: safeExceptionMessageTemplate(error?.message),
+    routeFamily: safeRouteFamily(pageUrl),
+    topProjectFrame,
+  };
+}
+
 export class GenericPlaywrightBrowserDriver {
   constructor({
     url,
@@ -96,6 +159,7 @@ export class GenericPlaywrightBrowserDriver {
     this.restartServerHook = restartServer;
     this.approvedSemanticRuntime = approvedSemanticRuntime;
     this.consoleEntries = [];
+    this.exceptionDiagnostics = [];
     this.routeEntries = [];
     this.targetResolvers = new Map();
     this.pendingRequests = new Set();
@@ -113,6 +177,7 @@ export class GenericPlaywrightBrowserDriver {
     await this.launch();
     this.contextSequence = (this.contextSequence ?? 0) + 1;
     this.consoleEntries = [];
+    this.exceptionDiagnostics = [];
     this.routeEntries = [];
     this.targetResolvers = new Map();
     this.pendingRequests = new Set();
@@ -178,6 +243,8 @@ export class GenericPlaywrightBrowserDriver {
     });
     this.page.on("pageerror", (error) => {
       this.consoleEntries.push({ kind: "uncaught", message: error.message });
+      const diagnostic = safeExceptionProvenance(error, this.page.url(), this.origin);
+      if (diagnostic) this.exceptionDiagnostics.push(diagnostic);
     });
     this.page.on("download", (download) => {
       this.routeEntries.push({
@@ -498,6 +565,7 @@ export class GenericPlaywrightBrowserDriver {
   async execute(action) {
     if (!this.page) throw new Error("generic browser session is not active");
     const before = await this.snapshot();
+    const diagnosticCountBefore = this.exceptionDiagnostics.length;
     const locator = this.locatorForTarget(action.target);
     const count = await locator.count();
     if (count !== 1) throw new Error(`target resolution expected exactly 1 element, found ${count}: ${JSON.stringify(action.target)}`);
@@ -517,10 +585,18 @@ export class GenericPlaywrightBrowserDriver {
     const settle = await this.settleAfterPossibleNavigation();
     this.lastSettle = settle;
     const after = await this.snapshotAfterPossibleNavigation();
+    const newestDiagnostic = this.exceptionDiagnostics.length > diagnosticCountBefore
+      ? this.exceptionDiagnostics[this.exceptionDiagnostics.length - 1]
+      : null;
+    const violations = evaluateWebProperties({ before, action, after }).map((violation) => (
+      violation.code === "unhandled_exception" && newestDiagnostic
+        ? { ...violation, diagnosticProvenance: newestDiagnostic }
+        : violation
+    ));
     return {
       snapshot: after,
       settle,
-      violations: evaluateWebProperties({ before, action, after }),
+      violations,
     };
   }
 

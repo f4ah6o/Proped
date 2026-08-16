@@ -6,6 +6,7 @@ import {
   selectWebFindingRepresentative,
 } from "../protocol/web-finding-group.mjs";
 import { semanticHash } from "../protocol/ui-driver-v1.mjs";
+import { analyzeWebActionableFindings } from "../protocol/web-actionable-finding.mjs";
 import {
   replayWebExplorationFailureCampaign,
   runWebExplorationReplayGate,
@@ -172,6 +173,69 @@ assert.deepEqual(exhaustedShrink.trace, ["crash"]);
 assert.equal(exhaustedShrink.minimality, "budget-exhausted");
 assert.equal(exhaustedShrink.evaluations, 1);
 
+const actionableExploration = { failures: [strongFailure, equivalentFinding], semanticHash: "actionable" };
+const actionableGate = await runWebExplorationReplayGate({
+  driver: new ReplayDriver({ diagnosticProvenance: equivalentProvenance, violationCode: "unhandled_exception" }),
+  exploration: actionableExploration,
+  attempts: 3,
+});
+const actionableAnalysis = await analyzeWebActionableFindings({
+  driver: new ReplayDriver({ diagnosticProvenance: equivalentProvenance, violationCode: "unhandled_exception" }),
+  exploration: actionableExploration,
+  explorationReplayGate: actionableGate,
+  shrinkBudget: 16,
+});
+assert.equal(actionableAnalysis.eligibleFindingGroupCount, 1);
+assert.equal(actionableAnalysis.metrics.deterministicFindingGroups, 1);
+assert.equal(actionableAnalysis.metrics.actionableFindingGroups, 1);
+assert.equal(actionableAnalysis.metrics.actionableFindingRate, 1);
+assert.equal(actionableAnalysis.metrics.oneMinimalFindingGroups, 1);
+assert.equal(actionableAnalysis.findings[0].actionable, true);
+assert.equal(actionableAnalysis.findings[0].occurrenceCount, 2);
+assert.equal(actionableAnalysis.findings[0].representativeReplay.minimality, "one-minimal");
+assert.deepEqual(actionableAnalysis.findings[0].representativeReplay.trace, ["crash"]);
+
+const scopedAnalysis = await analyzeWebActionableFindings({
+  driver: new ReplayDriver({ diagnosticProvenance: equivalentProvenance, violationCode: "unhandled_exception" }),
+  exploration: {
+    failures: [
+      ...actionableExploration.failures,
+      { code: "reload_persistence_storage_drift", message: "not a browser-exception finding", trace: ["open"] },
+    ],
+    semanticHash: "actionable-plus-out-of-scope",
+  },
+  explorationReplayGate: actionableGate,
+  shrinkBudget: 16,
+});
+assert.equal(scopedAnalysis.eligibleFindingGroupCount, 1);
+assert.equal(scopedAnalysis.metrics.actionableFindingRate, 1);
+
+const budgetAnalysis = await analyzeWebActionableFindings({
+  driver: new ReplayDriver({ diagnosticProvenance: equivalentProvenance, violationCode: "unhandled_exception" }),
+  exploration: actionableExploration,
+  explorationReplayGate: actionableGate,
+  shrinkBudget: 1,
+});
+assert.equal(budgetAnalysis.findings[0].actionable, false);
+assert.equal(budgetAnalysis.findings[0].representativeReplay.minimality, "budget-exhausted");
+assert.ok(budgetAnalysis.findings[0].qualificationReasons.includes("budget-exhausted"));
+
+const weakExploration = { failures: [failure], semanticHash: "weak" };
+const weakGate = await runWebExplorationReplayGate({ driver: new ReplayDriver(), exploration: weakExploration, attempts: 3 });
+const weakAnalysis = await analyzeWebActionableFindings({ driver: new ReplayDriver(), exploration: weakExploration, explorationReplayGate: weakGate });
+assert.equal(weakAnalysis.findings[0].singleton, true);
+assert.equal(weakAnalysis.findings[0].actionable, false);
+assert.ok(weakAnalysis.findings[0].provenanceRejectionReasons.includes("diagnostic-missing"));
+assert.equal(weakAnalysis.metrics.privacyProvenanceRejections["diagnostic-missing"], 1);
+
+const flakyAnalysis = await analyzeWebActionableFindings({
+  driver: new ReplayDriver({ flaky: true }),
+  exploration: weakExploration,
+  explorationReplayGate: flaky,
+});
+assert.equal(flakyAnalysis.metrics.deterministicFindingGroups, 0);
+assert.equal(flakyAnalysis.metrics.actionableFindingGroups, 0);
+
 console.log(JSON.stringify({
   ok: true,
   runtime: "web-exploration-replay-gate-test",
@@ -184,4 +248,7 @@ console.log(JSON.stringify({
   differentFindingReplay: differentFindingReplay.failures.length,
   minimizedTraceLength: shrunk.length,
   minimality: shrunk.minimality,
+  actionableFindingGroups: actionableAnalysis.metrics.actionableFindingGroups,
+  budgetStatus: budgetAnalysis.findings[0].representativeReplay.minimality,
+  weakSingleton: weakAnalysis.findings[0].singleton,
 }));

@@ -29,6 +29,25 @@ function safeRelativeSourcePath(value) {
   return normalized.replace(/^\.\//, "");
 }
 
+function safeRouteFamily(value) {
+  if (typeof value !== "string" || value.length === 0) return null;
+  try {
+    const url = new URL(value, "http://proped.invalid");
+    const pathname = url.pathname
+      .split("/")
+      .map((segment) => {
+        if (/^\d+$/.test(segment)) return ":id";
+        if (/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(segment)) return ":id";
+        return normalizeGenerated(segment);
+      })
+      .join("/");
+    const keys = [...url.searchParams.keys()].sort();
+    return `${pathname}${keys.length ? `?${keys.map((key) => `${key}=:value`).join("&")}` : ""}${url.hash ? "#<fragment>" : ""}`;
+  } catch {
+    return null;
+  }
+}
+
 function diagnosticCandidate(failure) {
   return failure?.diagnosticProvenance
     ?? failure?.evidence?.diagnosticProvenance
@@ -38,29 +57,35 @@ function diagnosticCandidate(failure) {
 }
 
 function strongBrowserExceptionProvenance(failure, canonical) {
-  if (canonical.oracleFamily !== "browser-safety") return null;
+  if (canonical.oracleFamily !== "browser-safety") return { provenance: null, rejectionReason: "not-browser-exception" };
   const diagnostic = diagnosticCandidate(failure);
-  if (!diagnostic || typeof diagnostic !== "object" || Array.isArray(diagnostic)) return null;
+  if (!diagnostic || typeof diagnostic !== "object" || Array.isArray(diagnostic)) return { provenance: null, rejectionReason: "diagnostic-missing" };
   const frame = diagnostic.topProjectFrame ?? diagnostic.frame ?? null;
-  if (!frame || typeof frame !== "object" || Array.isArray(frame) || frame.projectOwned !== true) return null;
+  if (!frame || typeof frame !== "object" || Array.isArray(frame) || frame.projectOwned !== true) return { provenance: null, rejectionReason: "project-frame-missing" };
   const sourcePath = safeRelativeSourcePath(frame.sourcePath ?? frame.file ?? null);
+  if (!sourcePath) return { provenance: null, rejectionReason: "unsafe-source-path" };
   const exceptionName = diagnostic.name ?? diagnostic.exceptionName ?? canonical.exceptionKind ?? null;
-  const rawMessage = diagnostic.message ?? failure?.message ?? null;
+  if (typeof exceptionName !== "string" || exceptionName.length === 0) return { provenance: null, rejectionReason: "exception-name-missing" };
+  const rawMessage = diagnostic.messageTemplate ?? diagnostic.message ?? failure?.message ?? null;
   const messageTemplate = normalizeMessage(rawMessage);
-  const routeFamily = canonical.routeFamily;
-  if (!sourcePath || typeof exceptionName !== "string" || exceptionName.length === 0 || !messageTemplate || !routeFamily) return null;
+  if (!messageTemplate) return { provenance: null, rejectionReason: "message-template-missing" };
+  const routeFamily = safeRouteFamily(diagnostic.routeFamily) ?? canonical.routeFamily;
+  if (!routeFamily) return { provenance: null, rejectionReason: "route-family-missing" };
   return {
-    family: "browser-exception",
-    exceptionName,
-    messageTemplate,
-    routeFamily,
-    topProjectFrame: {
-      sourcePath,
-      projectOwned: true,
-      function: typeof frame.function === "string" && frame.function.length > 0 ? normalizeGenerated(frame.function) : null,
-      line: Number.isSafeInteger(frame.line) && frame.line > 0 ? frame.line : null,
-      column: Number.isSafeInteger(frame.column) && frame.column > 0 ? frame.column : null,
+    provenance: {
+      family: "browser-exception",
+      exceptionName,
+      messageTemplate,
+      routeFamily,
+      topProjectFrame: {
+        sourcePath,
+        projectOwned: true,
+        function: typeof frame.function === "string" && frame.function.length > 0 ? normalizeGenerated(frame.function) : null,
+        line: Number.isSafeInteger(frame.line) && frame.line > 0 ? frame.line : null,
+        column: Number.isSafeInteger(frame.column) && frame.column > 0 ? frame.column : null,
+      },
     },
+    rejectionReason: null,
   };
 }
 
@@ -97,7 +122,8 @@ function compareRepresentatives(left, right) {
 
 export function classifyWebFinding(failure) {
   const canonical = classifyWebFailure(failure);
-  const provenance = strongBrowserExceptionProvenance(failure, canonical);
+  const provenanceResult = strongBrowserExceptionProvenance(failure, canonical);
+  const provenance = provenanceResult.provenance;
   if (!provenance) {
     const semantic = {
       version: WEB_FINDING_GROUP_VERSION,
@@ -111,6 +137,7 @@ export function classifyWebFinding(failure) {
       semanticHash: hash,
       canonicalFailureClassId: canonical.id,
       provenance: null,
+      provenanceRejectionReason: provenanceResult.rejectionReason,
     };
   }
   const semantic = {
@@ -125,7 +152,21 @@ export function classifyWebFinding(failure) {
     semanticHash: hash,
     canonicalFailureClassId: canonical.id,
     provenance,
+    provenanceRejectionReason: null,
   };
+}
+
+export function selectWebFindingRepresentativeFailure(failures = []) {
+  if (!Array.isArray(failures) || failures.length === 0) throw new Error("finding representative requires at least one failure");
+  const entries = failures.map((failure) => {
+    const finding = classifyWebFinding(failure);
+    return { failure, finding, representative: representativeProjection(failure, finding) };
+  });
+  const findingGroupId = entries[0].finding.id;
+  if (entries.some((entry) => entry.finding.id !== findingGroupId)) {
+    throw new Error("finding representative requires failures from one finding group");
+  }
+  return entries.sort((left, right) => compareRepresentatives(left.representative, right.representative))[0].failure;
 }
 
 export function selectWebFindingRepresentative(failures = []) {
@@ -154,6 +195,7 @@ export function groupWebFindings(failures = []) {
       canonicalFailureClassIds: [],
       failureCodes: [],
       representative: null,
+      provenanceRejectionReasons: [],
     };
     current.count += 1;
     if (!current.canonicalFailureClassIds.includes(finding.canonicalFailureClassId)) {
@@ -161,6 +203,9 @@ export function groupWebFindings(failures = []) {
     }
     const code = failureCode(failure);
     if (!current.failureCodes.includes(code)) current.failureCodes.push(code);
+    if (finding.provenanceRejectionReason && !current.provenanceRejectionReasons.includes(finding.provenanceRejectionReason)) {
+      current.provenanceRejectionReasons.push(finding.provenanceRejectionReason);
+    }
     if (!current.representative || compareRepresentatives(representative, current.representative) < 0) {
       current.representative = representative;
     }
@@ -171,6 +216,7 @@ export function groupWebFindings(failures = []) {
       ...group,
       canonicalFailureClassIds: group.canonicalFailureClassIds.sort(),
       failureCodes: group.failureCodes.sort(),
+      provenanceRejectionReasons: group.provenanceRejectionReasons.sort(),
     }))
     .sort((left, right) => left.id.localeCompare(right.id));
   return {
@@ -186,6 +232,7 @@ export function groupWebFindings(failures = []) {
       count: group.count,
       canonicalFailureClassIds: group.canonicalFailureClassIds,
       failureCodes: group.failureCodes,
+      provenanceRejectionReasons: group.provenanceRejectionReasons,
       representative: group.representative,
     }))),
   };

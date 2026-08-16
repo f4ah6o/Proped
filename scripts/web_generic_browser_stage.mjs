@@ -10,6 +10,7 @@ import { runFailureReplayGate } from "../protocol/web-replay-gate.mjs";
 import { createWebServerHookClient, validateWebServerHooks } from "../protocol/web-server-hooks.mjs";
 import { exploreWebCoverageGuided } from "../protocol/web-coverage-guided-exploration.mjs";
 import { runWebExplorationReplayGate } from "../protocol/web-exploration-replay-gate.mjs";
+import { analyzeWebActionableFindings } from "../protocol/web-actionable-finding.mjs";
 import { resolveApprovedSemanticRuntime, validateApprovedSemanticHints } from "../protocol/web-approved-semantics-runtime.mjs";
 import { buildWebSemanticOracleBoundary } from "../protocol/web-semantic-oracle-boundary.mjs";
 import { startWebCommandServer } from "../protocol/web-command-server.mjs";
@@ -256,6 +257,9 @@ try {
   const explorationReplayGate = await runWebExplorationReplayGate({
     driver, exploration, attempts: options.replayAttempts,
   });
+  const findingAnalysis = await analyzeWebActionableFindings({
+    driver, exploration, explorationReplayGate,
+  });
   const stateSemanticHash = semanticHash({
     dom: snapshot.dom,
     forms: snapshot.forms,
@@ -283,6 +287,8 @@ try {
     metrics: { ...inventory.metrics, riskCounts, explorationAllowedRisks: [...allowedExplorationRisks].sort() },
     exploration,
     explorationReplayGate: { ...explorationReplayGate, stableFailures: undefined },
+    findingAnalysis,
+    findings: findingAnalysis.findings,
     propertyPacks: campaignOptions.packs,
     semanticVerification,
     approvedSemantics: {
@@ -328,6 +334,7 @@ try {
     volatilitySemanticHash: volatility.semanticHash,
     explorationSemanticHash: exploration.semanticHash,
     explorationReplayGateSemanticHash: explorationReplayGate.semanticHash,
+    findingAnalysisSemanticHash: findingAnalysis.semanticHash,
     approvedSemanticRuntimeHash: approvedSemanticRuntime.semanticHash,
     semanticVerificationHash: semanticVerification.semanticHash,
     stateSemanticHash,

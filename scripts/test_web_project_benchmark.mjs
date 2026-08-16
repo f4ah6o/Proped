@@ -18,7 +18,18 @@ try {
     {
       id: "finding-project", status: "completed", autoOnboarded: true, qualityPassed: false,
       humanInterventions: 0, interventionReasons: [], failureClasses: ["stale-state"],
-      deterministicReplay: true, runtimeProfile: { framework: "react-vite", projectMode: "spa", serverMode: "static-output", packageManager: "npm", stateSources: ["dom", "indexedDB"] }, metrics: { states: 3, transitions: 5, actions: 2 },
+      deterministicReplay: true,
+      findingQuality: {
+        eligibleFindingGroupCount: 2, deterministicFindingGroups: 2, replayableFindingGroups: 2, actionableFindingGroups: 1,
+        actionableFindingRate: 0.5, oneMinimalFindingGroups: 1, oneMinimalRateAmongReplayable: 0.5, strongFindingGroups: 1, singletonFindingGroups: 1,
+        representativeActionsBefore: 4, representativeActionsAfter: 1, privacyProvenanceRejections: { "diagnostic-missing": 1 },
+      },
+      findings: [
+        { findingGroupId: "finding@abc", actionable: true, representativeReplay: { minimality: "one-minimal" } },
+        { findingGroupId: "finding-singleton@def", actionable: false, representativeReplay: null },
+      ],
+      actionableFindings: [{ findingGroupId: "finding@abc", actionable: true, representativeReplay: { minimality: "one-minimal" } }],
+      runtimeProfile: { framework: "react-vite", projectMode: "spa", serverMode: "static-output", packageManager: "npm", stateSources: ["dom", "indexedDB"] }, metrics: { states: 3, transitions: 5, actions: 2 },
     },
     {
       id: "blocked-project", status: "intervention-required", autoOnboarded: false, qualityPassed: null,
@@ -41,6 +52,13 @@ try {
   assert.equal(aggregate.replayObservedProjectCount, 1);
   assert.equal(aggregate.deterministicReplayRate, 1);
   assert.equal(aggregate.projectSpecificAdapterLoc, 0);
+  assert.equal(aggregate.findingQuality.deterministicFindingGroups, 2);
+  assert.equal(aggregate.findingQuality.actionableFindingGroups, 1);
+  assert.equal(aggregate.findingQuality.actionableFindingRate, 0.5);
+  assert.equal(aggregate.findingQuality.oneMinimalFindingGroups, 1);
+  assert.equal(aggregate.findingQuality.oneMinimalRateAmongReplayable, 0.5);
+  assert.deepEqual(aggregate.findingQuality.actionableFindingGroupIds, ["finding@abc"]);
+  assert.deepEqual(aggregate.findingQuality.privacyProvenanceRejections, { "diagnostic-missing": 1 });
   assert.deepEqual(aggregate.interventionReasonDistribution, { server_review_required: 1 });
   assert.deepEqual(aggregate.viabilityDistribution, { qualified: 1, unknown: 1 });
   assert.deepEqual(aggregate.viabilityFailureDistribution, {});

@@ -262,6 +262,8 @@ function payloadSummary(payload) {
     "volatility",
     "exploration",
     "explorationReplayGate",
+    "findingAnalysis",
+    "findings",
     "approvedSemantics",
   ]) {
     if (key in payload) summary[key] = payload[key];

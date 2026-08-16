@@ -1,6 +1,6 @@
 # Production runtime: real-OSS actionable acceptance critical path
 
-Status: open
+Status: closed
 Model: GPT-5.6 Sol
 Created: 2026-08-16
 Updated: 2026-08-16
@@ -163,3 +163,31 @@ The previous sequential CLI mode remains available locally as a reference path; 
 - optimization decisions are based on measured phase cost;
 - if shard campaign evidence is reused, two-fresh-campaign semantics remain provable and checkout cleanup/privacy/minimality contracts remain explicit;
 - `Production contracts` wall time is materially reduced from the approximately 26m48s baseline.
+
+
+## Completion evidence
+
+Completed on `main` at `f44403fdc00a95f1dc208b6ad7f26aa011cfa398`.
+
+Hosted `Production contracts` run `31930375853` completed successfully from 2026-08-16 15:00:54 JST to 15:15:08 JST: **14m14s total**, down from the approximately **26m48s** baseline (~47% wall-time reduction).
+
+Acceptance semantics remained intact and the uploaded `production-actionable-acceptance` summary proves:
+
+- `ok=true`;
+- two distinct fresh campaigns: `fresh-a`, `fresh-b`;
+- exact pinned `yarnpkg/berry` revision `57081c05a398f25c92df1dc78752f2053576cec0`;
+- project `packages/docusaurus`;
+- adapter LOC = 0;
+- stable `findingGroupId=finding@250bb43b5436`;
+- failure code `unhandled_exception`;
+- same deterministic representative replay;
+- `minimality=one-minimal`;
+- `repeatStable=true`;
+- `privacySafe=true`;
+- `checkoutCleanup=true`.
+
+Measured full campaign time was **489.8s (8m10s)** for fresh-a and **508.8s (8m29s)** for fresh-b. The two campaigns overlapped on independent runners and the compare job completed successfully. The acceptance branch therefore ceased to be the production critical path.
+
+The final critical path was the ordinary promoted-production `shadcn-svelte` shard: its job completed in approximately **13m00s**, including a production shard stage of **11m59s**. The aggregate gate then completed in 13 seconds.
+
+No exploration bounds, property packs, replay checks, finding identity, one-minimal proof, privacy checks, checkout cleanup, or adapter-LOC constraints were relaxed.

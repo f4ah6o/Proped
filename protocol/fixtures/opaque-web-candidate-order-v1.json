@@ -1,0 +1,355 @@
+{
+  "profile": "content-blind-opaque-v1",
+  "candidateOrderVersion": "1",
+  "actionKinds": [
+    "dom_activate",
+    "pointer_point"
+  ],
+  "maximumDomActivateCandidates": 32,
+  "maximumReplaySteps": 64,
+  "domActivateOrder": "native-structural-document-order",
+  "domActivateEligibility": [
+    "button:not-disabled",
+    "anchor:has-href",
+    "input-button:not-disabled",
+    "input-submit:not-disabled",
+    "input-reset:not-disabled",
+    "input-checkbox:not-disabled",
+    "input-radio:not-disabled",
+    "summary",
+    "exclude-hidden-ancestor"
+  ],
+  "pointerGeometry": {
+    "coordinateSpace": "viewport",
+    "points": [
+      {
+        "ordinal": 0,
+        "xNumerator": 1,
+        "xDenominator": 4,
+        "yNumerator": 1,
+        "yDenominator": 4
+      },
+      {
+        "ordinal": 1,
+        "xNumerator": 2,
+        "xDenominator": 4,
+        "yNumerator": 1,
+        "yDenominator": 4
+      },
+      {
+        "ordinal": 2,
+        "xNumerator": 3,
+        "xDenominator": 4,
+        "yNumerator": 1,
+        "yDenominator": 4
+      },
+      {
+        "ordinal": 3,
+        "xNumerator": 1,
+        "xDenominator": 4,
+        "yNumerator": 2,
+        "yDenominator": 4
+      },
+      {
+        "ordinal": 4,
+        "xNumerator": 2,
+        "xDenominator": 4,
+        "yNumerator": 2,
+        "yDenominator": 4
+      },
+      {
+        "ordinal": 5,
+        "xNumerator": 3,
+        "xDenominator": 4,
+        "yNumerator": 2,
+        "yDenominator": 4
+      },
+      {
+        "ordinal": 6,
+        "xNumerator": 1,
+        "xDenominator": 4,
+        "yNumerator": 3,
+        "yDenominator": 4
+      },
+      {
+        "ordinal": 7,
+        "xNumerator": 2,
+        "xDenominator": 4,
+        "yNumerator": 3,
+        "yDenominator": 4
+      },
+      {
+        "ordinal": 8,
+        "xNumerator": 3,
+        "xDenominator": 4,
+        "yNumerator": 3,
+        "yDenominator": 4
+      }
+    ]
+  },
+  "vectors": [
+    {
+      "domActivateCount": 0,
+      "expectedActions": [
+        {
+          "kind": "pointer_point",
+          "ordinal": 0
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 1
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 2
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 3
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 4
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 5
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 6
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 7
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 8
+        }
+      ]
+    },
+    {
+      "domActivateCount": 3,
+      "expectedActions": [
+        {
+          "kind": "dom_activate",
+          "ordinal": 0
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 1
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 2
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 0
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 1
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 2
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 3
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 4
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 5
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 6
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 7
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 8
+        }
+      ]
+    },
+    {
+      "domActivateCount": 40,
+      "expectedActions": [
+        {
+          "kind": "dom_activate",
+          "ordinal": 0
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 1
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 2
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 3
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 4
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 5
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 6
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 7
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 8
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 9
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 10
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 11
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 12
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 13
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 14
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 15
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 16
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 17
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 18
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 19
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 20
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 21
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 22
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 23
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 24
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 25
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 26
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 27
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 28
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 29
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 30
+        },
+        {
+          "kind": "dom_activate",
+          "ordinal": 31
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 0
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 1
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 2
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 3
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 4
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 5
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 6
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 7
+        },
+        {
+          "kind": "pointer_point",
+          "ordinal": 8
+        }
+      ]
+    }
+  ]
+}

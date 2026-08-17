@@ -13,7 +13,7 @@ function run(args, cwd = ROOT) {
 
 const help = run(["--help"]);
 assert.equal(help.status, 0, help.stderr);
-for (const command of ["inspect", "init", "doctor", "prepare", "compile", "review", "approve", "apply", "run", "campaign", "benchmark", "corpus"]) {
+for (const command of ["inspect", "init", "doctor", "prepare", "compile", "review", "approve", "apply", "run", "campaign", "explore-url", "benchmark", "corpus"]) {
   assert.match(help.stdout, new RegExp(`web ${command}`));
 }
 const invalid = run(["web", "unknown"]);
@@ -56,7 +56,7 @@ try {
   assert.equal(JSON.parse(review.stdout).runtime, "web-semantic-review-report");
 
   console.log(JSON.stringify({
-    ok: true, runtime: "proped-web-cli-test", commands: Object.keys({ inspect:1, init:1, doctor:1, prepare:1, compile:1, review:1, approve:1, apply:1, run:1, campaign:1, benchmark:1, corpus:1 }),
+    ok: true, runtime: "proped-web-cli-test", commands: Object.keys({ inspect:1, init:1, doctor:1, prepare:1, compile:1, review:1, approve:1, apply:1, run:1, campaign:1, "explore-url":1, benchmark:1, corpus:1 }),
     dispatcherShell: false, exitCodePreserved: true, fixtureFramework: inspection.framework.name,
   }));
 } finally {

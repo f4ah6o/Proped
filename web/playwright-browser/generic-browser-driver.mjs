@@ -1,4 +1,4 @@
-import { launchManagedChromium, managedBrowserRuntimeDetails } from "./managed-browser-runtime.mjs";
+import { launchManagedBrowser, managedBrowserRuntimeDetails } from "./managed-browser-runtime.mjs";
 import { captureIndexedDbInventory } from "./indexeddb-inventory.mjs";
 import { enrichIndexedDbInventoryWithDexie } from "./dexie-inventory-adapter.mjs";
 import { discoverAccessibleActions } from "../../protocol/accessible-action-discovery.mjs";
@@ -7,6 +7,24 @@ import { evaluateWebProperties } from "../../protocol/web-property-pack.mjs";
 import { semanticHash } from "../../protocol/ui-driver-v1.mjs";
 import { waitForSemanticQuiescence } from "../../protocol/semantic-quiescence.mjs";
 import { applyApprovedSemanticNormalizers, projectApprovedSemanticState } from "../../protocol/web-approved-semantics-runtime.mjs";
+import {
+  CONTENT_BLIND_OPAQUE_PROFILE,
+  OPAQUE_WEB_CANDIDATE_ORDER_VERSION,
+  OPAQUE_WEB_MAX_DOM_ACTIVATE_CANDIDATES,
+  OPAQUE_WEB_POINTER_POINTS,
+  opaqueActionId,
+} from "../../protocol/opaque-web-replay-v1.mjs";
+
+const OPAQUE_DOM_ACTIVATE_SELECTOR = [
+  "button:not([disabled])",
+  "a[href]",
+  "input[type=button]:not([disabled])",
+  "input[type=submit]:not([disabled])",
+  "input[type=reset]:not([disabled])",
+  "input[type=checkbox]:not([disabled])",
+  "input[type=radio]:not([disabled])",
+  "summary",
+].join(",");
 
 const ACTION_SELECTOR = [
   "button",
@@ -129,11 +147,24 @@ export class GenericPlaywrightBrowserDriver {
     readOnlyStateProbe = null,
     restartServer = null,
     approvedSemanticRuntime = null,
+    profile = null,
+    browserEngine = "chromium",
+    environmentCheckpoint = null,
+    restoreEnvironmentCheckpoint = null,
   } = {}) {
     if (!url) throw new Error("GenericPlaywrightBrowserDriver requires url");
     this.url = new URL(url).href;
     this.origin = new URL(this.url).origin;
-    this.inputCorpus = [...new Set([...inputCorpus, this.origin, this.url])];
+    if (profile !== null && profile !== CONTENT_BLIND_OPAQUE_PROFILE) throw new Error(`unsupported generic browser profile: ${profile}`);
+    if (!["chromium", "webkit"].includes(browserEngine)) throw new Error(`unsupported generic browser engine: ${browserEngine}`);
+    if ((environmentCheckpoint === null) !== (restoreEnvironmentCheckpoint === null)) throw new Error("environment checkpoint hooks must be provided together");
+    if (environmentCheckpoint !== null && typeof environmentCheckpoint !== "function") throw new Error("environmentCheckpoint must be a function or null");
+    if (restoreEnvironmentCheckpoint !== null && typeof restoreEnvironmentCheckpoint !== "function") throw new Error("restoreEnvironmentCheckpoint must be a function or null");
+    this.profile = profile;
+    this.browserEngine = browserEngine;
+    this.inputCorpus = profile === CONTENT_BLIND_OPAQUE_PROFILE
+      ? []
+      : [...new Set([...inputCorpus, this.origin, this.url])];
     this.timeoutMs = timeoutMs;
     this.headless = headless;
     this.viewport = viewport;
@@ -158,6 +189,10 @@ export class GenericPlaywrightBrowserDriver {
     this.readOnlyStateProbe = readOnlyStateProbe;
     this.restartServerHook = restartServer;
     this.approvedSemanticRuntime = approvedSemanticRuntime;
+    if (environmentCheckpoint) {
+      this.checkpoint = async () => environmentCheckpoint();
+      this.restoreCheckpoint = async (checkpointId) => restoreEnvironmentCheckpoint(checkpointId);
+    }
     this.consoleEntries = [];
     this.exceptionDiagnostics = [];
     this.routeEntries = [];
@@ -166,11 +201,24 @@ export class GenericPlaywrightBrowserDriver {
     this.lastSettle = null;
   }
 
+  recordRoute(entry) {
+    if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) {
+      this.opaqueRouteEventCount = (this.opaqueRouteEventCount ?? 0) + 1;
+      return;
+    }
+    this.routeEntries.push(entry);
+  }
+
   async launch() {
     if (this.browser) return;
-    this.browser = await launchManagedChromium({ headless: this.headless });
-    this.browserVersion = this.browser.version();
-    this.managedRuntime = managedBrowserRuntimeDetails();
+    try {
+      this.browser = await launchManagedBrowser(this.browserEngine, { headless: this.headless });
+      this.browserVersion = this.browser.version();
+      this.managedRuntime = managedBrowserRuntimeDetails({ engine: this.browserEngine });
+    } catch (error) {
+      if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) throw new Error("managed_browser_engine_unavailable");
+      throw error;
+    }
   }
 
   async createContext() {
@@ -182,6 +230,9 @@ export class GenericPlaywrightBrowserDriver {
     this.targetResolvers = new Map();
     this.pendingRequests = new Set();
     this.lastSettle = null;
+    this.opaqueRouteEventCount = 0;
+    this.opaqueConsoleEventCount = 0;
+    this.opaquePageErrorCount = 0;
     this.context = await this.browser.newContext({
       acceptDownloads: false,
       serviceWorkers: "block",
@@ -196,17 +247,17 @@ export class GenericPlaywrightBrowserDriver {
     await this.context.route("**/*", async (route) => {
       const request = route.request();
       const requestUrl = new URL(request.url());
-      const entry = {
+      const entry = this.profile === CONTENT_BLIND_OPAQUE_PROFILE ? null : {
         url: request.url(),
         method: request.method(),
         resourceType: request.resourceType(),
       };
       if (["data:", "blob:"].includes(requestUrl.protocol) || this.allowOrigins.has(requestUrl.origin)) {
-        this.routeEntries.push({ ...entry, decision: "continue", reason: "allowed_origin" });
+        this.recordRoute(entry ? { ...entry, decision: "continue", reason: "allowed_origin" } : null);
         await route.continue();
         return;
       }
-      this.routeEntries.push({ ...entry, decision: "abort", reason: "external_network_denied" });
+      this.recordRoute(entry ? { ...entry, decision: "abort", reason: "external_network_denied" } : null);
       await route.abort("blockedbyclient");
     });
 
@@ -216,9 +267,9 @@ export class GenericPlaywrightBrowserDriver {
         if (this.allowOrigins.has(url.origin)) {
           // Playwright does not expose a generic continue primitive here. Keep the
           // campaign fail-closed instead of silently allowing an uncontrolled peer.
-          this.routeEntries.push({ url: socket.url(), method: "WEBSOCKET", resourceType: "websocket", decision: "abort", reason: "websocket_requires_explicit_scheduler" });
+          this.recordRoute(this.profile === CONTENT_BLIND_OPAQUE_PROFILE ? null : { url: socket.url(), method: "WEBSOCKET", resourceType: "websocket", decision: "abort", reason: "websocket_requires_explicit_scheduler" });
         } else {
-          this.routeEntries.push({ url: socket.url(), method: "WEBSOCKET", resourceType: "websocket", decision: "abort", reason: "external_websocket_denied" });
+          this.recordRoute(this.profile === CONTENT_BLIND_OPAQUE_PROFILE ? null : { url: socket.url(), method: "WEBSOCKET", resourceType: "websocket", decision: "abort", reason: "external_websocket_denied" });
         }
         await socket.close({ code: 1008, reason: "Proped generic browser network policy" });
       });
@@ -239,15 +290,23 @@ export class GenericPlaywrightBrowserDriver {
     this.page.on("requestfinished", finishRequest);
     this.page.on("requestfailed", finishRequest);
     this.page.on("console", (message) => {
+      if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) {
+        this.opaqueConsoleEventCount += 1;
+        return;
+      }
       this.consoleEntries.push({ kind: message.type(), message: message.text() });
     });
     this.page.on("pageerror", (error) => {
+      if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) {
+        this.opaquePageErrorCount += 1;
+        return;
+      }
       this.consoleEntries.push({ kind: "uncaught", message: error.message });
       const diagnostic = safeExceptionProvenance(error, this.page.url(), this.origin);
       if (diagnostic) this.exceptionDiagnostics.push(diagnostic);
     });
     this.page.on("download", (download) => {
-      this.routeEntries.push({
+      this.recordRoute(this.profile === CONTENT_BLIND_OPAQUE_PROFILE ? null : {
         url: download.url(), method: "DOWNLOAD", resourceType: "download",
         decision: "abort", reason: "download_denied",
       });
@@ -256,12 +315,17 @@ export class GenericPlaywrightBrowserDriver {
   }
 
   async reset() {
-    if (this.beforeReset) await this.beforeReset();
-    if (this.context) await this.context.close();
-    await this.createContext();
-    await this.page.goto(this.url, { waitUntil: "domcontentloaded" });
-    this.lastSettle = await this.settle();
-    return this.snapshot();
+    try {
+      if (this.beforeReset) await this.beforeReset();
+      if (this.context) await this.context.close();
+      await this.createContext();
+      await this.page.goto(this.url, { waitUntil: "domcontentloaded" });
+      this.lastSettle = await this.settle();
+      return this.snapshot();
+    } catch (error) {
+      if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) throw new Error("opaque_reset_not_observed");
+      throw error;
+    }
   }
 
   async advanceSemanticFrame() {
@@ -283,6 +347,7 @@ export class GenericPlaywrightBrowserDriver {
   }
 
   async semanticSnapshotInput({ includeConsole = true } = {}) {
+    if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) throw new Error("semantic snapshot is unavailable under content-blind profile");
     const raw = await this.rawSnapshot();
     const indexedDB = await this.indexedDbInventory();
     const serverHooks = this.readOnlyStateProbe ? await this.readOnlyStateProbe() : null;
@@ -309,6 +374,7 @@ export class GenericPlaywrightBrowserDriver {
   }
 
   async quiescenceFingerprint() {
+    if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) return (await this.opaqueSnapshot()).fingerprint;
     return createSemanticSnapshot(await this.semanticSnapshotInput({ includeConsole: false })).fingerprint;
   }
 
@@ -440,6 +506,7 @@ export class GenericPlaywrightBrowserDriver {
   }
 
   async actions() {
+    if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) return this.opaqueActions();
     const descriptors = await this.domDescriptors();
     const discovered = discoverAccessibleActions(descriptors, { inputCorpus: this.inputCorpus });
     const resolverByTarget = new Map();
@@ -563,6 +630,7 @@ export class GenericPlaywrightBrowserDriver {
   }
 
   async execute(action) {
+    if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) return this.executeOpaqueAction(action);
     if (!this.page) throw new Error("generic browser session is not active");
     const before = await this.snapshot();
     const diagnosticCountBefore = this.exceptionDiagnostics.length;
@@ -724,13 +792,14 @@ export class GenericPlaywrightBrowserDriver {
   }
 
   async snapshot() {
+    if (this.profile === CONTENT_BLIND_OPAQUE_PROFILE) return this.opaqueSnapshot();
     const input = await this.semanticSnapshotInput({ includeConsole: true });
     const snapshot = createSemanticSnapshot(input);
     return {
       ...snapshot,
       routes: this.routeEntries.map((entry) => ({ ...entry })),
       browser: {
-        name: "chromium",
+        name: this.browserEngine,
         version: this.browserVersion,
         contextSequence: this.contextSequence,
         ephemeralProfile: true,
@@ -742,6 +811,143 @@ export class GenericPlaywrightBrowserDriver {
       settle: this.lastSettle ? { ...this.lastSettle } : null,
       pendingRequests: this.pendingRequestCount(),
     };
+  }
+
+
+  async opaqueStructuralState() {
+    if (!this.page) throw new Error("opaque_state_not_observed");
+    try {
+      return await this.page.evaluate(({ selector, maximum }) => {
+      const mix = (hash, value) => {
+        let next = hash ^ (value >>> 0);
+        next = Math.imul(next, 16777619) >>> 0;
+        return next;
+      };
+      const category = (element) => {
+        const tag = element.tagName;
+        if (tag === "BUTTON") return 1;
+        if (tag === "A") return 2;
+        if (tag === "INPUT") return 3;
+        if (tag === "FORM") return 4;
+        if (tag === "MAIN") return 5;
+        if (tag === "SECTION") return 6;
+        if (tag === "DIV") return 7;
+        if (tag === "DIALOG") return 8;
+        if (tag === "SUMMARY") return 9;
+        return 0;
+      };
+      const all = [...document.querySelectorAll("*")].slice(0, 2_000);
+      let topology = 2166136261 >>> 0;
+      let maximumDepth = 0;
+      for (const element of all) {
+        let depth = 0;
+        for (let parent = element.parentElement; parent && depth < 64; parent = parent.parentElement) depth += 1;
+        maximumDepth = Math.max(maximumDepth, depth);
+        topology = mix(topology, category(element));
+        topology = mix(topology, Math.min(element.childElementCount, 31));
+        topology = mix(topology, element.hasAttribute("hidden") ? 1 : 0);
+        topology = mix(topology, element.hasAttribute("disabled") ? 1 : 0);
+        topology = mix(topology, element.tagName === "DIALOG" && element.hasAttribute("open") ? 1 : 0);
+      }
+      const candidates = [...document.querySelectorAll(selector)].filter((element) => !element.closest("[hidden]"));
+      const documentElement = document.documentElement;
+      const bucket = (value) => Math.min(4095, Math.max(0, Math.ceil(Number(value || 0) / 64)));
+      return {
+        version: 1,
+        topologyHash: topology.toString(16).padStart(8, "0"),
+        elementCount: all.length,
+        maximumDepth,
+        domActivateCount: Math.min(candidates.length, maximum),
+        widthBucket: bucket(documentElement?.scrollWidth),
+        heightBucket: bucket(documentElement?.scrollHeight),
+        focusPresent: Boolean(document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement),
+      };
+      }, { selector: OPAQUE_DOM_ACTIVATE_SELECTOR, maximum: OPAQUE_WEB_MAX_DOM_ACTIVATE_CANDIDATES });
+    } catch {
+      throw new Error("opaque_state_not_observed");
+    }
+  }
+
+  async opaqueSnapshot() {
+    const opaqueState = await this.opaqueStructuralState();
+    return {
+      fingerprint: semanticHash({
+        profile: CONTENT_BLIND_OPAQUE_PROFILE,
+        candidateOrderVersion: OPAQUE_WEB_CANDIDATE_ORDER_VERSION,
+        opaqueState,
+      }),
+      opaqueState,
+      browser: {
+        name: this.browserEngine,
+        version: this.browserVersion,
+        contextSequence: this.contextSequence,
+        ephemeralProfile: true,
+        serviceWorkers: "block",
+        networkPolicy: "same-origin-only",
+        managedRuntime: { ...this.managedRuntime },
+      },
+      settle: this.lastSettle ? { ...this.lastSettle } : null,
+      pendingRequests: this.pendingRequestCount(),
+    };
+  }
+
+  async opaqueActions() {
+    const state = await this.opaqueStructuralState();
+    const actions = [];
+    for (let ordinal = 0; ordinal < state.domActivateCount; ordinal += 1) {
+      actions.push({
+        id: opaqueActionId("dom_activate", ordinal),
+        kind: "dom_activate",
+        ordinal,
+        portableAction: true,
+        destructiveRisk: "bounded-mutation",
+      });
+    }
+    for (let ordinal = 0; ordinal < OPAQUE_WEB_POINTER_POINTS.length; ordinal += 1) {
+      actions.push({
+        id: opaqueActionId("pointer_point", ordinal),
+        kind: "pointer_point",
+        ordinal,
+        portableAction: true,
+        destructiveRisk: "bounded-mutation",
+      });
+    }
+    const metrics = {
+      candidateOrderVersion: OPAQUE_WEB_CANDIDATE_ORDER_VERSION,
+      domActivateCount: state.domActivateCount,
+      pointerPointCount: OPAQUE_WEB_POINTER_POINTS.length,
+      candidateCount: actions.length,
+    };
+    return { actions, diagnostics: [], metrics, semanticHash: semanticHash({ actions, metrics }) };
+  }
+
+  async executeOpaqueAction(action) {
+    if (!this.page) throw new Error("opaque_action_not_observed");
+    if (!action?.portableAction || !Number.isSafeInteger(action.ordinal)) throw new Error("opaque_action_not_observed");
+    try {
+      if (action.kind === "dom_activate") {
+        const activated = await this.page.evaluate(({ selector, ordinal, maximum }) => {
+          const candidates = [...document.querySelectorAll(selector)].filter((element) => !element.closest("[hidden]")).slice(0, maximum);
+          const element = candidates[ordinal];
+          if (!element) return false;
+          element.click();
+          return true;
+        }, { selector: OPAQUE_DOM_ACTIVATE_SELECTOR, ordinal: action.ordinal, maximum: OPAQUE_WEB_MAX_DOM_ACTIVATE_CANDIDATES });
+        if (!activated) throw new Error("opaque_action_not_observed");
+      } else if (action.kind === "pointer_point") {
+        const point = OPAQUE_WEB_POINTER_POINTS[action.ordinal];
+        if (!point) throw new Error("opaque_action_not_observed");
+        const x = Math.floor(this.viewport.width * point.xNumerator / point.xDenominator);
+        const y = Math.floor(this.viewport.height * point.yNumerator / point.yDenominator);
+        await this.page.mouse.click(x, y);
+      } else {
+        throw new Error("opaque_action_not_observed");
+      }
+      this.lastSettle = await this.settleAfterPossibleNavigation();
+      return { snapshot: await this.snapshotAfterPossibleNavigation(), settle: this.lastSettle, violations: [] };
+    } catch {
+      throw new Error("opaque_action_not_observed");
+    }
   }
 
   async replay(actionIds, { attempts = 2 } = {}) {

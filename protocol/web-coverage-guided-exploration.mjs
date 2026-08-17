@@ -18,7 +18,14 @@ import {
 
 export const WEB_COVERAGE_GUIDED_EXPLORATION_VERSION = "1";
 
+function explorationError(driver, error) {
+  return driver?.profile === "content-blind-opaque-v1" ? "opaque_operation_failed" : error.message;
+}
+
 function actionSignature(action) {
+  if (action?.portableAction === true && Number.isSafeInteger(action?.ordinal)) {
+    return semanticHash({ kind: action.kind, ordinal: action.ordinal });
+  }
   return semanticHash({
     kind: action?.kind ?? "unknown",
     target: {
@@ -68,6 +75,11 @@ function selectFrontierNode(nodes, executedEdges, executedActionSignatures, maxD
 
 function selectAction(frontier, executedActionSignatures) {
   return [...frontier.available].sort((left, right) => {
+    if (left?.portableAction === true && right?.portableAction === true) {
+      const portablePriority = (action) => action.kind === "dom_activate" ? 0 : 1;
+      const priorityDelta = portablePriority(left) - portablePriority(right);
+      if (priorityDelta !== 0) return priorityDelta;
+    }
     const leftNew = executedActionSignatures.has(actionSignature(left)) ? 0 : 1;
     const rightNew = executedActionSignatures.has(actionSignature(right)) ? 0 : 1;
     if (rightNew !== leftNew) return rightNew - leftNew;
@@ -85,7 +97,7 @@ async function replayStatelessTrace(driver, trace) {
     try {
       result = await driver.execute(action);
     } catch (error) {
-      return { ok: false, executionError: error.message, failedActionId: actionId, snapshot };
+      return { ok: false, executionError: explorationError(driver, error), failedActionId: actionId, snapshot };
     }
     snapshot = result.snapshot;
   }
@@ -137,21 +149,21 @@ export async function replayWebCheckpointedTrace(driver, {
   try {
     await restoreEnvironmentCheckpoint(driver, baseline);
   } catch (error) {
-    return { ok: false, diagnostic: { code: "environment_checkpoint_restore_failed", error: error.message } };
+    return { ok: false, diagnostic: { code: "environment_checkpoint_restore_failed", error: explorationError(driver, error) } };
   }
 
   let snapshot;
   try {
     snapshot = await driver.reset();
   } catch (error) {
-    return { ok: false, diagnostic: { code: "runtime_reset_after_checkpoint_restore_failed", error: error.message } };
+    return { ok: false, diagnostic: { code: "runtime_reset_after_checkpoint_restore_failed", error: explorationError(driver, error) } };
   }
 
   let environment;
   try {
     environment = await captureEnvironmentCheckpoint(driver);
   } catch (error) {
-    return { ok: false, diagnostic: { code: "environment_checkpoint_capture_failed", error: error.message } };
+    return { ok: false, diagnostic: { code: "environment_checkpoint_capture_failed", error: explorationError(driver, error) } };
   }
   if (environment.environmentStateId !== baseline.environmentStateId) {
     return {
@@ -176,13 +188,13 @@ export async function replayWebCheckpointedTrace(driver, {
     try {
       result = await driver.execute(action);
     } catch (error) {
-      return { ok: false, executionError: error.message, failedActionId: actionId, snapshot, environment, transitionEvidence };
+      return { ok: false, executionError: explorationError(driver, error), failedActionId: actionId, snapshot, environment, transitionEvidence };
     }
     snapshot = result.snapshot;
     try {
       environment = await captureEnvironmentCheckpoint(driver);
     } catch (error) {
-      return { ok: false, diagnostic: { code: "environment_checkpoint_capture_failed", actionId, error: error.message }, snapshot, transitionEvidence };
+      return { ok: false, diagnostic: { code: "environment_checkpoint_capture_failed", actionId, error: explorationError(driver, error) }, snapshot, transitionEvidence };
     }
     const evidence = checkpointTransition({ beforeSnapshot, beforeEnvironment, actionId, afterSnapshot: snapshot, afterEnvironment: environment });
     transitionEvidence.push(evidence);
@@ -339,7 +351,7 @@ export async function exploreWebCoverageGuided(driver, {
             replayInventory = await driver.actions();
           }
         } catch (error) {
-          replay = { ok: false, diagnostic: { code: "parent_environment_restore_failed", error: error.message } };
+          replay = { ok: false, diagnostic: { code: "parent_environment_restore_failed", error: explorationError(driver, error) } };
         }
       }
       currentTrace = null;
@@ -405,7 +417,7 @@ export async function exploreWebCoverageGuided(driver, {
         sourceStateIdentity: source.identity,
         actionId: action.id,
         trace: source.trace,
-        error: error.message,
+        error: explorationError(driver, error),
       });
       continue;
     }
@@ -422,7 +434,7 @@ export async function exploreWebCoverageGuided(driver, {
           sourceStateIdentity: source.identity,
           actionId: action.id,
           trace: source.trace,
-          error: error.message,
+          error: explorationError(driver, error),
         });
         continue;
       }

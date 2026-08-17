@@ -62,6 +62,7 @@ function indexedDBShape(snapshot) {
 }
 
 function actionTargetKey(action) {
+  if (action?.portableAction === true && Number.isSafeInteger(action?.ordinal)) return semanticHash({ kind: action.kind, ordinal: action.ordinal });
   const target = action?.target ?? {};
   return semanticHash({
     role: target.role ?? "",

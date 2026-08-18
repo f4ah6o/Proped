@@ -1,6 +1,6 @@
 # Add content-blind opaque Web exploration and portable minimal replay export
 
-Status: open
+Status: closed
 Created: 2026-08-18
 Updated: 2026-08-18
 Priority: P0
@@ -262,17 +262,17 @@ Also export fixture vectors for the consumer repository to pin `candidateOrderVe
 
 ## Acceptance criteria
 
-- [ ] Generic Browser supports an explicit content-blind profile without changing default campaign semantics.
-- [ ] An already-running loopback Web app can be explored without project onboarding/prepare.
-- [ ] `OpaqueWebReplayV1` exports only versioned fixed action kinds, bounded ordinals, fixed transition classes, engine identity and minimality metadata.
-- [ ] No text/selector/URL/accessibility/screenshot/pixel/error/source/storage value can enter the exported replay artifact.
-- [ ] Candidate ordering is deterministic, versioned and covered by portable fixture vectors.
-- [ ] Coverage-guided exploration finds a progressing non-default branch among legitimate no-op candidates.
-- [ ] Fresh-context replay is deterministic.
-- [ ] A deterministic opaque transition path can be bounded/minimized without using semantic finding identity.
-- [ ] Chromium remains backward-compatible/default; WebKit is optional and explicit.
-- [ ] Checkpoint-aware sibling isolation remains correct under the content-blind profile.
-- [ ] Existing Web/Browser, replay, production corpus, promoted-production and public-disclosure gates remain green with no unintended semantic-hash churn.
+- [x] Generic Browser supports an explicit content-blind profile without changing default campaign semantics.
+- [x] An already-running loopback Web app can be explored without project onboarding/prepare.
+- [x] `OpaqueWebReplayV1` exports only versioned fixed action kinds, bounded ordinals, fixed transition classes, engine identity and minimality metadata.
+- [x] No text/selector/URL/accessibility/screenshot/pixel/error/source/storage value can enter the exported replay artifact.
+- [x] Candidate ordering is deterministic, versioned and covered by portable fixture vectors.
+- [x] Coverage-guided exploration finds a progressing non-default branch among legitimate no-op candidates.
+- [x] Fresh-context replay is deterministic.
+- [x] A deterministic opaque transition path can be bounded/minimized without using semantic finding identity.
+- [x] Chromium remains backward-compatible/default; WebKit is optional and explicit.
+- [x] Checkpoint-aware sibling isolation remains correct under the content-blind profile.
+- [x] Existing Web/Browser, replay, production corpus, promoted-production and public-disclosure gates remain green with no unintended semantic-hash churn.
 
 ## Handoff / parallel-development rule
 
@@ -281,3 +281,37 @@ This issue is designed to proceed independently from the consumer repository.
 Pin `OpaqueWebReplayV1` and `candidateOrderVersion` semantics with synthetic fixture vectors first. The consumer can implement against those vectors in parallel.
 
 Do not add consumer-specific executable code to Proped. Any necessary contract change must be versioned and reflected in the fixture vectors rather than silently changing ordinal semantics.
+
+## Completion evidence
+
+Implemented the P0 capability as a generic, opt-in Web/Browser contract. The normal semantic Browser path remains the default and the opaque transition-path minimizer is separate from browser-exception `findingGroupId` identity.
+
+- `protocol/opaque-web-replay-v1.mjs` defines `content-blind-opaque-v1`, `OpaqueWebReplayV1`, `candidateOrderVersion = 1`, bounded `dom_activate` / `pointer_point` ordinal actions, fixed transition classes, strict artifact validation, fresh replay, and bounded deletion shrinking with explicit `one-minimal` / `budget-exhausted` status.
+- `protocol/fixtures/opaque-web-candidate-order-v1.json` pins the consumer-visible candidate-order contract, including DOM activation eligibility, bounds, and fixed viewport pointer geometry.
+- `web/playwright-browser/generic-browser-driver.mjs` adds an explicit opaque profile at the observation/action boundary. The opaque projection returns only structural counts/booleans/buckets plus an opaque topology hash; it does not build semantic snapshots, console/error provenance, route evidence, storage values, accessibility names, screenshots/pixels, selectors, or raw URLs for portable evidence.
+- `scripts/web_explore_url_opaque.mjs` and `proped web explore-url` accept already-running loopback HTTP(S) applications directly, without project onboarding, prepare, command-server ownership, or delegated shell execution. Invalid/failed strict-mode paths return fixed diagnostics without echoing the raw URL.
+- Managed Playwright engine selection is generic and additive. Chromium remains the default with its existing metadata shape; WebKit is explicit/optional and reports `managed_webkit_launch_failed` when its executable is unavailable. The opaque replay test executes the same ordinal trace under WebKit whenever that runtime is installed.
+- Existing coverage-guided exploration and environment-checkpoint machinery are reused. Portable action identity is `kind + ordinal`; checkpoint restoration isolates sibling candidates and the opaque minimizer restores the initial environment checkpoint before each fresh candidate replay.
+- The synthetic fixture contains legitimate no-op candidates, a non-default progressing branch, and external checkpoint state. Coverage-guided exploration finds the progressing branch and minimizes it to two opaque actions: `dom_activate:001` (`changed`) then `dom_activate:001` (`terminal`). Repeated fresh replay is deterministic and budget exhaustion is never mislabeled one-minimal.
+- Privacy regression assertions seed private sentinels into title/text/accessibility/storage/console/source/URL/route content and verify that the browser boundary, exploration evidence, CLI result, and `OpaqueWebReplayV1` contain none of them. A separate runtime-salt fixture proves portable replay does not require cross-runtime fingerprint equality.
+
+Validation completed successfully:
+
+- `node scripts/test_content_blind_opaque_web_replay.mjs`
+- `node web/playwright-browser/test-generic-browser-driver.mjs`
+- `node scripts/test_web_coverage_guided_exploration.mjs`
+- `node scripts/test_web_exploration_replay_gate.mjs`
+- `node scripts/test_web_state_novelty.mjs`
+- `node scripts/test_web_project_onboarding_v2.mjs`
+- `node scripts/test_web_project_baseline.mjs`
+- `node scripts/test_release_gate.mjs`
+- `node scripts/test_proped_web_cli.mjs`
+- `node scripts/test_github_actions_workflow.mjs`
+- `python3 scripts/check_public_disclosure.py`
+- local production corpus: 5/5 auto-onboarded, 0 interventions, deterministic replay 5/5, 0 baseline regressions; existing baseline semantic hash preserved as `e1c22176372f104081a04ba12c343bba6422a64d6cfe1d00c2bdc22afbf738e8`
+- GitHub Actions CI run `32082184180` for implementation commit `d3a81b4e013c25099fb45073ec92edc4236d1c20`: success, including Web generic contracts
+- GitHub Actions Production contracts run `32082184197`: success; all seven promoted-production shards succeeded, both fresh actionable-acceptance campaigns compared successfully, and the Production aggregate gate succeeded under the workflow's strict sandbox path
+- `git diff --check`
+
+Local direct promoted-production execution was additionally attempted. The local-MCP sandbox prevented four external projects from completing because dependency/network access and nested process execution are intentionally restricted there; the corresponding network-enabled GitHub Actions shards all succeeded, so these were execution-environment limitations rather than product regressions.
+

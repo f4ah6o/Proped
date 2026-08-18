@@ -189,6 +189,37 @@ export async function replayOpaqueWebReplayV1(driver, replay, { attempts = 1 } =
   };
 }
 
+export async function observeOpaqueWebReplayV1(driver, replay, { attempts = 2 } = {}) {
+  validateOpaqueWebReplayV1(replay);
+  if (!driver) throw new Error("opaque replay observation requires a driver");
+  if (!Number.isSafeInteger(attempts) || attempts < 2) throw new Error("opaque replay observation requires at least two attempts");
+  const browserEngine = driver.browserEngine ?? "chromium";
+  if (!OPAQUE_WEB_BROWSER_ENGINES.includes(browserEngine)) throw new Error(`unsupported opaque replay engine: ${browserEngine}`);
+  const trace = replay.steps.map((step) => opaqueActionId(step.kind, step.ordinal));
+  const runs = [];
+  for (let attempt = 0; attempt < attempts; attempt += 1) runs.push(await replayOpaqueTrace(driver, trace));
+  const complete = runs.every((run) => run.ok
+    && run.steps.length === replay.steps.length
+    && replay.steps.every((step, index) => step.kind === run.steps[index]?.kind && step.ordinal === run.steps[index]?.ordinal));
+  const deterministic = complete && new Set(runs.map((run) => semanticHash(run.steps))).size === 1;
+  if (!deterministic) throw new Error("opaque replay observation is not deterministic across fresh contexts");
+  return validateOpaqueWebReplayV1({
+    version: OPAQUE_WEB_REPLAY_VERSION,
+    candidateOrderVersion: OPAQUE_WEB_CANDIDATE_ORDER_VERSION,
+    browserEngine,
+    steps: runs[0].steps,
+    minimality: {
+      status: "not-one-minimal",
+      budget: 0,
+      checks: 0,
+      originalStepCount: replay.steps.length,
+      minimalStepCount: replay.steps.length,
+      freshReplayAttempts: attempts,
+      deterministic: true,
+    },
+  });
+}
+
 export async function buildOpaqueWebReplayV1(driver, {
   trace,
   targetFingerprint,

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node test-playwright-browser.mjs",
     "install:chromium": "playwright install chromium",
-    "install:chromium:ci": "playwright install --with-deps --only-shell chromium"
+    "install:chromium:ci": "playwright install --with-deps --only-shell chromium",
+    "install:webkit": "playwright install webkit"
   },
   "dependencies": {
     "playwright": "1.62.0"

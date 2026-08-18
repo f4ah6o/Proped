@@ -13,6 +13,7 @@ import {
   OPAQUE_WEB_CANDIDATE_ORDER_VERSION,
   buildOpaqueWebReplayV1,
   opaqueCandidateOrderFixtureVector,
+  observeOpaqueWebReplayV1,
   replayOpaqueWebReplayV1,
   validateOpaqueWebReplayV1,
 } from "../protocol/opaque-web-replay-v1.mjs";
@@ -265,6 +266,14 @@ try {
       const webkitReplay = await replayOpaqueWebReplayV1(webkitDriver, replay, { attempts: 2 });
       assert.equal(webkitReplay.ok, true, JSON.stringify(webkitReplay));
       assert.equal(webkitReplay.browserEngine, "webkit");
+      const webkitObserved = await observeOpaqueWebReplayV1(webkitDriver, replay, { attempts: 2 });
+      assert.equal(webkitObserved.browserEngine, "webkit");
+      assert.equal(webkitObserved.minimality.status, "not-one-minimal");
+      assert.equal(webkitObserved.minimality.deterministic, true);
+      assert.deepEqual(
+        webkitObserved.steps.map(({ kind, ordinal }) => ({ kind, ordinal })),
+        replay.steps.map(({ kind, ordinal }) => ({ kind, ordinal })),
+      );
     } finally {
       await webkitDriver.dispose();
     }
@@ -293,6 +302,34 @@ try {
   validateOpaqueWebReplayV1(cliReplay);
   assert.equal(JSON.stringify(cliReplay).includes(url), false, "CLI result must not persist the raw loopback URL");
   for (const secret of PRIVATE_STRINGS) assert.equal(JSON.stringify(cliReplay).includes(secret), false, `CLI portable replay leaked ${secret}`);
+
+  if (webkitReadiness.executableReady) {
+    const observedChild = spawn(process.execPath, [
+      path.join(ROOT, "scripts/web_observe_url_opaque.mjs"),
+      url,
+      "--profile", CONTENT_BLIND_OPAQUE_PROFILE,
+      "--engine", "webkit",
+    ], { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] });
+    let observedStdout = "";
+    let observedStderr = "";
+    observedChild.stdout.setEncoding("utf8");
+    observedChild.stderr.setEncoding("utf8");
+    observedChild.stdout.on("data", (chunk) => { observedStdout += chunk; });
+    observedChild.stderr.on("data", (chunk) => { observedStderr += chunk; });
+    observedChild.stdin.end(JSON.stringify(cliReplay));
+    const observedExit = await new Promise((resolve) => observedChild.on("close", resolve));
+    assert.equal(observedExit, 0, observedStderr);
+    const observedReplay = validateOpaqueWebReplayV1(JSON.parse(observedStdout.trim()));
+    assert.equal(observedReplay.browserEngine, "webkit");
+    assert.equal(observedReplay.minimality.status, "not-one-minimal");
+    assert.deepEqual(
+      observedReplay.steps.map(({ kind, ordinal }) => ({ kind, ordinal })),
+      cliReplay.steps.map(({ kind, ordinal }) => ({ kind, ordinal })),
+    );
+    const observedJson = JSON.stringify(observedReplay);
+    assert.equal(observedJson.includes(url), false);
+    for (const secret of PRIVATE_STRINGS) assert.equal(observedJson.includes(secret), false, `observed portable replay leaked ${secret}`);
+  }
 
   const rejectedUrl = "https://example.com/PRIVATE_REMOTE_URL_L1";
   const rejected = spawn(process.execPath, [

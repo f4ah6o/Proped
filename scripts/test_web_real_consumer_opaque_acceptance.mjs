@@ -46,6 +46,31 @@ assert.equal(acceptance.after.productionQualified, true);
 assert.equal(acceptance.after.firstDivergence, null);
 assert.equal(acceptance.after.mutableStateIsolation, "isolated");
 
+const breadthEvidence = JSON.parse(fs.readFileSync(path.join(ROOT, "protocol/fixtures/opaque-web-real-consumer-evidence-v1-breadth.json"), "utf8"));
+const breadthValidated = validateOpaqueWebRealConsumerEvidenceV1(breadthEvidence);
+assert.equal(breadthValidated.consumerSpecificAdapterLoc, 0);
+assert.deepEqual(
+  breadthValidated.source.steps.map(({ kind, ordinal }) => ({ kind, ordinal })),
+  breadthValidated.peer.steps.map(({ kind, ordinal }) => ({ kind, ordinal })),
+);
+assert.deepEqual(
+  breadthValidated.source.steps.map(({ kind, ordinal }) => ({ kind, ordinal })),
+  breadthValidated.consumerAfter.steps.map(({ kind, ordinal }) => ({ kind, ordinal })),
+);
+const breadthAcceptance = buildOpaqueWebRealConsumerAcceptanceV1(breadthEvidence);
+const committedBreadthAcceptance = JSON.parse(fs.readFileSync(path.join(ROOT, "protocol/fixtures/opaque-web-real-consumer-acceptance-v1-breadth.json"), "utf8"));
+assert.deepEqual(committedBreadthAcceptance, breadthAcceptance);
+assert.equal(breadthAcceptance.portableActionCount, 1);
+assert.equal(breadthAcceptance.source.minimality, "one-minimal");
+assert.equal(breadthAcceptance.peer.minimality, "not-one-minimal");
+assert.equal(breadthAcceptance.before.classification, "portable_replay_agrees");
+assert.equal(breadthAcceptance.before.productionQualified, false);
+assert.equal(breadthAcceptance.before.firstDivergence, null);
+assert.equal(breadthAcceptance.after.classification, "portable_replay_agrees");
+assert.equal(breadthAcceptance.after.productionQualified, true);
+assert.equal(breadthAcceptance.after.firstDivergence, null);
+assert.equal(breadthAcceptance.after.mutableStateIsolation, "isolated");
+
 assert.throws(
   () => validateOpaqueWebRealConsumerEvidenceV1({ ...evidence, consumerSpecificAdapterLoc: 1 }),
   /adapter LOC must remain zero/,
@@ -76,6 +101,14 @@ const cli = spawnSync(process.execPath, [path.join(ROOT, "scripts/web_real_consu
 });
 assert.equal(cli.status, 0, cli.stderr);
 assert.deepEqual(JSON.parse(cli.stdout.trim()), acceptance);
+
+const breadthCli = spawnSync(process.execPath, [path.join(ROOT, "scripts/web_real_consumer_opaque_acceptance.mjs")], {
+  cwd: ROOT,
+  input: JSON.stringify(breadthEvidence),
+  encoding: "utf8",
+});
+assert.equal(breadthCli.status, 0, breadthCli.stderr);
+assert.deepEqual(JSON.parse(breadthCli.stdout.trim()), breadthAcceptance);
 
 const privateSentinel = "PRIVATE_CONSUMER_NAME_SHOULD_NOT_ESCAPE";
 const rejected = spawnSync(process.execPath, [path.join(ROOT, "scripts/web_real_consumer_opaque_acceptance.mjs")], {

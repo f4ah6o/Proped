@@ -1,0 +1,41 @@
+{
+  "version": "OpaqueWebRealConsumerEvidenceV1",
+  "candidateOrderVersion": "1",
+  "consumerSpecificAdapterLoc": 0,
+  "source": {
+    "browserEngine": "chromium",
+    "steps": [
+      { "kind": "dom_activate", "ordinal": 2, "transition": "changed" }
+    ],
+    "attempts": 2,
+    "deterministic": true,
+    "minimality": "one-minimal"
+  },
+  "peer": {
+    "browserEngine": "webkit",
+    "steps": [
+      { "kind": "dom_activate", "ordinal": 2, "transition": "changed" }
+    ],
+    "attempts": 2,
+    "deterministic": true,
+    "minimality": "not-one-minimal"
+  },
+  "consumerBefore": {
+    "steps": [
+      { "kind": "dom_activate", "ordinal": 2, "transition": "changed" }
+    ],
+    "attempts": 1,
+    "deterministic": false,
+    "freshContext": true,
+    "mutableStateIsolation": "isolated"
+  },
+  "consumerAfter": {
+    "steps": [
+      { "kind": "dom_activate", "ordinal": 2, "transition": "changed" }
+    ],
+    "attempts": 2,
+    "deterministic": true,
+    "freshContext": true,
+    "mutableStateIsolation": "isolated"
+  }
+}

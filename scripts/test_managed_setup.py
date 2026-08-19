@@ -89,6 +89,39 @@ def fingerprint(root: Path) -> str:
     return digest.hexdigest()
 
 
+def fingerprint_entries(root: Path) -> dict[str, str]:
+    entries: dict[str, str] = {}
+    if not root.exists():
+        return entries
+    for path in sorted(root.rglob("*"), key=lambda item: item.as_posix()):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            entries[relative] = f"L:{os.readlink(path)}"
+        elif path.is_dir():
+            entries[relative] = "D"
+        elif path.is_file():
+            digest = hashlib.sha256()
+            with path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            entries[relative] = f"F:{digest.hexdigest()}"
+    return entries
+
+
+def fingerprint_diff(before: dict[str, str], after: dict[str, str]) -> list[str]:
+    changed = []
+    for relative in sorted(set(before) | set(after)):
+        if before.get(relative) == after.get(relative):
+            continue
+        if relative not in before:
+            changed.append(f"added:{relative}")
+        elif relative not in after:
+            changed.append(f"removed:{relative}")
+        else:
+            changed.append(f"changed:{relative}")
+    return changed
+
+
 def forced_managed_node_path(tmp: Path, inherited_path: str) -> str:
     tool_bin = tmp / "bootstrap-tools"
     tool_bin.mkdir()
@@ -231,13 +264,18 @@ def main() -> None:
             env=env,
         )
         stable = fingerprint(managed_runtime)
+        stable_entries = fingerprint_entries(managed_runtime)
         run(
             [str(proped), "doctor", "--json"],
             cwd=tmp,
             env=env,
         )
         if fingerprint(managed_runtime) != stable:
-            raise SystemExit("doctor modified the prepared managed runtime")
+            changed = fingerprint_diff(stable_entries, fingerprint_entries(managed_runtime))
+            raise SystemExit(
+                "doctor modified the prepared managed runtime: "
+                + json.dumps(changed[:32], separators=(",", ":"))
+            )
         run(
             [str(proped), "web", "run", str(manifest), "--repository-root", str(fixture)],
             cwd=tmp,

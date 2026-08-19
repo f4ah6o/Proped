@@ -1,0 +1,30 @@
+{
+  "version": "OpaqueWebLongitudinalContractBaselineV1",
+  "history": [
+    {
+      "id": "2026-08-20-initial",
+      "revision": "301fdb31a358d8ff19275bb9072c1edb8a0ae4c1",
+      "migration": null,
+      "contractVersions": {
+        "uiDriverProtocol": "1.0",
+        "environmentCheckpoint": "1",
+        "coverageGuidedExploration": "1",
+        "explorationReplayGate": "2",
+        "findingGroup": "1",
+        "actionableFinding": "1",
+        "realOssActionableEvidence": 1,
+        "opaqueWebReplay": "OpaqueWebReplayV1",
+        "candidateOrder": "1",
+        "realConsumerEvidence": "OpaqueWebRealConsumerEvidenceV1",
+        "realConsumerAcceptance": "OpaqueWebRealConsumerAcceptanceV1"
+      },
+      "semanticHashes": {
+        "candidateOrder": "418d8debf4240b3822d67c26094fe0e1806413e25011e35e189a0c4b2ad4bba2",
+        "realConsumerEvidencePrimary": "f0fb7135c6c44dad3858645482134f545e230de4f0861e1e5c5813cbdcd1e602",
+        "realConsumerAcceptancePrimary": "f82c0198b1ad339cf4779d19ef1219a341feb3ebd3c834eedc409065b75a9953",
+        "realConsumerEvidenceBreadth": "079cb789c2131b1e431344000139bbbaef083157b31368717e020cd9acfb8130",
+        "realConsumerAcceptanceBreadth": "7f8f590963939ea55193effca78e1eab3dddb58f82ad46c7e90e4f4bf92a0ec3"
+      }
+    }
+  ]
+}

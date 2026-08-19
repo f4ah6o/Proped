@@ -870,11 +870,12 @@ export class GenericPlaywrightBrowserDriver {
 
   async opaqueSnapshot() {
     const opaqueState = await this.opaqueStructuralState();
+    const { focusPresent: _focusPresent, ...progressState } = opaqueState;
     return {
       fingerprint: semanticHash({
         profile: CONTENT_BLIND_OPAQUE_PROFILE,
         candidateOrderVersion: OPAQUE_WEB_CANDIDATE_ORDER_VERSION,
-        opaqueState,
+        opaqueState: progressState,
       }),
       opaqueState,
       browser: {
@@ -926,14 +927,22 @@ export class GenericPlaywrightBrowserDriver {
     if (!action?.portableAction || !Number.isSafeInteger(action.ordinal)) throw new Error("opaque_action_not_observed");
     try {
       if (action.kind === "dom_activate") {
-        const activated = await this.page.evaluate(({ selector, ordinal, maximum }) => {
+        const point = await this.page.evaluate(({ selector, ordinal, maximum }) => {
           const candidates = [...document.querySelectorAll(selector)].filter((element) => !element.closest("[hidden]")).slice(0, maximum);
           const element = candidates[ordinal];
-          if (!element) return false;
-          element.click();
-          return true;
+          if (!element) return null;
+          const rect = element.getBoundingClientRect();
+          for (const [rx, ry] of [[0.5, 0.5], [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
+            const x = rect.left + rect.width * rx;
+            const y = rect.top + rect.height * ry;
+            if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+            const target = document.elementFromPoint(x, y);
+            if (target && (target === element || element.contains(target))) return { x, y };
+          }
+          return null;
         }, { selector: OPAQUE_DOM_ACTIVATE_SELECTOR, ordinal: action.ordinal, maximum: OPAQUE_WEB_MAX_DOM_ACTIVATE_CANDIDATES });
-        if (!activated) throw new Error("opaque_action_not_observed");
+        if (!point) throw new Error("opaque_action_not_observed");
+        await this.page.mouse.click(point.x, point.y);
       } else if (action.kind === "pointer_point") {
         const point = OPAQUE_WEB_POINTER_POINTS[action.ordinal];
         if (!point) throw new Error("opaque_action_not_observed");

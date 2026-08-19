@@ -46,6 +46,9 @@ jobs:
       - name: Verify real OSS actionable acceptance contract
         run: node scripts/test_web_real_oss_actionable_finding_acceptance.mjs
 
+      - name: Verify opaque real-consumer acceptance contract
+        run: node scripts/test_web_real_consumer_opaque_acceptance.mjs
+
       - name: Build checkout-safe shard matrix
         id: matrix
         run: echo "matrix=$(node scripts/web_project_benchmark_shard.mjs matrix)" >> "$GITHUB_OUTPUT"

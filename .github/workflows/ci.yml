@@ -160,6 +160,7 @@ jobs:
           node scripts/test_web_state_novelty.mjs
           node scripts/test_web_coverage_guided_exploration.mjs
           node scripts/test_content_blind_opaque_web_replay.mjs
+          node scripts/test_web_real_consumer_opaque_acceptance.mjs
           node scripts/test_web_exploration_stage_quality.mjs
           node scripts/test_web_multi_context_scheduler.mjs
           node scripts/test_web_semantic_property_candidates.mjs

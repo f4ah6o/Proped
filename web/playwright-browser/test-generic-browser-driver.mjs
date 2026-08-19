@@ -224,6 +224,42 @@ try {
   await opaqueDriver.dispose();
 }
 
+
+// Focus ownership is useful opaque telemetry, but focus-only changes must not create
+// exploration progress states or minimal replay steps.
+const focusOnlyDriver = new GenericPlaywrightBrowserDriver({
+  url: "data:text/html,<button id='focus'>Focus</button>",
+  profile: "content-blind-opaque-v1",
+  timeoutMs: 2_000,
+});
+try {
+  const beforeFocus = await focusOnlyDriver.reset();
+  await focusOnlyDriver.page.evaluate(() => document.querySelector('button').focus());
+  const afterFocus = await focusOnlyDriver.opaqueSnapshot();
+  assert.notEqual(beforeFocus.opaqueState.focusPresent, afterFocus.opaqueState.focusPresent);
+  assert.equal(beforeFocus.fingerprint, afterFocus.fingerprint);
+} finally {
+  await focusOnlyDriver.dispose();
+}
+
+// Portable dom activation must model a physically hittable pointer action. A covered
+// structural candidate remains in ordinal order but is not executed through DOM .click().
+const coveredOpaqueDriver = new GenericPlaywrightBrowserDriver({
+  url: "data:text/html,<style>button{position:absolute;left:20px;top:20px;width:120px;height:60px}div{position:absolute;left:0;top:0;width:200px;height:120px;z-index:2}</style><button id=target>Target</button><div></div><script>globalThis.activated=0;target.addEventListener('click',()=>activated++)</script>",
+  profile: "content-blind-opaque-v1",
+  timeoutMs: 2_000,
+});
+try {
+  await coveredOpaqueDriver.reset();
+  const coveredInventory = await coveredOpaqueDriver.actions();
+  const coveredAction = coveredInventory.actions.find((action) => action.kind === "dom_activate" && action.ordinal === 0);
+  assert.ok(coveredAction);
+  await assert.rejects(() => coveredOpaqueDriver.execute(coveredAction), /opaque_action_not_observed/);
+  assert.equal(await coveredOpaqueDriver.page.evaluate(() => globalThis.activated), 0);
+} finally {
+  await coveredOpaqueDriver.dispose();
+}
+
 // Optional real TodoMVC dogfood: no project-specific Playwright adapter is used.
 async function staticServer(root) {
   if (!fs.existsSync(path.join(root, "index.html"))) return null;

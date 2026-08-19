@@ -165,3 +165,12 @@ The P0 target is met. Keep this issue open for measured follow-up rather than ad
 3. introduce Vitest only for a demonstrably material pure-test subset with a committed package lock
 4. add Playwright/build caches where cache correctness is deterministic
 5. profile the `agent-friendly-code` production shard independently
+
+
+## Completion evidence — 2026-08-19
+
+Closed as complete rather than extending the optimization scope. The P0 target was already achieved: normal CI fell from about 9m46s to about 3m53s while preserving the stable aggregate `test` check and all existing quality/release/production contracts.
+
+The only unchecked P0 acceptance item was later satisfied by a descendant main revision: GitHub Actions `Production contracts` run `32082184197` succeeded for `d3a81b4e013c25099fb45073ec92edc4236d1c20`, including all promoted-production shards, two fresh actionable-acceptance campaigns, their comparison, and the aggregate gate. Subsequent main work retained those production contracts.
+
+The remaining Vitest/integration splitting/cache/profiling bullets are optional measured follow-ups, not completion requirements. They are intentionally not pursued here because the 3–5 minute target is met and this maturity phase prioritizes proof breadth over further performance work.

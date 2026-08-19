@@ -39,23 +39,31 @@ Forbidden producer evidence remains consumer/application identity, URL, selector
 
 No existing contract may be silently reinterpreted. A compatibility-breaking semantic change requires the owning contract version to change and an explicit migration note/baseline update.
 
+## Hosted evidence checkpoint
+
+Implementation revision: `89902ff48733b4f8d4c0c44d8aca369d62210399` (`test(web): pin longitudinal opaque contract stability`).
+
+- Production contracts run `32269595858`, attempt 1: green on the exact implementation revision. The longitudinal validator, both fresh actionable campaigns and comparison, all production shards, and the aggregate gate passed. The Lit Web Components shard spent an extended period in `Prepare managed browser runtime`, then recovered without retry and its actual production shard passed. This is infrastructure/setup latency, not a product-contract failure.
+- CI run `32269595850`, attempt 1: Core contracts, production external contracts, all external-contract shards, sandbox-policy Linux/macOS, and managed runtime Windows/macOS passed. Four Linux jobs remained blocked for an extended period before product checks in dependency/browser/sandbox setup (`Install strict sandbox backend for production gate`, `Install Chromium system dependencies`, and two `Install Web project dependencies` steps). No contract/product test had failed.
+- Because the CI stall is entirely before the affected product-contract steps and Production recovered the same class of managed-browser setup stall on the same implementation revision, this checkpoint records the first CI attempt as hosted-infrastructure stall evidence. The next CI run is a single fresh-runner revalidation of the unchanged implementation tree; no retry count, gate, threshold, contract, or product code is changed to make it green.
+
 ## Exit criteria
 
 - [ ] current main / CI / Production contracts reconfirmed;
-- [ ] versioned contract inventory committed;
-- [ ] longitudinal baseline and regression committed;
-- [ ] candidate ordering drift detected;
-- [ ] portable action vector / transition classification drift detected;
-- [ ] accidental peer minimality inheritance detected;
-- [ ] privacy surface expansion and consumer evidence schema drift detected;
-- [ ] checkpoint isolation contract remains green;
-- [ ] source/peer engine evidence remains green;
-- [ ] adapter LOC remains 0;
-- [ ] semantic hash/version churn requires an explicit baseline migration;
-- [ ] both existing real-consumer fixed evidence vectors revalidate unchanged;
-- [ ] third proof added only if naturally available under the unchanged contract;
-- [ ] hosted CI green on the implementation revision;
-- [ ] Production contracts green on the implementation revision;
+- [x] versioned contract inventory committed;
+- [x] longitudinal baseline and regression committed;
+- [x] candidate ordering drift detected;
+- [x] portable action vector / transition classification drift detected;
+- [x] accidental peer minimality inheritance detected;
+- [x] privacy surface expansion and consumer evidence schema drift detected;
+- [x] checkpoint isolation contract remains green;
+- [x] source/peer engine evidence remains green;
+- [x] adapter LOC remains 0;
+- [x] semantic hash/version churn requires an explicit baseline migration;
+- [x] both existing real-consumer fixed evidence vectors revalidate unchanged;
+- [x] third proof added only if naturally available under the unchanged contract (evaluated; no qualifying third proof was already available, so none was manufactured);
+- [ ] hosted CI green on the unchanged implementation tree;
+- [x] Production contracts green on the implementation revision;
 - [ ] completion evidence records exact revision, versions, CI/Production results, privacy, determinism, minimality, checkpoint isolation, cross-engine result, adapter LOC, and drift status;
 - [ ] issue moved to `issues/closed` when complete.
 
